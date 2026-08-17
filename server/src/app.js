@@ -89,7 +89,20 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/v1', routes);
 
-// 404 Handler
+// Serve Frontend (Client Build) in Single-Server Deployment
+const fs = require('fs');
+const clientDistPath = path.join(__dirname, '../../client/dist');
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path === '/health') {
+      return next();
+    }
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+}
+
+// 404 Handler for unhandled API routes
 app.use((req, res, next) => {
   res.status(404).json({
     success: false,

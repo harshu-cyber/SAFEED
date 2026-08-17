@@ -1,0 +1,314 @@
+/**
+ * userStore.js — SafeED-UP User Management Store
+ * Manages police officers, inspectors, and admin users in localStorage.
+ * Users created here can log in via AuthContext's fallback logic.
+ */
+
+const STORE_KEY = 'safeed_users_store_v1';
+
+const DEFAULT_USERS = [
+  {
+    _id: 'u-super-1',
+    name: 'Super Admin',
+    email: 'superadmin@safeedup.gov.in',
+    username: 'superadmin@safeedup.gov.in',
+    phone: '9412000001',
+    password: 'SuperAdmin@123',
+    role: 'SUPER_ADMIN',
+    designation: 'System Administrator',
+    badgeNumber: 'SA-001',
+    department: 'SafeED-UP HQ',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    joiningDate: '2024-01-01',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'SYSTEM',
+    avatar: null,
+  },
+  {
+    _id: 'u-dcp-west',
+    name: 'DCP WEST',
+    email: 'dcpwest@safeedup.gov.in',
+    username: 'dcpwest@safeedup.gov.in',
+    phone: '9412000002',
+    password: 'DCPWest@123',
+    role: 'INSPECTION_OFFICER',
+    designation: 'Deputy Commissioner of Police — West Zone',
+    badgeNumber: 'DCP-W-01',
+    department: 'UP Police — West District',
+    dcpZone: 'DCP West',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    joiningDate: '2024-01-01',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'SYSTEM',
+    avatar: null,
+  },
+  {
+    _id: 'u-dcp-central',
+    name: 'DCP CENTRAL',
+    email: 'dcpcentral@safeedup.gov.in',
+    username: 'dcpcentral@safeedup.gov.in',
+    phone: '9412000003',
+    password: 'DCPCentral@123',
+    role: 'INSPECTION_OFFICER',
+    designation: 'Deputy Commissioner of Police — Central Zone',
+    badgeNumber: 'DCP-C-01',
+    department: 'UP Police — Central District',
+    dcpZone: 'DCP Central',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    joiningDate: '2024-01-01',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'SYSTEM',
+    avatar: null,
+  },
+  {
+    _id: 'u-dcp-north',
+    name: 'DCP NORTH',
+    email: 'dcpnorth@safeedup.gov.in',
+    username: 'dcpnorth@safeedup.gov.in',
+    phone: '9412000004',
+    password: 'DCPNorth@123',
+    role: 'INSPECTION_OFFICER',
+    designation: 'Deputy Commissioner of Police — North Zone',
+    badgeNumber: 'DCP-N-01',
+    department: 'UP Police — North District',
+    dcpZone: 'DCP North',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    joiningDate: '2024-01-01',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'SYSTEM',
+    avatar: null,
+  },
+  {
+    _id: 'u-dcp-east',
+    name: 'DCP EAST',
+    email: 'dcpeast@safeedup.gov.in',
+    username: 'dcpeast@safeedup.gov.in',
+    phone: '9412000005',
+    password: 'DCPEast@123',
+    role: 'INSPECTION_OFFICER',
+    designation: 'Deputy Commissioner of Police — East Zone',
+    badgeNumber: 'DCP-E-01',
+    department: 'UP Police — East District',
+    dcpZone: 'DCP East',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    joiningDate: '2024-01-01',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'SYSTEM',
+    avatar: null,
+  },
+  {
+    _id: 'u-dcp-south',
+    name: 'DCP SOUTH',
+    email: 'dcpsouth@safeedup.gov.in',
+    username: 'dcpsouth@safeedup.gov.in',
+    phone: '9412000006',
+    password: 'DCPSouth@123',
+    role: 'INSPECTION_OFFICER',
+    designation: 'Deputy Commissioner of Police — South Zone',
+    badgeNumber: 'DCP-S-01',
+    department: 'UP Police — South District',
+    dcpZone: 'DCP South',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    joiningDate: '2024-01-01',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'SYSTEM',
+    avatar: null,
+  },
+  {
+    _id: 'u-dist-1',
+    name: 'Commissioner of Police (CP)',
+    email: 'commissioner@uppolice.gov.in',
+    username: 'commissioner@uppolice.gov.in',
+    phone: '9412000007',
+    password: 'cop123456',
+    role: 'DISTRICT_ADMIN',
+    designation: 'Commissioner of Police, Lucknow',
+    badgeNumber: 'CP-LKO-01',
+    department: 'UP Police HQ',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    joiningDate: '2023-06-01',
+    isActive: true,
+    createdAt: '2023-06-01T00:00:00Z',
+    createdBy: 'SYSTEM',
+    avatar: null,
+  },
+  {
+    _id: 'u-dist-2',
+    name: 'Joint Commissioner of Police (JCP)',
+    email: 'joint.cop@uppolice.gov.in',
+    username: 'joint.cop@uppolice.gov.in',
+    phone: '9412000008',
+    password: 'jcp123456',
+    role: 'DISTRICT_ADMIN',
+    designation: 'Joint Commissioner of Police, Lucknow',
+    badgeNumber: 'JCP-LKO-01',
+    department: 'UP Police HQ',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    joiningDate: '2023-06-01',
+    isActive: true,
+    createdAt: '2023-06-01T00:00:00Z',
+    createdBy: 'SYSTEM',
+    avatar: null,
+  },
+];
+
+function loadStore() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function saveStore(data) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(data));
+}
+
+function initStore() {
+  const existing = loadStore();
+  if (!existing) {
+    saveStore({ users: DEFAULT_USERS });
+    return { users: DEFAULT_USERS };
+  }
+  // Merge defaults so system users always exist
+  const existingIds = new Set(existing.users.map(u => u._id));
+  const merged = [...existing.users];
+  for (const def of DEFAULT_USERS) {
+    if (!existingIds.has(def._id)) merged.unshift(def);
+  }
+  if (merged.length !== existing.users.length) {
+    saveStore({ users: merged });
+  }
+  return { users: merged };
+}
+
+export const userStore = {
+  getUsers() {
+    return initStore().users;
+  },
+
+  getUserById(id) {
+    return this.getUsers().find(u => u._id === id) || null;
+  },
+
+  getUserByEmail(email) {
+    return this.getUsers().find(
+      u => u.email?.toLowerCase() === email?.toLowerCase()
+    ) || null;
+  },
+
+  /**
+   * Creates a new user account.
+   * Auto-generated credentials:
+   *   Username = email (Gmail) as provided by admin
+   *   Password = phone number (10 digits)
+   */
+  createUser(formData, createdByName = 'Super Admin') {
+    const store = initStore();
+
+    const emailLower = formData.email?.toLowerCase();
+    if (store.users.find(u => u.email?.toLowerCase() === emailLower)) {
+      throw new Error('A user with this email already exists.');
+    }
+
+    const newId = 'u-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+    const username = formData.email;
+    const password = formData.phone;
+
+    // Determine target portal path
+    let assignedPortal = formData.assignedPortal || formData.role;
+    if (assignedPortal === 'INSPECTION_OFFICER' || formData.role === 'INSPECTION_OFFICER' || formData.role === 'POLICE_OFFICER') {
+      assignedPortal = 'INSPECTION_OFFICER';
+    } else if (assignedPortal === 'DISTRICT_ADMIN' || formData.role === 'DISTRICT_ADMIN') {
+      assignedPortal = 'DISTRICT_ADMIN';
+    } else if (assignedPortal === 'SUPER_ADMIN' || formData.role === 'SUPER_ADMIN') {
+      assignedPortal = 'SUPER_ADMIN';
+    }
+
+    const newUser = {
+      _id: newId,
+      name: formData.name,
+      email: formData.email,
+      username,
+      phone: formData.phone,
+      password,
+      role: formData.role || 'INSPECTION_OFFICER',
+      assignedPortal,
+      designation: formData.designation || '',
+      badgeNumber: formData.badgeNumber || '',
+      department: formData.department || 'UP Police',
+      dcpZone: formData.dcpZone || null,
+      district: formData.district || 'Lucknow',
+      state: formData.state || 'Uttar Pradesh',
+      joiningDate: formData.joiningDate || new Date().toISOString().split('T')[0],
+      bloodGroup: formData.bloodGroup || '',
+      rankLevel: formData.rankLevel || '',
+      postingStation: formData.postingStation || '',
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      createdBy: createdByName,
+      avatar: null,
+    };
+
+    store.users.push(newUser);
+    saveStore(store);
+    return newUser;
+  },
+
+  updateUser(id, updates) {
+    const store = initStore();
+    const idx = store.users.findIndex(u => u._id === id);
+    if (idx === -1) throw new Error('User not found.');
+    if (store.users[idx].role === 'SUPER_ADMIN') throw new Error('Cannot modify Super Admin system account.');
+    store.users[idx] = { ...store.users[idx], ...updates, updatedAt: new Date().toISOString() };
+    saveStore(store);
+    return store.users[idx];
+  },
+
+  toggleUserStatus(id) {
+    const store = initStore();
+    const user = store.users.find(u => u._id === id);
+    if (!user) throw new Error('User not found.');
+    if (user.role === 'SUPER_ADMIN') throw new Error('Cannot deactivate Super Admin account.');
+    user.isActive = !user.isActive;
+    saveStore(store);
+    return user;
+  },
+
+  deleteUser(id) {
+    const store = initStore();
+    const user = store.users.find(u => u._id === id);
+    if (!user) throw new Error('User not found.');
+    if (user.role === 'SUPER_ADMIN') throw new Error('Cannot delete Super Admin account.');
+    store.users = store.users.filter(u => u._id !== id);
+    saveStore(store);
+  },
+
+  getStats() {
+    const users = this.getUsers();
+    return {
+      total: users.length,
+      active: users.filter(u => u.isActive).length,
+      inspectors: users.filter(u => u.role === 'INSPECTION_OFFICER').length,
+      districtAdmins: users.filter(u => u.role === 'DISTRICT_ADMIN').length,
+      superAdmins: users.filter(u => u.role === 'SUPER_ADMIN').length,
+      police: users.filter(u => u.role === 'POLICE_OFFICER').length,
+    };
+  },
+};

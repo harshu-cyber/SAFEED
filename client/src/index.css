@@ -1,0 +1,247 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --primary: #071A2F;
+    --primary-light: #162B44;
+    --gold: #D4AF37;
+    --gold-light: #F3E5AB;
+    --gold-dark: #B8860B;
+    --police-red: #DC2626;
+    --police-blue: #1E40AF;
+    --background: #071A2F;
+    --surface: #0B223D;
+    --border: #1E3A5F;
+    --text-primary: #FFFFFF;
+    --text-secondary: #CBD5E1;
+  }
+
+  /* ─── LIGHT THEME OVERRIDES ─── */
+  [data-theme='light'] {
+    --background: #F4F6F9;
+    --surface: #FFFFFF;
+    --border: #CBD5E1;
+    --text-primary: #071A2F;
+    --text-secondary: #334155;
+    --primary-light: #E2EAF4;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--background);
+    color: var(--text-primary);
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LIGHT THEME — Global element overrides
+   Targets every dark-navy Tailwind class used in Landing.jsx,
+   AuthLayout.jsx, AppHeader, sections, cards, footer etc.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Base background reset */
+[data-theme='light'] body,
+[data-theme='light'] #root {
+  background-color: #F4F6F9 !important;
+}
+
+/* All dark navy surface elements → white */
+[data-theme='light'] [class*='bg-\[#071A2F\]'],
+[data-theme='light'] [class*='bg-\[#07111E\]'],
+[data-theme='light'] [class*='bg-\[#0B223D\]'],
+[data-theme='light'] [class*='bg-\[#050C15\]'],
+[data-theme='light'] [class*='bg-\[#0A182B\]'],
+[data-theme='light'] [class*='bg-\[#162B44\]'],
+[data-theme='light'] [class*='bg-\[#1E3A5F\]'] {
+  background-color: #FFFFFF !important;
+  color: #071A2F !important;
+}
+
+/* Sections with dark-opacity backgrounds */
+[data-theme='light'] section {
+  background: #F4F6F9 !important;
+}
+
+/* Hero section */
+[data-theme='light'] section:first-of-type {
+  background: linear-gradient(135deg, #E8F0FF 0%, #F4F6F9 60%, #EEF2FF 100%) !important;
+  border-bottom-color: #D4AF37 !important;
+}
+
+/* Header bar */
+[data-theme='light'] header {
+  background: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+}
+
+/* Text corrections for light */
+[data-theme='light'] [class*='text-white'] {
+  color: #071A2F !important;
+}
+[data-theme='light'] [class*='text-slate-300'],
+[data-theme='light'] [class*='text-slate-400'] {
+  color: #475569 !important;
+}
+
+/* Cards, workflow steps, leader cards */
+[data-theme='light'] [class*='rounded-2xl'],
+[data-theme='light'] [class*='rounded-3xl'],
+[data-theme='light'] [class*='rounded-xl'] {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+}
+
+/* Keep borders/dividers readable */
+[data-theme='light'] [class*='border-\[#1E3A5F\]'],
+[data-theme='light'] [class*='divide-\[#1E3A5F\]'] {
+  border-color: #E2E8F0 !important;
+}
+
+/* Leadership card grid */
+[data-theme='light'] [class*='bg-\[#0B223D\]\/'] {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+}
+
+/* Carousel / gallery */
+[data-theme='light'] [class*='from-\[#07111E\]'],
+[data-theme='light'] [class*='via-\[#071A2F\]'],
+[data-theme='light'] [class*='to-\[#0A182B\]'] {
+  background: #FFFFFF !important;
+}
+
+/* Keep the tricolor bar */
+[data-theme='light'] .tricolor > div { background-color: inherit !important; }
+
+/* Footer dark background */
+[data-theme='light'] footer {
+  background-color: #F1F5F9 !important;
+  color: #071A2F !important;
+  border-top-color: #D4AF37 !important;
+}
+
+/* Navigation bar */
+[data-theme='light'] nav {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+}
+[data-theme='light'] nav a {
+  color: #334155 !important;
+}
+[data-theme='light'] nav a:hover,
+[data-theme='light'] nav a.active {
+  background-color: #D4AF37 !important;
+  color: #071A2F !important;
+}
+
+/* Utility top bar */
+[data-theme='light'] .top-utility-bar {
+  background-color: #FFFFFF !important;
+}
+
+/* Emergency section */
+[data-theme='light'] [class*='from-\[#07111E\]\/95'] {
+  background: #EEF2FF !important;
+}
+
+/* Carousel nav buttons */
+[data-theme='light'] [class*='bg-\[#07111E\]\/90'] {
+  background-color: rgba(255,255,255,0.92) !important;
+  color: #071A2F !important;
+  border-color: #D4AF37 !important;
+}
+
+/* Gold text stays gold always */
+[data-theme='light'] [class*='text-\[#D4AF37\]'] {
+  color: #B8860B !important;
+}
+
+/* Shadow adjustments for light */
+[data-theme='light'] [class*='shadow'] {
+  box-shadow: 0 2px 12px rgba(7, 26, 47, 0.10) !important;
+}
+
+
+
+/* Gold Gradient Text Utility */
+.gold-gradient-text {
+  background: linear-gradient(135deg, #FFF0C2 0%, #D4AF37 50%, #B8860B 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-border-glow {
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.25), inset 0 0 10px rgba(212, 175, 55, 0.1);
+  border: 1.5px solid #D4AF37;
+}
+
+/* Police Badge Pulse Animation */
+@keyframes police-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(220, 38, 38, 0.4), 0 0 20px rgba(30, 64, 175, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.7), 0 0 35px rgba(30, 64, 175, 0.7);
+  }
+}
+
+.police-siren-glow {
+  animation: police-glow 2.5s infinite ease-in-out;
+}
+
+/* Shimmer Light Effect */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer-card {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(212,175,55,0.08) 50%, rgba(255,255,255,0) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 4s infinite linear;
+}
+
+/* Custom Scrollbar for Government Dashboard Tables */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F8FAFC;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D4AF37;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #F3E5AB;
+}
+
+/* Glassmorphism Government Card */
+.gov-glass-card {
+  background: rgba(7, 26, 47, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+}
+
+.gov-card-white {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px -2px rgba(7, 26, 47, 0.06);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gov-card-white:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px -4px rgba(7, 26, 47, 0.12);
+  border-color: #D4AF37;
+}

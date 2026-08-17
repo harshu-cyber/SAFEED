@@ -1,0 +1,28 @@
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Production / Build
+/dist
+/build
+*.tsbuildinfo
+
+# Uploads & Logs
+/server/uploads/*
+!/server/uploads/.gitkeep
+/server/logs/*
+!/server/logs/.gitkeep
+*.log
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

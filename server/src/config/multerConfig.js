@@ -4,7 +4,7 @@
 const multer = require('multer');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const { ALLOWED_FILE_TYPES } = require('../constants/statusTypes');
+const { ALLOWED_FILE_TYPES, ALLOWED_FILE_EXTENSIONS } = require('../constants/statusTypes');
 const env = require('./env');
 
 const storage = multer.diskStorage({
@@ -17,8 +17,6 @@ const storage = multer.diskStorage({
     cb(null, uniqueName);
   },
 });
-
-const { ALLOWED_FILE_TYPES, ALLOWED_FILE_EXTENSIONS } = require('../constants/statusTypes');
 
 const fileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();

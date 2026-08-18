@@ -26,6 +26,45 @@ const DEFAULT_USERS = [
     createdAt: '2024-01-01T00:00:00Z',
     createdBy: 'SYSTEM',
   },
+  {
+    _id: 'u-dist-tarun',
+    name: 'TARUN',
+    email: 'cp1ko@safeed',
+    username: 'cp1ko@safeed',
+    phone: '9876543210',
+    password: '9876543210',
+    role: 'DISTRICT_ADMIN',
+    assignedPortal: 'DISTRICT_ADMIN',
+    designation: 'District Authority',
+    badgeNumber: 'LKO-01',
+    department: 'UP Police',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    joiningDate: '2024-02-01',
+    isActive: true,
+    createdAt: '2024-02-01T00:00:00Z',
+    createdBy: 'Super Admin',
+  },
+  {
+    _id: 'u-insp-1',
+    name: 'Inspector Sharma',
+    email: 'si.sharma@uppolice.gov.in',
+    username: 'si.sharma@uppolice.gov.in',
+    phone: '9412000003',
+    password: '9412000003',
+    role: 'INSPECTION_OFFICER',
+    assignedPortal: 'INSPECTION_OFFICER',
+    designation: 'SI Officer',
+    badgeNumber: 'UPP-4081',
+    department: 'UP Police',
+    dcpZone: 'DCP Central',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    joiningDate: '2024-02-05',
+    isActive: true,
+    createdAt: '2024-02-05T00:00:00Z',
+    createdBy: 'Super Admin',
+  },
 ];
 
 function loadStore() {
@@ -89,6 +128,14 @@ function initStore() {
     sa.isActive = true;
   } else {
     existing.users.unshift(DEFAULT_USERS[0]);
+  }
+
+  // Ensure all DEFAULT_USERS (TARUN, Inspector Sharma, etc.) exist in the store
+  for (const defUser of DEFAULT_USERS) {
+    const exists = existing.users.some(u => u.email?.toLowerCase() === defUser.email?.toLowerCase() || u._id === defUser._id);
+    if (!exists) {
+      existing.users.push(defUser);
+    }
   }
 
   saveStore(existing);

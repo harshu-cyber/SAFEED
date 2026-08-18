@@ -162,7 +162,7 @@ export const Register = () => {
   const [error, setError] = useState('');
   const [credentials, setCredentials] = useState(null); // triggers popup
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
-    defaultValues: { state: 'Uttar Pradesh', institutionType: 'SCHOOL', role: 'SCHOOL_ADMIN' }
+    defaultValues: { state: 'Uttar Pradesh', institutionType: 'SCHOOL', role: 'SCHOOL_ADMIN', district: 'Lucknow' }
   });
 
   const onSubmit = async (data) => {

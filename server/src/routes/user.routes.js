@@ -74,6 +74,22 @@ router.patch('/:id/toggle-status', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.STATE
   });
 }));
 
+// Delete user permanently (Super Admin only)
+router.delete('/:id', authorizeRoles(ROLES.SUPER_ADMIN), asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    return sendError(res, { statusCode: 404, message: 'User not found.' });
+  }
+  if (user.role === ROLES.SUPER_ADMIN) {
+    return sendError(res, { statusCode: 403, message: 'Super Admin account cannot be deleted.' });
+  }
+  await User.findByIdAndDelete(req.params.id);
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: `User account (${user.email}) permanently deleted from database.`,
+  });
+}));
+
 // GET /api/v1/users/audit-logs (Security Monitoring)
 const AuditLog = require('../models/AuditLog.model');
 router.get('/audit-logs', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.STATE_ADMIN), asyncHandler(async (req, res) => {

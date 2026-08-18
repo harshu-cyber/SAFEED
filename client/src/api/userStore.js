@@ -186,16 +186,7 @@ function initStore() {
     saveStore({ users: DEFAULT_USERS });
     return { users: DEFAULT_USERS };
   }
-  // Merge defaults so system users always exist
-  const existingIds = new Set(existing.users.map(u => u._id));
-  const merged = [...existing.users];
-  for (const def of DEFAULT_USERS) {
-    if (!existingIds.has(def._id)) merged.unshift(def);
-  }
-  if (merged.length !== existing.users.length) {
-    saveStore({ users: merged });
-  }
-  return { users: merged };
+  return existing;
 }
 
 export const userStore = {

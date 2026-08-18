@@ -65,8 +65,12 @@ export const AuthProvider = ({ children }) => {
 
       // ✅ Priority 1: Check userStore for Super Admin-created users
       const storedUser = userStore.getUserByEmail(emailLower);
-      if (storedUser && storedUser.isActive) {
-        // Validate password: phone number
+      if (storedUser) {
+        if (!storedUser.isActive) {
+          throw new Error('Your account has been deactivated. Access suspended by Super Admin.');
+        }
+
+        // Validate password: password field or phone number
         if (credentials.password === storedUser.password || credentials.password === storedUser.phone) {
           const fallbackUser = {
             _id: storedUser._id,
@@ -84,53 +88,9 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem('accessToken', 'demo_token_' + Date.now());
           setUser(fallbackUser);
           return fallbackUser;
+        } else {
+          throw new Error('Invalid email or password.');
         }
-      }
-
-      // 5 Fixed DCP Inspection Officer Accounts
-      if (emailLower.includes('dcpwest')) {
-        const fallbackUser = { _id: 'dcp_west', name: 'DCP WEST', email: credentials.email, role: 'INSPECTION_OFFICER', dcpZone: 'DCP West', state: 'Uttar Pradesh', district: 'Lucknow' };
-        localStorage.setItem('accessToken', 'demo_token_' + Date.now());
-        setUser(fallbackUser);
-        return fallbackUser;
-      }
-      if (emailLower.includes('dcpcentral')) {
-        const fallbackUser = { _id: 'dcp_central', name: 'DCP CENTRAL', email: credentials.email, role: 'INSPECTION_OFFICER', dcpZone: 'DCP Central', state: 'Uttar Pradesh', district: 'Lucknow' };
-        localStorage.setItem('accessToken', 'demo_token_' + Date.now());
-        setUser(fallbackUser);
-        return fallbackUser;
-      }
-      if (emailLower.includes('dcpnorth')) {
-        const fallbackUser = { _id: 'dcp_north', name: 'DCP NORTH', email: credentials.email, role: 'INSPECTION_OFFICER', dcpZone: 'DCP North', state: 'Uttar Pradesh', district: 'Lucknow' };
-        localStorage.setItem('accessToken', 'demo_token_' + Date.now());
-        setUser(fallbackUser);
-        return fallbackUser;
-      }
-      if (emailLower.includes('dcpeast')) {
-        const fallbackUser = { _id: 'dcp_east', name: 'DCP EAST', email: credentials.email, role: 'INSPECTION_OFFICER', dcpZone: 'DCP East', state: 'Uttar Pradesh', district: 'Lucknow' };
-        localStorage.setItem('accessToken', 'demo_token_' + Date.now());
-        setUser(fallbackUser);
-        return fallbackUser;
-      }
-      if (emailLower.includes('dcpsouth')) {
-        const fallbackUser = { _id: 'dcp_south', name: 'DCP SOUTH', email: credentials.email, role: 'INSPECTION_OFFICER', dcpZone: 'DCP South', state: 'Uttar Pradesh', district: 'Lucknow' };
-        localStorage.setItem('accessToken', 'demo_token_' + Date.now());
-        setUser(fallbackUser);
-        return fallbackUser;
-      }
-
-      // 🏛️ Commissioner of Police & Joint Commissioner of Police
-      if (emailLower.includes('cp@') || emailLower.includes('commissioner')) {
-        const fallbackUser = { _id: 'cp_police', name: 'Commissioner of Police (CP)', email: credentials.email, role: 'DISTRICT_ADMIN', state: 'Uttar Pradesh', district: 'Lucknow' };
-        localStorage.setItem('accessToken', 'demo_token_' + Date.now());
-        setUser(fallbackUser);
-        return fallbackUser;
-      }
-      if (emailLower.includes('jcp@') || emailLower.includes('jointcp')) {
-        const fallbackUser = { _id: 'jcp_police', name: 'Joint Commissioner of Police (JCP)', email: credentials.email, role: 'DISTRICT_ADMIN', state: 'Uttar Pradesh', district: 'Lucknow' };
-        localStorage.setItem('accessToken', 'demo_token_' + Date.now());
-        setUser(fallbackUser);
-        return fallbackUser;
       }
 
       // Check if this matches a registered institution in institutionStore

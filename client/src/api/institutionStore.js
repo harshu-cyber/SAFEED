@@ -26,6 +26,11 @@ export const institutionStore = {
 
   // ── INSTITUTIONS ─────────────────────────────────────────
 
+  syncCloudInstitutions: (cloudInsts) => {
+    if (!Array.isArray(cloudInsts)) return;
+    localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(cloudInsts));
+  },
+
   /** Return ALL institutions from localStorage (with auto-assigned zone inspectors) */
   getInstitutions: () => {
     try {

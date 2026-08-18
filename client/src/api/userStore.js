@@ -110,12 +110,18 @@ export const userStore = {
     ) || null;
   },
 
-  /**
-   * Creates a new user account.
-   * Auto-generated credentials:
-   *   Username = email (Gmail) as provided by admin
-   *   Password = phone number (10 digits)
-   */
+  syncCloudUsers(cloudUsers) {
+    if (!Array.isArray(cloudUsers) || cloudUsers.length === 0) return;
+    const store = initStore();
+    // Ensure Super Admin exists in cloud payload
+    const hasSA = cloudUsers.some(u => u.role === 'SUPER_ADMIN' || u.email === 'superadmin@safeed.ac.in');
+    if (!hasSA && store.users.length > 0) {
+      cloudUsers.unshift(store.users[0]);
+    }
+    store.users = cloudUsers;
+    saveStore(store);
+  },
+
   createUser(formData, createdByName = 'Super Admin') {
     const store = initStore();
 
@@ -165,6 +171,10 @@ export const userStore = {
 
     store.users.push(newUser);
     saveStore(store);
+
+    // Trigger Real-Time Global Cloud Sync
+    import('./cloudSync').then(m => m.cloudSync.push()).catch(() => {});
+
     return newUser;
   },
 
@@ -175,6 +185,10 @@ export const userStore = {
     if (store.users[idx].role === 'SUPER_ADMIN') throw new Error('Cannot modify Super Admin system account.');
     store.users[idx] = { ...store.users[idx], ...updates, updatedAt: new Date().toISOString() };
     saveStore(store);
+
+    // Trigger Real-Time Global Cloud Sync
+    import('./cloudSync').then(m => m.cloudSync.push()).catch(() => {});
+
     return store.users[idx];
   },
 
@@ -185,6 +199,10 @@ export const userStore = {
     if (user.role === 'SUPER_ADMIN') throw new Error('Cannot deactivate Super Admin account.');
     user.isActive = !user.isActive;
     saveStore(store);
+
+    // Trigger Real-Time Global Cloud Sync
+    import('./cloudSync').then(m => m.cloudSync.push()).catch(() => {});
+
     return user;
   },
 
@@ -195,6 +213,9 @@ export const userStore = {
     if (user.role === 'SUPER_ADMIN') throw new Error('Cannot delete Super Admin account.');
     store.users = store.users.filter(u => u._id !== id);
     saveStore(store);
+
+    // Trigger Real-Time Global Cloud Sync
+    import('./cloudSync').then(m => m.cloudSync.push()).catch(() => {});
   },
 
   getStats() {

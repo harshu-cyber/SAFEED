@@ -26,6 +26,7 @@ import { MdVerified, MdLocalPolice } from 'react-icons/md';
 export const Sidebar = ({ collapsed }) => {
   const { user } = useAuth();
   const role = user?.role;
+  const effectiveRole = user?.assignedPortal || role;
 
   // Real-time check if certificate is unlocked for current institution
   const inst = user ? institutionStore.getInstitutionByIdOrEmail(user?.institutionId || user?.email) : null;
@@ -33,7 +34,7 @@ export const Sidebar = ({ collapsed }) => {
 
   // Build role-specific navigation menus
   const getNavItems = () => {
-    switch (role) {
+    switch (effectiveRole) {
       case ROLES.SUPER_ADMIN:
         return [
           { label: 'System Overview', path: '/dashboard/super-admin', icon: FiGrid },

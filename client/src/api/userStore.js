@@ -4,7 +4,7 @@
  * Users created here can log in via AuthContext's fallback logic.
  */
 
-const STORE_KEY = 'safeed_users_store_v1';
+const STORE_KEY = 'safeed_users_store_v3';
 
 const DEFAULT_USERS = [
   {
@@ -42,12 +42,43 @@ function saveStore(data) {
   localStorage.setItem(STORE_KEY, JSON.stringify(data));
 }
 
+function cleanupLegacyStores() {
+  try {
+    const keysToRemove = [
+      'safeed_users_store_v1',
+      'safeed_users_store_v2',
+      'safeed_users_store',
+      'users_store',
+    ];
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+  } catch (_) {}
+}
+
 function initStore() {
+  cleanupLegacyStores();
+
   const existing = loadStore();
   if (!existing) {
     saveStore({ users: DEFAULT_USERS });
     return { users: DEFAULT_USERS };
   }
+
+  // Filter out any stale pre-seeded dummy accounts from previous versions
+  const dummyEmails = [
+    'dcpwest@safeedup.gov.in',
+    'dcpcentral@safeedup.gov.in',
+    'dcpnorth@safeedup.gov.in',
+    'dcpeast@safeedup.gov.in',
+    'dcpsouth@safeedup.gov.in',
+    'dgp@safeedup.gov.in',
+    'commissioner@uppolice.gov.in',
+    'joint.cop@uppolice.gov.in',
+    'adcp@safeedup.gov.in',
+    'acp@safeedup.gov.in',
+    'superadmin@safeedup.gov.in',
+  ];
+
+  existing.users = (existing.users || []).filter(u => !dummyEmails.includes(u.email?.toLowerCase()));
 
   // Ensure superadmin@safeed.ac.in / harshsafeed exists and is updated
   let sa = existing.users.find(u => u.role === 'SUPER_ADMIN' || u.email?.includes('superadmin'));
@@ -55,9 +86,11 @@ function initStore() {
     sa.email = 'superadmin@safeed.ac.in';
     sa.username = 'superadmin@safeed.ac.in';
     sa.password = 'harshsafeed';
+    sa.isActive = true;
   } else {
     existing.users.unshift(DEFAULT_USERS[0]);
   }
+
   saveStore(existing);
   return existing;
 }

@@ -130,13 +130,24 @@ function initStore() {
     existing.users.unshift(DEFAULT_USERS[0]);
   }
 
-  // Ensure all DEFAULT_USERS (TARUN, Inspector Sharma, etc.) exist in the store
+  let deletedList = [];
+  try {
+    deletedList = JSON.parse(localStorage.getItem('safeed_deleted_user_ids') || '[]');
+  } catch (_) {}
+
+  // Ensure all DEFAULT_USERS (TARUN, Inspector Sharma, etc.) exist in the store EXCEPT deleted ones
   for (const defUser of DEFAULT_USERS) {
-    const exists = existing.users.some(u => u.email?.toLowerCase() === defUser.email?.toLowerCase() || u._id === defUser._id);
-    if (!exists) {
-      existing.users.push(defUser);
+    const isDeleted = deletedList.includes(defUser._id) || deletedList.includes(defUser.email?.toLowerCase());
+    if (!isDeleted) {
+      const exists = existing.users.some(u => u.email?.toLowerCase() === defUser.email?.toLowerCase() || u._id === defUser._id);
+      if (!exists) {
+        existing.users.push(defUser);
+      }
     }
   }
+
+  // Filter existing users to exclude any deleted user
+  existing.users = (existing.users || []).filter(u => !deletedList.includes(u._id) && !deletedList.includes(u.email?.toLowerCase()));
 
   saveStore(existing);
   return existing;
@@ -159,13 +170,23 @@ export const userStore = {
 
   syncCloudUsers(cloudUsers) {
     if (!Array.isArray(cloudUsers) || cloudUsers.length === 0) return;
+    let deletedList = [];
+    try {
+      deletedList = JSON.parse(localStorage.getItem('safeed_deleted_user_ids') || '[]');
+    } catch (_) {}
+
     const store = initStore();
 
     // CRITICAL: Always preserve the local Super Admin — never overwrite with cloud payload
     const localSA = store.users.find(u => u.role === 'SUPER_ADMIN' || u.email === 'superadmin@safeed.ac.in');
 
-    // Merge: use cloud users but strip any cloud Super Admin (could be corrupted)
-    const filteredCloud = cloudUsers.filter(u => u.role !== 'SUPER_ADMIN' && u.email !== 'superadmin@safeed.ac.in');
+    // Merge: use cloud users but strip any cloud Super Admin or deleted users
+    const filteredCloud = cloudUsers.filter(u =>
+      u.role !== 'SUPER_ADMIN' &&
+      u.email !== 'superadmin@safeed.ac.in' &&
+      !deletedList.includes(u._id) &&
+      !deletedList.includes(u.email?.toLowerCase())
+    );
 
     const merged = localSA ? [localSA, ...filteredCloud] : filteredCloud;
     store.users = merged;
@@ -258,10 +279,18 @@ export const userStore = {
 
   deleteUser(id) {
     const store = initStore();
-    const user = store.users.find(u => u._id === id);
+    const user = store.users.find(u => u._id === id || u.email === id);
     if (!user) throw new Error('User not found.');
     if (user.role === 'SUPER_ADMIN') throw new Error('Cannot delete Super Admin account.');
-    store.users = store.users.filter(u => u._id !== id);
+
+    try {
+      const deletedList = JSON.parse(localStorage.getItem('safeed_deleted_user_ids') || '[]');
+      if (user._id && !deletedList.includes(user._id)) deletedList.push(user._id);
+      if (user.email && !deletedList.includes(user.email.toLowerCase())) deletedList.push(user.email.toLowerCase());
+      localStorage.setItem('safeed_deleted_user_ids', JSON.stringify(deletedList));
+    } catch (_) {}
+
+    store.users = store.users.filter(u => u._id !== id && u.email?.toLowerCase() !== user.email?.toLowerCase());
     saveStore(store);
 
     // Trigger Real-Time Global Cloud Sync

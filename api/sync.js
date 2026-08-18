@@ -1,14 +1,12 @@
 // ============================================================
 // SafeED-UP — Vercel Serverless Global Sync Endpoint
-// Syncs users, institutions, inspections, and complaints in real-time
-// across ALL devices visiting https://safeed-ruddy.vercel.app/
+// MongoDB Atlas as single source of truth for all devices
 // ============================================================
 
 const mongoose = require('mongoose');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://SAFEED:Clekhak1701@cluster0.8vmsujy.mongodb.net/safeedup?retryWrites=true&w=majority&appName=Cluster0';
 
-// Global cache for connection reuse across serverless invocations
 let isConnected = false;
 
 async function connectToDatabase() {
@@ -16,117 +14,119 @@ async function connectToDatabase() {
   try {
     await mongoose.connect(MONGODB_URI, {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 8000,
     });
     isConnected = true;
   } catch (err) {
-    console.error('MongoDB connection error in Serverless Sync:', err.message);
+    console.error('MongoDB connection error:', err.message);
   }
 }
 
-// Global Sync Schema
+// Global Sync Schema — stores all users & institutions as arrays
 const SyncStateSchema = new mongoose.Schema(
   {
     _id: { type: String, default: 'global_safeed_state' },
     users: { type: Array, default: [] },
     institutions: { type: Array, default: [] },
-    inspections: { type: Array, default: [] },
-    complaints: { type: Array, default: [] },
     updatedAt: { type: Date, default: Date.now },
   },
-  { timestamps: true, minimize: false }
+  { timestamps: false, minimize: false }
 );
 
 const SyncState = mongoose.models.SyncState || mongoose.model('SyncState', SyncStateSchema);
 
-// In-Memory Fallback State (if DB is unreachable)
-let memoryStore = {
-  users: [],
-  institutions: [],
-  inspections: [],
-  complaints: [],
-  updatedAt: new Date().toISOString(),
-};
+// In-memory fallback if DB unreachable
+let memoryStore = { users: [], institutions: [], updatedAt: new Date().toISOString() };
+
+function mergeUsers(existing, incoming) {
+  // Super Admin is NEVER stored in cloud
+  const SA_EMAIL = 'superadmin@safeed.ac.in';
+  const filtered = incoming.filter(u => u.email !== SA_EMAIL && u.role !== 'SUPER_ADMIN');
+
+  // Build map: _id → user from existing
+  const map = {};
+  for (const u of existing) {
+    if (u._id) map[u._id] = u;
+  }
+  // Incoming overwrites / adds — never removes existing users
+  for (const u of filtered) {
+    if (u._id) map[u._id] = u;
+  }
+  return Object.values(map);
+}
 
 module.exports = async function handler(req, res) {
-  // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   await connectToDatabase();
+  const dbReady = mongoose.connection.readyState === 1;
 
   try {
+    // ── GET: return current global state ──────────────────────────
     if (req.method === 'GET') {
-      let doc = null;
-      if (mongoose.connection.readyState === 1) {
-        doc = await SyncState.findById('global_safeed_state').lean();
-      }
-
-      if (doc) {
+      if (dbReady) {
+        const doc = await SyncState.findById('global_safeed_state').lean();
         return res.status(200).json({
           success: true,
           data: {
-            users: doc.users || [],
-            institutions: doc.institutions || [],
-            inspections: doc.inspections || [],
-            complaints: doc.complaints || [],
-            updatedAt: doc.updatedAt,
+            users: doc?.users || [],
+            institutions: doc?.institutions || [],
+            updatedAt: doc?.updatedAt || null,
           },
         });
-      } else {
-        return res.status(200).json({
-          success: true,
-          data: memoryStore,
-        });
       }
+      return res.status(200).json({ success: true, data: memoryStore });
     }
 
+    // ── POST: merge incoming state into MongoDB ───────────────────
     if (req.method === 'POST') {
-      const { users, institutions, inspections, complaints } = req.body || {};
+      const { users: incomingUsers, institutions: incomingInsts } = req.body || {};
 
-      const payload = {
-        updatedAt: new Date(),
-      };
-      if (Array.isArray(users)) payload.users = users;
-      if (Array.isArray(institutions)) payload.institutions = institutions;
-      if (Array.isArray(inspections)) payload.inspections = inspections;
-      if (Array.isArray(complaints)) payload.complaints = complaints;
+      if (dbReady) {
+        // Load existing doc
+        const existing = await SyncState.findById('global_safeed_state').lean();
+        const existingUsers = existing?.users || [];
+        const existingInsts = existing?.institutions || [];
 
-      if (mongoose.connection.readyState === 1) {
-        const updatedDoc = await SyncState.findByIdAndUpdate(
+        // Smart merge: never delete users — only add/update
+        const mergedUsers = Array.isArray(incomingUsers)
+          ? mergeUsers(existingUsers, incomingUsers)
+          : existingUsers;
+
+        const mergedInsts = Array.isArray(incomingInsts) && incomingInsts.length > 0
+          ? incomingInsts
+          : existingInsts;
+
+        const updated = await SyncState.findByIdAndUpdate(
           'global_safeed_state',
-          { $set: payload },
+          { $set: { users: mergedUsers, institutions: mergedInsts, updatedAt: new Date() } },
           { upsert: true, new: true, setDefaultsOnInsert: true }
         ).lean();
 
         return res.status(200).json({
           success: true,
-          message: 'Global state synced across all devices.',
-          data: updatedDoc,
-        });
-      } else {
-        if (Array.isArray(users)) memoryStore.users = users;
-        if (Array.isArray(institutions)) memoryStore.institutions = institutions;
-        if (Array.isArray(inspections)) memoryStore.inspections = inspections;
-        if (Array.isArray(complaints)) memoryStore.complaints = complaints;
-        memoryStore.updatedAt = new Date().toISOString();
-
-        return res.status(200).json({
-          success: true,
-          message: 'Global state synced in memory.',
-          data: memoryStore,
+          data: { users: updated.users, institutions: updated.institutions, updatedAt: updated.updatedAt },
         });
       }
+
+      // Memory fallback
+      if (Array.isArray(incomingUsers)) {
+        memoryStore.users = mergeUsers(memoryStore.users, incomingUsers);
+      }
+      if (Array.isArray(incomingInsts) && incomingInsts.length > 0) {
+        memoryStore.institutions = incomingInsts;
+      }
+      memoryStore.updatedAt = new Date().toISOString();
+      return res.status(200).json({ success: true, data: memoryStore });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
-    console.error('Serverless Sync error:', err);
+    console.error('Sync error:', err);
     return res.status(500).json({ error: err.message });
   }
 };

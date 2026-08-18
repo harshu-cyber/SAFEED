@@ -5,23 +5,52 @@ import { userStore } from '../api/userStore';
 
 const AuthContext = createContext(null);
 
+// Hardcoded Super Admin credentials — never overridden by backend or cloud
+const SUPER_ADMIN = {
+  _id: 'u-super-1',
+  name: 'Super Admin (SafeED)',
+  email: 'superadmin@safeed.ac.in',
+  role: 'SUPER_ADMIN',
+  assignedPortal: 'SUPER_ADMIN',
+  designation: 'System Administrator',
+  badgeNumber: 'SA-001',
+  rankLevel: 'SUPER_ADMIN',
+  department: 'SafeED-UP HQ',
+  district: 'Lucknow',
+  state: 'Uttar Pradesh',
+  isActive: true,
+};
+
+/** Fetch cloud users from /api/sync and merge into local store */
+async function pullCloudUsersIntoStore() {
+  try {
+    const res = await fetch('/api/sync', { method: 'GET' });
+    if (!res.ok) return;
+    const json = await res.json();
+    if (json.success && Array.isArray(json.data?.users)) {
+      userStore.syncCloudUsers(json.data.users);
+    }
+  } catch (_) {
+    // Offline — use local store as fallback
+  }
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchUser = async () => {
     try {
-      // Attempt backend session retrieval (via HttpOnly cookies or Authorization header)
+      // Attempt backend session retrieval
       const res = await authApi.getMe();
       setUser(res.data.data.user);
     } catch {
-      // Restore local session
+      // Restore institution user from local session
       const savedSchoolStr = localStorage.getItem('registeredSchoolUser');
       if (savedSchoolStr) {
         try {
           const parsed = JSON.parse(savedSchoolStr);
           const inst = institutionStore.getInstitutionByIdOrEmail(parsed.institutionId || parsed.username);
-
           if (inst) {
             setUser({
               _id: inst._id,
@@ -52,80 +81,72 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (credentials) => {
-    const emailLower = credentials.email?.toLowerCase();
+    const emailLower = credentials.email?.toLowerCase()?.trim();
 
-    // ⚡ FAST-PATH: Super Admin credentials — always resolved locally, NEVER via backend
-    // This guarantees Super Admin always gets role:SUPER_ADMIN regardless of backend/cloud state
-    if (emailLower === 'superadmin@safeed.ac.in' && credentials.password === 'harshsafeed') {
-      const saUser = {
-        _id: 'u-super-1',
-        name: 'Super Admin (SafeED)',
-        email: 'superadmin@safeed.ac.in',
-        role: 'SUPER_ADMIN',
-        assignedPortal: 'SUPER_ADMIN',
-        designation: 'System Administrator',
-        badgeNumber: 'SA-001',
-        rankLevel: 'SUPER_ADMIN',
-        department: 'SafeED-UP HQ',
-        district: 'Lucknow',
-        state: 'Uttar Pradesh',
-        isActive: true,
-      };
-      localStorage.setItem('accessToken', 'sa_token_' + Date.now());
-      setUser(saUser);
-      return saUser;
+    // ──────────────────────────────────────────────────────────────
+    // ⚡ FAST-PATH 1: Super Admin — always local, never touches backend or cloud
+    // ──────────────────────────────────────────────────────────────
+    if (emailLower === 'superadmin@safeed.ac.in') {
+      if (credentials.password !== 'harshsafeed') {
+        throw new Error('Invalid email or password.');
+      }
+      localStorage.setItem('accessToken', 'sa_' + Date.now());
+      setUser(SUPER_ADMIN);
+      return SUPER_ADMIN;
     }
 
+    // ──────────────────────────────────────────────────────────────
+    // ⚡ FAST-PATH 2: Check local store first (fast, works offline)
+    // ──────────────────────────────────────────────────────────────
+    let storedUser = userStore.getUserByEmail(emailLower);
+
+    // If not found locally, pull from cloud and try again
+    if (!storedUser) {
+      await pullCloudUsersIntoStore();
+      storedUser = userStore.getUserByEmail(emailLower);
+    }
+
+    if (storedUser) {
+      if (!storedUser.isActive) {
+        throw new Error('Your account has been deactivated. Contact Super Admin.');
+      }
+      if (credentials.password !== storedUser.password && credentials.password !== storedUser.phone) {
+        throw new Error('Invalid email or password.');
+      }
+      const sessionUser = {
+        _id: storedUser._id,
+        name: storedUser.name,
+        email: storedUser.email,
+        role: storedUser.role,
+        assignedPortal: storedUser.assignedPortal || storedUser.role,
+        rankLevel: storedUser.rankLevel || '',
+        designation: storedUser.designation || '',
+        badgeNumber: storedUser.badgeNumber || '',
+        department: storedUser.department || 'UP Police',
+        dcpZone: storedUser.dcpZone || null,
+        district: storedUser.district || 'Lucknow',
+        state: storedUser.state || 'Uttar Pradesh',
+        isActive: storedUser.isActive,
+      };
+      localStorage.setItem('accessToken', 'officer_' + Date.now());
+      setUser(sessionUser);
+      return sessionUser;
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // FALLBACK: Try backend API (institution accounts etc.)
+    // ──────────────────────────────────────────────────────────────
     try {
       const res = await authApi.login(credentials);
-      const { user, accessToken } = res.data.data;
+      const { user: apiUser, accessToken } = res.data.data;
       localStorage.setItem('accessToken', accessToken);
-      setUser(user);
-      return user;
-    } catch (err) {
-      console.warn('Backend API unavailable, using client session authentication fallback');
-
-      const emailLower = credentials.email.toLowerCase();
-
-      // ✅ Priority 1: Check userStore for Super Admin-created users (always re-reads fresh from localStorage)
-      const storedUser = userStore.getUserByEmail(emailLower);
-      if (storedUser) {
-        if (!storedUser.isActive) {
-          throw new Error('Your account has been deactivated. Access suspended by Super Admin.');
-        }
-
-        // Validate password: password field or phone number
-        if (credentials.password === storedUser.password || credentials.password === storedUser.phone) {
-          const fallbackUser = {
-            _id: storedUser._id,
-            name: storedUser.name,
-            email: storedUser.email,
-            // CRITICAL: Always use fresh role/assignedPortal from userStore (never from stale cloud state)
-            role: storedUser.role,
-            assignedPortal: storedUser.assignedPortal || storedUser.role,
-            rankLevel: storedUser.rankLevel || '',
-            designation: storedUser.designation,
-            badgeNumber: storedUser.badgeNumber,
-            department: storedUser.department,
-            dcpZone: storedUser.dcpZone || null,
-            district: storedUser.district,
-            state: storedUser.state,
-          };
-          localStorage.setItem('accessToken', 'demo_token_' + Date.now());
-          setUser(fallbackUser);
-          return fallbackUser;
-        } else {
-          throw new Error('Invalid email or password.');
-        }
-      }
-
-      // Check if this matches a registered institution in institutionStore
+      setUser(apiUser);
+      return apiUser;
+    } catch {
+      // Institution account check
       const inst = institutionStore.getInstitutionByIdOrEmail(emailLower);
-
-      let fallbackUser;
-
       if (inst) {
-        fallbackUser = {
+        const instUser = {
           _id: inst._id,
           id: inst._id,
           name: inst.name,
@@ -140,91 +161,19 @@ export const AuthProvider = ({ children }) => {
           institutionId: inst._id,
           institutionName: inst.name,
         }));
-      } else {
-        // 🌐 Dynamic Smart Cross-Device Officer Fallback
-        // Derive user role from email keywords or rank format
-        let detectedRole = 'INSPECTION_OFFICER';
-        let assignedPortal = 'INSPECTION_OFFICER';
-        let rankLevel = 'SI';
-        let dcpZone = 'DCP Central';
-
-        if (emailLower.includes('super')) {
-          detectedRole = 'SUPER_ADMIN';
-          assignedPortal = 'SUPER_ADMIN';
-          rankLevel = 'SUPER_ADMIN';
-        } else if (emailLower.includes('dgp') || emailLower.includes('cp') || emailLower.includes('jcp') || emailLower.includes('commissioner')) {
-          detectedRole = 'DISTRICT_ADMIN';
-          assignedPortal = 'DISTRICT_ADMIN';
-          rankLevel = emailLower.includes('dgp') ? 'DGP' : emailLower.includes('jcp') ? 'JCP' : 'CP';
-          dcpZone = null;
-        } else if (emailLower.includes('dcp') || emailLower.includes('adcp') || emailLower.includes('acp')) {
-          detectedRole = 'DISTRICT_ADMIN';
-          assignedPortal = 'DISTRICT_ADMIN';
-          rankLevel = emailLower.includes('adcp') ? 'ADCP' : emailLower.includes('acp') ? 'ACP' : 'DCP';
-          if (emailLower.includes('west')) dcpZone = 'DCP West';
-          else if (emailLower.includes('north')) dcpZone = 'DCP North';
-          else if (emailLower.includes('east')) dcpZone = 'DCP East';
-          else if (emailLower.includes('south')) dcpZone = 'DCP South';
-          else dcpZone = 'DCP Central';
-        } else if (emailLower.includes('sho') || emailLower.includes('si') || emailLower.includes('ps') || emailLower.includes('inspector') || emailLower.includes('police')) {
-          detectedRole = 'INSPECTION_OFFICER';
-          assignedPortal = 'INSPECTION_OFFICER';
-          rankLevel = emailLower.includes('sho') ? 'SHO' : emailLower.includes('ps') ? 'PS' : 'SI';
-        } else if (emailLower.includes('district') || emailLower.includes('admin')) {
-          detectedRole = 'DISTRICT_ADMIN';
-          assignedPortal = 'DISTRICT_ADMIN';
-          rankLevel = 'CP';
-          dcpZone = null;
-        }
-
-        // Create fallback user dynamically on this device so future logins work
-        const nameFromEmail = emailLower.split('@')[0].toUpperCase().replace('.', ' ');
-        fallbackUser = {
-          _id: 'u-dyn-' + Date.now(),
-          name: nameFromEmail || 'Official Officer',
-          email: credentials.email,
-          role: detectedRole,
-          assignedPortal,
-          rankLevel,
-          dcpZone,
-          designation: `${rankLevel} Officer`,
-          district: 'Lucknow',
-          state: 'Uttar Pradesh',
-        };
-
-        try {
-          userStore.createUser({
-            name: fallbackUser.name,
-            email: credentials.email,
-            phone: credentials.password || '9412000000',
-            role: detectedRole,
-            assignedPortal,
-            rankLevel,
-            dcpZone,
-            district: 'Lucknow',
-          }, 'System Fallback');
-        } catch (_) {
-          // ignore duplicate in local store
-        }
+        localStorage.setItem('accessToken', 'inst_' + Date.now());
+        setUser(instUser);
+        return instUser;
       }
-
-      const token = 'demo_token_' + Date.now();
-      localStorage.setItem('accessToken', token);
-      setUser(fallbackUser);
-      return fallbackUser;
+      throw new Error('No account found with this email. Please contact Super Admin to create your account.');
     }
   };
 
   const logout = async () => {
-    try {
-      await authApi.logout();
-    } catch (_) {
-      // ignore
-    } finally {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('registeredSchoolUser');
-      setUser(null);
-    }
+    try { await authApi.logout(); } catch (_) {}
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('registeredSchoolUser');
+    setUser(null);
   };
 
   return (
@@ -236,8 +185,6 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };

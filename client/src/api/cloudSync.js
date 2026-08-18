@@ -1,120 +1,99 @@
 /**
- * cloudSync.js — Real-Time Global Cross-Device Synchronization Engine
- * Uses ntfy.sh high-speed REST pub/sub relay to sync user accounts and institutions
- * across ALL devices accessing https://safeed-ruddy.vercel.app/ (Laptop, Mobile, Tablet, PC)
+ * cloudSync.js — Professional Real-Time Cloud Sync Engine
+ * Uses /api/sync Vercel Serverless Function → MongoDB Atlas as SINGLE SOURCE OF TRUTH
+ * All devices (Laptop, Mobile, Tablet, PC) read/write from the same database.
  */
 
 import { userStore } from './userStore';
 import { institutionStore } from './institutionStore';
 
-const TOPIC = 'safeedup_lucknow_sync_2026';
-const NTFY_URL = `https://ntfy.sh/${TOPIC}`;
+// /api/sync is at the same domain as the Vercel app
+const SYNC_URL = '/api/sync';
 
-let isSyncing = false;
-let autoSyncInterval = null;
-let lastSyncTimestamp = 0;
+// Super Admin is NEVER synced to/from cloud — always kept locally
+const SA_EMAIL = 'superadmin@safeed.ac.in';
+
+let pollInterval = null;
+let isBusy = false;
+let lastCloudTimestamp = 0;
+
+/**
+ * Push local users + institutions to MongoDB Atlas via /api/sync
+ */
+async function push() {
+  if (isBusy) return;
+  isBusy = true;
+  try {
+    // Never push Super Admin to cloud — it lives locally only
+    const users = userStore.getUsers().filter(u => u.email !== SA_EMAIL && u.role !== 'SUPER_ADMIN');
+    const institutions = institutionStore.getInstitutions();
+
+    await fetch(SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ users, institutions }),
+    });
+  } catch (err) {
+    console.warn('[CloudSync] push failed (offline?):', err.message);
+  } finally {
+    isBusy = false;
+  }
+}
+
+/**
+ * Pull from MongoDB Atlas and merge into local stores
+ * Uses smart merge: cloud wins for non-SA accounts, local SA is always preserved
+ */
+async function pull() {
+  if (isBusy) return;
+  isBusy = true;
+  try {
+    const res = await fetch(SYNC_URL, { method: 'GET' });
+    if (!res.ok) return;
+
+    const json = await res.json();
+    if (!json.success || !json.data) return;
+
+    const { users: cloudUsers, institutions: cloudInsts, updatedAt } = json.data;
+
+    // Avoid re-applying same payload
+    const cloudTs = new Date(updatedAt).getTime() || 0;
+    if (cloudTs && cloudTs <= lastCloudTimestamp) return;
+    if (cloudTs) lastCloudTimestamp = cloudTs;
+
+    // Sync users (Super Admin always preserved from local)
+    if (Array.isArray(cloudUsers)) {
+      userStore.syncCloudUsers(cloudUsers);
+    }
+
+    // Sync institutions
+    if (Array.isArray(cloudInsts) && cloudInsts.length > 0) {
+      institutionStore.syncCloudInstitutions(cloudInsts);
+    }
+  } catch (err) {
+    console.warn('[CloudSync] pull failed (offline?):', err.message);
+  } finally {
+    isBusy = false;
+  }
+}
 
 export const cloudSync = {
-  /**
-   * Push current local store state to global cloud relay
-   */
-  async push() {
-    if (isSyncing) return;
-    isSyncing = true;
-    try {
-      const users = userStore.getUsers();
-      const institutions = institutionStore.getInstitutions();
-      const payload = {
-        users,
-        institutions,
-        timestamp: Date.now(),
-      };
+  push,
+  pull,
 
-      await fetch(NTFY_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      lastSyncTimestamp = payload.timestamp;
-    } catch (err) {
-      console.warn('Cloud sync push offline fallback:', err.message);
-    } finally {
-      isSyncing = false;
-    }
-  },
-
-  /**
-   * Pull global state from cloud relay and update local stores if changed
-   */
-  async pull() {
-    if (isSyncing) return;
-    isSyncing = true;
-    try {
-      const res = await fetch(`${NTFY_URL}/json?poll=1`);
-      if (!res.ok) return;
-
-      const text = await res.text();
-      if (!text || !text.trim()) return;
-
-      // Parse NDJSON lines returned by ntfy poll
-      const lines = text.trim().split('\n');
-      let latestPayload = null;
-
-      for (let i = lines.length - 1; i >= 0; i--) {
-        try {
-          const entry = JSON.parse(lines[i]);
-          if (entry.message) {
-            const data = JSON.parse(entry.message);
-            if (data.users || data.institutions) {
-              latestPayload = data;
-              break;
-            }
-          }
-        } catch (_) {}
-      }
-
-      if (!latestPayload) return;
-
-      // Ignore if this payload was sent by local machine or is older
-      if (latestPayload.timestamp && latestPayload.timestamp <= lastSyncTimestamp) {
-        return;
-      }
-
-      if (latestPayload.timestamp) {
-        lastSyncTimestamp = latestPayload.timestamp;
-      }
-
-      const { users: cloudUsers, institutions: cloudInsts } = latestPayload;
-
-      // Sync Users if cloud has data
-      if (Array.isArray(cloudUsers) && cloudUsers.length > 0) {
-        userStore.syncCloudUsers(cloudUsers);
-      }
-
-      // Sync Institutions if cloud has data
-      if (Array.isArray(cloudInsts) && cloudInsts.length > 0) {
-        institutionStore.syncCloudInstitutions(cloudInsts);
-      }
-    } catch (err) {
-      console.warn('Cloud sync pull offline fallback:', err.message);
-    } finally {
-      isSyncing = false;
-    }
-  },
-
-  /**
-   * Start real-time background sync polling loop (every 3 seconds)
-   */
+  /** Start real-time background sync */
   startAutoSync() {
-    if (autoSyncInterval) return;
-    this.pull();
-    // Also initial push if local store has data
-    setTimeout(() => {
-      this.push();
-    }, 1000);
+    if (pollInterval) return;
+    // Initial pull to get latest state from cloud
+    pull();
+    // Then poll every 4 seconds
+    pollInterval = setInterval(pull, 4000);
+  },
 
-    autoSyncInterval = setInterval(() => {
-      this.pull();
-    }, 3000);
+  stopAutoSync() {
+    if (pollInterval) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+    }
   },
 };

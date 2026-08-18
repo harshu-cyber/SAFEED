@@ -1,18 +1,23 @@
 {
-  "functions": {
-    "api/*.js": {
-      "memory": 1024,
-      "maxDuration": 10
-    }
-  },
-  "rewrites": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/api/sync",
-      "destination": "/api/sync.js"
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
     },
     {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
+      "src": "package.json",
+      "use": "@vercel/vite"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/((?!api/).*)",
+      "dest": "/index.html"
     }
   ]
 }

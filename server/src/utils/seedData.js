@@ -41,7 +41,7 @@ const seedDB = async () => {
 
     // 1. Create Users for all 9 roles
     const userConfigs = [
-      { name: 'Rajesh Sharma (Super Admin)', email: 'superadmin@safeedup.gov.in', password: defaultPassword, role: ROLES.SUPER_ADMIN, state: 'Uttar Pradesh', district: 'Lucknow', isActive: true },
+      { name: 'Super Admin', email: 'superadmin@safeed.ac.in', password: 'harshsafeed', role: ROLES.SUPER_ADMIN, state: 'Uttar Pradesh', district: 'Lucknow', isActive: true },
       { name: 'Dr. Anita Verma (State Admin)', email: 'stateadmin@safeedup.gov.in', password: defaultPassword, role: ROLES.STATE_ADMIN, state: 'Uttar Pradesh', district: 'Lucknow', isActive: true },
       { name: 'Suresh Kumar (District Admin)', email: 'districtadmin@safeedup.gov.in', password: defaultPassword, role: ROLES.DISTRICT_ADMIN, state: 'Uttar Pradesh', district: 'Lucknow', isActive: true },
       { name: 'Inspector Inspector Singh', email: 'inspector@safeedup.gov.in', password: defaultPassword, role: ROLES.INSPECTION_OFFICER, state: 'Uttar Pradesh', district: 'Lucknow', designation: 'Senior Safety Inspector', isActive: true },

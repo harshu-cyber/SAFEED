@@ -1,6 +1,6 @@
 // ============================================================
-// SafeED-UP — Database Cleanup Script
-// Wipes all data across all collections (Users, Institutions, Docs, Inspections)
+// SafeED-UP — Database Cleanup & Super Admin Initialization
+// Wipes all demo data and creates the dedicated Super Admin account
 // ============================================================
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
@@ -16,13 +16,15 @@ const Compliance = require('../models/Compliance.model');
 const Deficiency = require('../models/Deficiency.model');
 const EmergencyPlan = require('../models/EmergencyPlan.model');
 const SafeID = require('../models/SafeID.model');
+const { ROLES } = require('../constants/roles');
 const env = require('../config/env');
 
-const cleanDB = async () => {
+const cleanAndInitSuperAdmin = async () => {
   try {
     await mongoose.connect(env.MONGODB_URI);
-    console.log('✅ Connected to MongoDB for cleanup...');
+    console.log('✅ Connected to MongoDB...');
 
+    // 1. Clear all existing collections
     await User.deleteMany({});
     await Institution.deleteMany({});
     await Inspection.deleteMany({});
@@ -32,12 +34,31 @@ const cleanDB = async () => {
     await EmergencyPlan.deleteMany({});
     await SafeID.deleteMany({});
 
-    console.log('✨ ALL institution data, admin accounts, documents, inspections, and safe IDs cleared from database successfully!');
+    console.log('🧹 Existing database collections cleared.');
+
+    // 2. Create the dedicated Super Admin account
+    const superAdmin = await User.create({
+      name: 'Super Admin (SafeED)',
+      email: 'superadmin@safeed.ac.in',
+      password: 'harshsafeed',
+      role: ROLES.SUPER_ADMIN,
+      state: 'Uttar Pradesh',
+      district: 'Lucknow',
+      isActive: true,
+      isEmailVerified: true,
+    });
+
+    console.log('✨ Super Admin Created Successfully:');
+    console.log(` 👤 Name: ${superAdmin.name}`);
+    console.log(` 📧 Username/Email: superadmin@safeed.ac.in`);
+    console.log(` 🔑 Password: harshsafeed`);
+    console.log(` 🛡️ Role: SUPER_ADMIN`);
+
     process.exit(0);
   } catch (error) {
-    console.error('❌ Database cleanup error:', error.message || error);
+    console.error('❌ Error initializing database:', error.message || error);
     process.exit(1);
   }
 };
 
-cleanDB();
+cleanAndInitSuperAdmin();

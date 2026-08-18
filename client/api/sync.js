@@ -2,14 +2,44 @@
 // SafeED-UP — Real-Time MongoDB Atlas Production Sync Endpoint
 // Direct Serverless Mongoose Persistence — Single Source of Truth
 // ============================================================
-const path = require('path');
-const dotenv = require('dotenv');
+const mongoose = require('mongoose');
 
-dotenv.config({ path: path.join(__dirname, '../../server/.env') });
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://SAFEED:Clekhak1701@cluster0.8vmsujy.mongodb.net/safeedup?retryWrites=true&w=majority&appName=Cluster0';
 
-const connectDB = require('../../server/src/config/db');
-const User = require('../../server/src/models/User.model');
-const Institution = require('../../server/src/models/Institution.model');
+let isConnected = false;
+async function connectDB() {
+  if (isConnected && mongoose.connection.readyState === 1) return;
+  try {
+    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 8000 });
+    isConnected = true;
+  } catch (err) {
+    console.error('MongoDB Atlas Connect Error:', err.message);
+  }
+}
+
+// User Schema & Model
+const userSchema = new mongoose.Schema({
+  name: String,
+  email: { type: String, unique: true },
+  role: String,
+  district: String,
+  state: String,
+  isActive: { type: Boolean, default: true },
+}, { strict: false, timestamps: true });
+
+const User = mongoose.models.User || mongoose.model('User', userSchema);
+
+// Institution Schema & Model
+const instSchema = new mongoose.Schema({
+  name: String,
+  type: String,
+  district: String,
+  state: String,
+  safetyScore: Number,
+  complianceStatus: String,
+}, { strict: false, timestamps: true });
+
+const Institution = mongoose.models.Institution || mongoose.model('Institution', instSchema);
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

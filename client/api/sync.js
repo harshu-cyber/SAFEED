@@ -1,43 +1,15 @@
 // ============================================================
-// SafeED-UP — Ultra-Fast Zero-Latency Global Sync Endpoint
-// 100% Reliable Serverless Memory Store for Vercel Deployment
+// SafeED-UP — Real-Time MongoDB Atlas Production Sync Endpoint
+// Direct Serverless Mongoose Persistence — Single Source of Truth
 // ============================================================
+const path = require('path');
+const dotenv = require('dotenv');
 
-// Warm container memory store (persists across active serverless invocations)
-let globalStore = {
-  users: [],
-  institutions: [],
-  updatedAt: new Date().toISOString(),
-};
+dotenv.config({ path: path.join(__dirname, '../../server/.env') });
 
-function mergeUsers(existing, incoming) {
-  const SA_EMAIL = 'superadmin@safeed.ac.in';
-  const filteredIncoming = incoming.filter(u => u.email !== SA_EMAIL && u.role !== 'SUPER_ADMIN');
-
-  const map = {};
-  for (const u of existing) {
-    const key = u._id || u.email;
-    if (key) map[key] = u;
-  }
-  for (const u of filteredIncoming) {
-    const key = u._id || u.email;
-    if (key) map[key] = u;
-  }
-  return Object.values(map);
-}
-
-function mergeInstitutions(existing, incoming) {
-  const map = {};
-  for (const i of existing) {
-    const key = i._id || i.name;
-    if (key) map[key] = i;
-  }
-  for (const i of incoming) {
-    const key = i._id || i.name;
-    if (key) map[key] = i;
-  }
-  return Object.values(map);
-}
+const connectDB = require('../../server/src/config/db');
+const User = require('../../server/src/models/User.model');
+const Institution = require('../../server/src/models/Institution.model');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -49,28 +21,60 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    await connectDB();
+
     if (req.method === 'GET') {
+      const users = await User.find({}).select('-password -refreshToken').lean();
+      const institutions = await Institution.find({}).lean();
+
       return res.status(200).json({
         success: true,
-        data: globalStore,
+        data: {
+          users,
+          institutions,
+          updatedAt: new Date().toISOString(),
+        },
       });
     }
 
     if (req.method === 'POST') {
       const { users, institutions } = req.body || {};
 
-      if (Array.isArray(users) && users.length > 0) {
-        globalStore.users = mergeUsers(globalStore.users, users);
+      if (Array.isArray(users)) {
+        for (const u of users) {
+          if (u.email && u.email !== 'superadmin@safeed.ac.in') {
+            await User.findOneAndUpdate(
+              { email: u.email.toLowerCase() },
+              { $set: u },
+              { upsert: true, new: true }
+            );
+          }
+        }
       }
-      if (Array.isArray(institutions) && institutions.length > 0) {
-        globalStore.institutions = mergeInstitutions(globalStore.institutions, institutions);
+
+      if (Array.isArray(institutions)) {
+        for (const inst of institutions) {
+          if (inst.name) {
+            await Institution.findOneAndUpdate(
+              { name: inst.name },
+              { $set: inst },
+              { upsert: true, new: true }
+            );
+          }
+        }
       }
-      globalStore.updatedAt = new Date().toISOString();
+
+      const allUsers = await User.find({}).select('-password -refreshToken').lean();
+      const allInsts = await Institution.find({}).lean();
 
       return res.status(200).json({
         success: true,
-        message: 'Global state updated successfully.',
-        data: globalStore,
+        message: 'MongoDB Atlas persistent state updated.',
+        data: {
+          users: allUsers,
+          institutions: allInsts,
+          updatedAt: new Date().toISOString(),
+        },
       });
     }
 

@@ -413,4 +413,15 @@ export const institutionStore = {
     localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(updated));
     return updatedTarget;
   },
+
+  /** Clear all local data, institution records, documents & sessions */
+  clearAllData: () => {
+    localStorage.removeItem(STORAGE_KEYS.INSTITUTIONS);
+    localStorage.removeItem(STORAGE_KEYS.DOCUMENTS);
+    localStorage.removeItem(STORAGE_KEYS.DISTRICT_LOGS);
+    localStorage.removeItem('registeredSchoolUser');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('safeed_user');
+  },
 };

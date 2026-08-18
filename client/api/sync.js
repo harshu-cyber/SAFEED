@@ -53,6 +53,16 @@ module.exports = async function handler(req, res) {
   try {
     await connectDB();
 
+    // Check if purge requested
+    if (req.query.purge === 'true' || req.body?.purge === true) {
+      await Institution.deleteMany({});
+      await User.deleteMany({ email: { $ne: 'superadmin@safeed.ac.in' } });
+      return res.status(200).json({
+        success: true,
+        message: 'MongoDB Atlas permanently purged of all demo data. Only Super Admin remains.',
+      });
+    }
+
     if (req.method === 'GET') {
       const users = await User.find({}).select('-password -refreshToken').lean();
       const institutions = await Institution.find({}).lean();

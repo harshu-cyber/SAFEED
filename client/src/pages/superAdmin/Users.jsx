@@ -669,10 +669,10 @@ export const UserManagementPage = () => {
                   <Field label="Badge / Employee Number" required>
                     <input type="text" required placeholder="e.g. DCP-N-02" value={form.badgeNumber} onChange={e => setForm(f => ({ ...f, badgeNumber: e.target.value }))} className={inputClass} />
                   </Field>
-                  <Field label="Official Gmail / Email" required hint="This becomes the login username">
+                  <Field label="Official Gmail / Email" required>
                     <input type="email" required placeholder="officer@uppolice.gov.in" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputClass} />
                   </Field>
-                  <Field label="Mobile Number (10 digits)" required hint="This becomes the login password">
+                  <Field label="Mobile Number (10 digits)" required>
                     <input
                       type="tel"
                       required

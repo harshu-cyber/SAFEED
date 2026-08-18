@@ -296,14 +296,14 @@ export const Register = () => {
           {/* District & Board */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className={labelClass}>District (उत्तर प्रदेश जिला) <span className="text-rose-500">*</span></label>
-              <select {...register('district', { required: 'District is required' })} className={inputClass}>
-                <option value="" className="bg-[#0B223D] text-white">-- Select UP District --</option>
-                {DISTRICTS.map(d => (
-                  <option key={d} value={d} className="bg-[#0B223D] text-white">{d}</option>
-                ))}
-              </select>
-              {errors.district && <p className="text-[10px] text-rose-400 mt-0.5">{errors.district.message}</p>}
+              <label className={labelClass}>District (उत्तर प्रदेश जिला)</label>
+              <input
+                type="text"
+                value="Lucknow"
+                readOnly
+                {...register('district')}
+                className={`${inputClass} font-bold text-white bg-[#071A2F] border-[#D4AF37]/50 cursor-not-allowed`}
+              />
             </div>
 
             <div>

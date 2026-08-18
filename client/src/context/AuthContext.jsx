@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }) => {
 
       const emailLower = credentials.email.toLowerCase();
 
-      // ✅ Priority 1: Check userStore for Super Admin-created users
+      // ✅ Priority 1: Check userStore for Super Admin-created users (always re-reads fresh from localStorage)
       const storedUser = userStore.getUserByEmail(emailLower);
       if (storedUser) {
         if (!storedUser.isActive) {
@@ -76,8 +76,10 @@ export const AuthProvider = ({ children }) => {
             _id: storedUser._id,
             name: storedUser.name,
             email: storedUser.email,
+            // CRITICAL: Always use fresh role/assignedPortal from userStore (never from stale cloud state)
             role: storedUser.role,
             assignedPortal: storedUser.assignedPortal || storedUser.role,
+            rankLevel: storedUser.rankLevel || '',
             designation: storedUser.designation,
             badgeNumber: storedUser.badgeNumber,
             department: storedUser.department,

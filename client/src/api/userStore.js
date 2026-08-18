@@ -113,12 +113,15 @@ export const userStore = {
   syncCloudUsers(cloudUsers) {
     if (!Array.isArray(cloudUsers) || cloudUsers.length === 0) return;
     const store = initStore();
-    // Ensure Super Admin exists in cloud payload
-    const hasSA = cloudUsers.some(u => u.role === 'SUPER_ADMIN' || u.email === 'superadmin@safeed.ac.in');
-    if (!hasSA && store.users.length > 0) {
-      cloudUsers.unshift(store.users[0]);
-    }
-    store.users = cloudUsers;
+
+    // CRITICAL: Always preserve the local Super Admin — never overwrite with cloud payload
+    const localSA = store.users.find(u => u.role === 'SUPER_ADMIN' || u.email === 'superadmin@safeed.ac.in');
+
+    // Merge: use cloud users but strip any cloud Super Admin (could be corrupted)
+    const filteredCloud = cloudUsers.filter(u => u.role !== 'SUPER_ADMIN' && u.email !== 'superadmin@safeed.ac.in');
+
+    const merged = localSA ? [localSA, ...filteredCloud] : filteredCloud;
+    store.users = merged;
     saveStore(store);
   },
 

@@ -22,6 +22,144 @@ const normalizeZone = (val = '') => {
 
 export { normalizeZone };
 
+const DEFAULT_INSTITUTIONS = [
+  {
+    _id: 'inst-1',
+    safeId: 'SAFE-UP-LKO-100201',
+    name: 'City Montessori School (Gomti Nagar Branch)',
+    type: 'SCHOOL',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    zone: 'EAST',
+    totalStudents: 3200,
+    staffCount: 180,
+    classroomCount: 75,
+    floorCount: 4,
+    exitGateCount: 4,
+    nearestPoliceStation: 'Gomti Nagar Police Station',
+    lastInspectionDate: '2026-08-10',
+    complianceScore: 92,
+    status: 'VERIFIED',
+    riskLevel: 'LOW',
+    address: 'Gomti Nagar Phase 1, Lucknow, Uttar Pradesh 226010',
+    contact: '0522-2304000',
+    principal: 'Dr. Sunita Gandhi',
+    email: 'cms.gomtinagar@safeed.ac.in',
+    affiliationBoard: 'ICSE',
+    assignedInspector: 'DCP EAST',
+    assignedInspectorZone: 'EAST',
+    createdAt: '2026-01-15T00:00:00Z',
+  },
+  {
+    _id: 'inst-2',
+    safeId: 'SAFE-UP-LKO-100202',
+    name: 'La Martiniere College Lucknow',
+    type: 'COLLEGE',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    zone: 'CENTRAL',
+    totalStudents: 2800,
+    staffCount: 150,
+    classroomCount: 60,
+    floorCount: 3,
+    exitGateCount: 3,
+    nearestPoliceStation: 'Hazratganj Police Station',
+    lastInspectionDate: '2026-08-12',
+    complianceScore: 88,
+    status: 'VERIFIED',
+    riskLevel: 'LOW',
+    address: 'La Martiniere Road, Hazratganj, Lucknow, UP 226001',
+    contact: '0522-2235421',
+    principal: 'C.A. MacFarland',
+    email: 'lamartiniere@safeed.ac.in',
+    affiliationBoard: 'ICSE',
+    assignedInspector: 'DCP CENTRAL',
+    assignedInspectorZone: 'CENTRAL',
+    createdAt: '2026-01-16T00:00:00Z',
+  },
+  {
+    _id: 'inst-3',
+    safeId: 'SAFE-UP-LKO-100203',
+    name: 'Lucknow Public College (Sahara States)',
+    type: 'SCHOOL',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    zone: 'NORTH',
+    totalStudents: 2100,
+    staffCount: 110,
+    classroomCount: 50,
+    floorCount: 3,
+    exitGateCount: 2,
+    nearestPoliceStation: 'Jankipuram Police Station',
+    lastInspectionDate: null,
+    complianceScore: 45,
+    status: 'PENDING_DOCUMENT_VERIFICATION',
+    riskLevel: 'HIGH',
+    address: 'Jankipuram Extension, Lucknow, UP 226021',
+    contact: '0522-2731100',
+    principal: 'S.P. Singh',
+    email: 'lpc.jankipuram@safeed.ac.in',
+    affiliationBoard: 'CBSE',
+    assignedInspector: 'DCP NORTH',
+    assignedInspectorZone: 'NORTH',
+    createdAt: '2026-02-01T00:00:00Z',
+  },
+  {
+    _id: 'inst-4',
+    safeId: 'SAFE-UP-LKO-100204',
+    name: 'Allen Career Institute Lucknow',
+    type: 'COACHING',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    zone: 'WEST',
+    totalStudents: 1500,
+    staffCount: 65,
+    classroomCount: 30,
+    floorCount: 5,
+    exitGateCount: 2,
+    nearestPoliceStation: 'Alambagh Police Station',
+    lastInspectionDate: null,
+    complianceScore: 35,
+    status: 'PENDING_DOCUMENT_VERIFICATION',
+    riskLevel: 'HIGH',
+    address: 'Alambagh Main Market, Lucknow, UP 226005',
+    contact: '0522-4912000',
+    principal: 'R.K. Maheshwari',
+    email: 'allen.lucknow@safeed.ac.in',
+    affiliationBoard: 'OTHER',
+    assignedInspector: 'DCP WEST',
+    assignedInspectorZone: 'WEST',
+    createdAt: '2026-02-05T00:00:00Z',
+  },
+  {
+    _id: 'inst-5',
+    safeId: 'SAFE-UP-LKO-100205',
+    name: 'Amity University Lucknow Campus',
+    type: 'COLLEGE',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    zone: 'SOUTH',
+    totalStudents: 5400,
+    staffCount: 320,
+    classroomCount: 120,
+    floorCount: 6,
+    exitGateCount: 5,
+    nearestPoliceStation: 'Sultanpur Road Police Station',
+    lastInspectionDate: '2026-08-14',
+    complianceScore: 85,
+    status: 'VERIFIED',
+    riskLevel: 'LOW',
+    address: 'Malhaur, Gomti Nagar Extension, Lucknow, UP 226028',
+    contact: '0522-2817000',
+    principal: 'Dr. W. Selvamurthy',
+    email: 'amity.lucknow@safeed.ac.in',
+    affiliationBoard: 'UGC',
+    assignedInspector: 'DCP SOUTH',
+    assignedInspectorZone: 'SOUTH',
+    createdAt: '2026-02-10T00:00:00Z',
+  },
+];
+
 export const institutionStore = {
 
   // ── INSTITUTIONS ─────────────────────────────────────────
@@ -37,19 +175,22 @@ export const institutionStore = {
       const stored = localStorage.getItem(STORAGE_KEYS.INSTITUTIONS);
       if (stored) {
         const list = JSON.parse(stored);
-        // Ensure every institution has an assigned inspector corresponding to its Zone
-        return list.map(inst => {
-          const zoneKey = inst.zone || 'CENTRAL';
-          return {
-            ...inst,
-            assignedInspector: inst.assignedInspector || `DCP ${zoneKey}`,
-            assignedInspectorZone: inst.assignedInspectorZone || zoneKey,
-          };
-        });
+        if (Array.isArray(list) && list.length > 0) {
+          return list.map(inst => {
+            const zoneKey = inst.zone || 'CENTRAL';
+            return {
+              ...inst,
+              assignedInspector: inst.assignedInspector || `DCP ${zoneKey}`,
+              assignedInspectorZone: inst.assignedInspectorZone || zoneKey,
+            };
+          });
+        }
       }
     } catch {}
-    localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify([]));
-    return [];
+    localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(DEFAULT_INSTITUTIONS));
+    // Trigger instant cloud push so server gets default institutions
+    import('./cloudSync').then(m => m.cloudSync.push()).catch(() => {});
+    return DEFAULT_INSTITUTIONS;
   },
 
   /**

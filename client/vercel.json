@@ -1,8 +1,14 @@
 {
+  "functions": {
+    "api/*.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/api/sync",
+      "destination": "/api/sync.js"
     },
     {
       "source": "/((?!api/).*)",

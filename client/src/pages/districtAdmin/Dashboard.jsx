@@ -103,30 +103,52 @@ export const DistrictAdminDashboard = ({ defaultTab }) => {
     setTimeout(() => setToast(''), 4000);
   };
 
+  // 🛡️ Zone & Role-based Authority Jurisdiction Filtering
+  // Higher Posts (DGP, CP, JCP) -> Full Lucknow District Oversight (All Zones & All Complaints)
+  // Zonal Posts (DCP, ADCP, ACP) -> Restricted strictly to their assigned DCP Zone
+  const isHigherCommand = ['DGP', 'CP', 'JCP'].includes(user?.rankLevel);
+  const userZoneNorm = user?.dcpZone ? user.dcpZone.toUpperCase().replace('DCP', '').trim() : '';
+  const isZonalOfficer = !isHigherCommand && Boolean(userZoneNorm);
+  const userZone = isZonalOfficer ? userZoneNorm : null;
+
+  // Base Visible Datasets based on Officer's Jurisdiction
+  const visibleInstitutions = isZonalOfficer
+    ? institutions.filter(i => (i.zone || '').toUpperCase().replace('DCP', '').trim() === userZone)
+    : institutions;
+
+  const visibleComplaints = isZonalOfficer
+    ? complaints.filter(c => (c.zone || '').toUpperCase().replace('DCP', '').trim() === userZone)
+    : complaints;
+
   // Metrics calculation
-  const totalInsts = institutions.length;
-  const totalStudents = institutions.reduce((acc, i) => acc + (parseInt(i.totalStudents) || 0), 0);
-  const verifiedCount = institutions.filter(i => i.status === 'VERIFIED').length;
-  const pendingCount = institutions.filter(i => i.status !== 'VERIFIED').length;
-  const highRiskCount = institutions.filter(i => i.riskLevel === 'HIGH' || i.complianceScore < 50).length;
-  const pendingComplaintsCount = complaints.filter(c => c.status === 'PENDING_DISTRICT_ACTION').length;
+  const totalInsts = visibleInstitutions.length;
+  const totalStudents = visibleInstitutions.reduce((acc, i) => acc + (parseInt(i.totalStudents) || 0), 0);
+  const verifiedCount = visibleInstitutions.filter(i => i.status === 'VERIFIED').length;
+  const pendingCount = visibleInstitutions.filter(i => i.status !== 'VERIFIED').length;
+  const highRiskCount = visibleInstitutions.filter(i => i.riskLevel === 'HIGH' || i.complianceScore < 50).length;
+  const pendingComplaintsCount = visibleComplaints.filter(c => c.status === 'PENDING_DISTRICT_ACTION').length;
 
   const zoneBreakdown = {
-    WEST: institutions.filter(i => i.zone === 'WEST'),
-    CENTRAL: institutions.filter(i => i.zone === 'CENTRAL'),
-    NORTH: institutions.filter(i => i.zone === 'NORTH'),
-    EAST: institutions.filter(i => i.zone === 'EAST'),
-    SOUTH: institutions.filter(i => i.zone === 'SOUTH'),
+    WEST: visibleInstitutions.filter(i => (i.zone || '').toUpperCase().includes('WEST')),
+    CENTRAL: visibleInstitutions.filter(i => (i.zone || '').toUpperCase().includes('CENTRAL')),
+    NORTH: visibleInstitutions.filter(i => (i.zone || '').toUpperCase().includes('NORTH')),
+    EAST: visibleInstitutions.filter(i => (i.zone || '').toUpperCase().includes('EAST')),
+    SOUTH: visibleInstitutions.filter(i => (i.zone || '').toUpperCase().includes('SOUTH')),
   };
 
-  // Filtered institutions
-  const filteredInstitutions = institutions.filter(inst => {
+  // Filtered institutions (with search by Institution Name OR Police Station Name)
+  const filteredInstitutions = visibleInstitutions.filter(inst => {
+    const s = search.trim().toLowerCase();
     const matchSearch =
-      inst.name?.toLowerCase().includes(search.toLowerCase()) ||
-      inst.safeId?.toLowerCase().includes(search.toLowerCase()) ||
-      inst.principal?.toLowerCase().includes(search.toLowerCase());
+      !s ||
+      inst.name?.toLowerCase().includes(s) ||
+      inst.safeId?.toLowerCase().includes(s) ||
+      inst.principal?.toLowerCase().includes(s) ||
+      inst.nearestPoliceStation?.toLowerCase().includes(s) ||
+      inst.postingStation?.toLowerCase().includes(s) ||
+      inst.address?.toLowerCase().includes(s);
 
-    const matchZone = zoneFilter === 'ALL' || inst.zone === zoneFilter;
+    const matchZone = zoneFilter === 'ALL' || (inst.zone || '').toUpperCase().includes(zoneFilter);
 
     let matchTab = true;
     if (activeTab === 'PENDING') matchTab = inst.status !== 'VERIFIED';
@@ -204,9 +226,24 @@ export const DistrictAdminDashboard = ({ defaultTab }) => {
           <h1 className="text-xl font-black text-[#0F2038] font-serif">
             District Safety Control &amp; Monitoring Centre — <span className="text-[#D4AF37]">{districtName}</span>
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
-            <FiActivity className="text-emerald-600 animate-pulse" />
-            <span>Real-time monitoring active. Auto-refreshes every 4 seconds.</span>
+          <p className="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap font-semibold">
+            <MdLocalPolice size={15} className="text-[#D4AF37]" />
+            <span>Officer: <strong>{user?.name || 'District Authority Officer'}</strong></span>
+            <span className="text-slate-300">•</span>
+            <span>Rank: <strong>{user?.rankLevel || user?.designation || 'District Admin'}</strong></span>
+            <span className="text-slate-300">•</span>
+            <span>
+              Jurisdiction:{' '}
+              {isHigherCommand ? (
+                <strong className="text-purple-800 bg-purple-100 px-2 py-0.5 rounded border border-purple-300">
+                  🏛️ District Command ({districtName} — All Zones)
+                </strong>
+              ) : (
+                <strong className="text-blue-800 bg-blue-100 px-2 py-0.5 rounded border border-blue-300">
+                  🛡️ {user?.dcpZone || 'DCP Central Zone'} Jurisdiction
+                </strong>
+              )}
+            </span>
           </p>
         </div>
 
@@ -400,7 +437,7 @@ export const DistrictAdminDashboard = ({ defaultTab }) => {
               <img src="/up-police-logo.png" alt="UP Police" className="w-8 h-8 object-contain bg-white rounded-full p-0.5 border border-[#D4AF37]" />
               <div>
                 <h3 className="text-xs font-black text-[#D4AF37] uppercase tracking-widest">
-                  Public Safety Complaints Control Panel ({complaints.length} Total Complaints)
+                  Public Safety Complaints Control Panel ({visibleComplaints.length} Total Complaints)
                 </h3>
                 <p className="text-xs text-slate-300">
                   Citizen complaints submitted from the Landing Page. Click <strong>"View Full Complaint &amp; Assign DCP"</strong> on any card to view full details and route to a DCP Inspector.
@@ -413,19 +450,19 @@ export const DistrictAdminDashboard = ({ defaultTab }) => {
             </span>
           </div>
 
-          {complaints.length === 0 ? (
+          {visibleComplaints.length === 0 ? (
             <div className="bg-white p-12 text-center space-y-3 rounded-2xl border-2 border-slate-200">
               <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto text-3xl">
                 💬
               </div>
               <p className="text-sm font-black text-[#0F2038]">No Public Complaints Submitted Yet</p>
               <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
-                When citizens or parents report a safety concern from the Landing Page, interactive complaint cards will appear here in real-time.
+                {isZonalOfficer ? `No public safety complaints flagged in your assigned zone (${userZoneNorm}).` : 'When citizens or parents report a safety concern from the Landing Page, interactive complaint cards will appear here in real-time.'}
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {complaints.map(cmp => {
+              {visibleComplaints.map(cmp => {
                 const isPending = cmp.status === 'PENDING_DISTRICT_ACTION';
                 const isAssigned = cmp.status === 'INVESTIGATION_ASSIGNED';
 

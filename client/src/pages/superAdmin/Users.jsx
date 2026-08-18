@@ -380,9 +380,9 @@ const EditUserModal = ({ user, onClose, onSave }) => {
             <Field label="District">
               <input type="text" value="Lucknow" readOnly className={inputClass + ' bg-gray-100 text-gray-400 cursor-not-allowed'} />
             </Field>
-            {(editForm.assignedPortal === 'INSPECTION_OFFICER' || editForm.role === 'INSPECTION_OFFICER') && (
+            {(editForm.assignedPortal === 'INSPECTION_OFFICER' || editForm.role === 'INSPECTION_OFFICER' || ['DCP', 'ADCP', 'ACP', 'PS', 'SI', 'SHO'].includes(user.rankLevel)) && (
               <Field label="DCP Zone Assignment">
-                <select value={editForm.dcpZone} onChange={e => setEditForm({ ...editForm, dcpZone: e.target.value })} className={inputClass}>
+                <select value={editForm.dcpZone || 'DCP Central'} onChange={e => setEditForm({ ...editForm, dcpZone: e.target.value })} className={inputClass}>
                   {DCP_ZONES.map(z => <option key={z} value={z}>{z}</option>)}
                 </select>
               </Field>
@@ -648,28 +648,30 @@ export const UserManagementPage = () => {
                     <select
                       value={form.rankLevel}
                       onChange={e => {
-                        const rank = POLICE_RANKS.find(r => r.value === e.target.value);
+                        const selectedRankVal = e.target.value;
+                        const rank = POLICE_RANKS.find(r => r.value === selectedRankVal);
+                        const isZonalRank = ['DCP', 'ADCP', 'ACP', 'PS', 'SI', 'SHO'].includes(selectedRankVal);
                         setForm(f => ({
                           ...f,
-                          rankLevel: e.target.value,
+                          rankLevel: selectedRankVal,
                           assignedPortal: rank ? rank.portal : f.assignedPortal,
                           role: rank ? rank.portal : f.role,
-                          dcpZone: rank && rank.portal === 'DISTRICT_ADMIN' ? '' : f.dcpZone,
+                          dcpZone: isZonalRank ? (f.dcpZone || 'DCP Central') : '',
                         }));
                       }}
                       className={inputClass}
                     >
                       <option value="">Select Police Rank…</option>
-                      <optgroup label="🛡️ Inspection Portal Ranks (DCP Zone Officers)">
+                      <optgroup label="🛡️ Inspection Portal Ranks (Field Officers)">
                         {POLICE_RANKS.filter(r => r.portal === 'INSPECTION_OFFICER').map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                       </optgroup>
-                      <optgroup label="🏛️ District Authority Admin Portal Ranks (District-Level Officers)">
+                      <optgroup label="🏛️ District Authority Admin Portal Ranks (Command Officers)">
                         {POLICE_RANKS.filter(r => r.portal === 'DISTRICT_ADMIN').map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                       </optgroup>
                     </select>
                   </Field>
                   <Field label="Department">
-                    <input type="text" placeholder="e.g. UP Police — North Zone" value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} className={inputClass} />
+                    <input type="text" placeholder="e.g. UP Police — Lucknow Commissionerate" value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} className={inputClass} />
                   </Field>
                   <Field label="Posting Station (Lucknow)">
                     <select value={form.postingStation} onChange={e => setForm(f => ({ ...f, postingStation: e.target.value }))} className={inputClass}>
@@ -677,9 +679,9 @@ export const UserManagementPage = () => {
                       {LUCKNOW_POLICE_STATIONS.map(s => <option key={s} value={s}>{s} Police Station</option>)}
                     </select>
                   </Field>
-                  {form.role === 'INSPECTION_OFFICER' && (
-                    <Field label="DCP Zone Assignment" required>
-                      <select value={form.dcpZone} onChange={e => setForm(f => ({ ...f, dcpZone: e.target.value }))} className={inputClass}>
+                  {(form.role === 'INSPECTION_OFFICER' || ['DCP', 'ADCP', 'ACP', 'PS', 'SI', 'SHO'].includes(form.rankLevel)) && (
+                    <Field label="DCP Zone Assignment" required hint="Zonal Command / Inspection Zone">
+                      <select value={form.dcpZone || 'DCP Central'} onChange={e => setForm(f => ({ ...f, dcpZone: e.target.value }))} className={inputClass}>
                         {DCP_ZONES.map(z => <option key={z} value={z}>{z}</option>)}
                       </select>
                     </Field>

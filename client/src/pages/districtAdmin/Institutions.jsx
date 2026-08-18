@@ -20,6 +20,7 @@ export const DistrictInstitutionsPage = () => {
   const { user } = useAuth();
   const districtName = user?.district || 'Lucknow';
   const [institutions, setInstitutions] = useState([]);
+  const [search, setSearch] = useState('');
   const [assignInst, setAssignInst] = useState(null);
   const [selectedInstModal, setSelectedInstModal] = useState(null);
   const [selectedOfficer, setSelectedOfficer] = useState('DCP CENTRAL');
@@ -49,10 +50,53 @@ export const DistrictInstitutionsPage = () => {
     setTimeout(() => setToast(''), 4000);
   };
 
+  // 🛡️ Zone & Role-based Authority Jurisdiction Filtering
+  // Higher Posts (DGP, CP, JCP) -> Full Lucknow District Oversight
+  // Zonal Posts (DCP, ADCP, ACP) -> Restricted strictly to their assigned DCP Zone
+  const isHigherCommand = ['DGP', 'CP', 'JCP'].includes(user?.rankLevel);
+  const userZoneNorm = user?.dcpZone ? user.dcpZone.toUpperCase().replace('DCP', '').trim() : '';
+  const isZonalOfficer = !isHigherCommand && Boolean(userZoneNorm);
+  const userZone = isZonalOfficer ? userZoneNorm : null;
+
+  const visibleInstitutions = isZonalOfficer
+    ? institutions.filter(i => (i.zone || '').toUpperCase().replace('DCP', '').trim() === userZone)
+    : institutions;
+
+  const filtered = visibleInstitutions.filter(inst => {
+    const s = search.trim().toLowerCase();
+    if (!s) return true;
+    return (
+      inst.name?.toLowerCase().includes(s) ||
+      inst.safeId?.toLowerCase().includes(s) ||
+      inst.principal?.toLowerCase().includes(s) ||
+      inst.nearestPoliceStation?.toLowerCase().includes(s) ||
+      inst.postingStation?.toLowerCase().includes(s) ||
+      inst.address?.toLowerCase().includes(s)
+    );
+  });
+
   return (
     <PageWrapper
       title={`District Institution Registry — ${districtName}`}
-      subtitle="Monitor digital applications, assign DCP Inspection Officers, and track real-time compliance"
+      subtitle={
+        <div className="flex items-center gap-2 flex-wrap font-semibold text-slate-600 text-xs mt-1">
+          <MdLocalPolice size={15} className="text-[#D4AF37]" />
+          <span>Officer: <strong>{user?.name || 'District Authority'}</strong> ({user?.rankLevel || 'DCP'})</span>
+          <span>•</span>
+          <span>
+            Jurisdiction:{' '}
+            {isHigherCommand ? (
+              <strong className="text-purple-800 bg-purple-100 px-2 py-0.5 rounded border border-purple-300">
+                🏛️ Lucknow District Command (All Zones)
+              </strong>
+            ) : (
+              <strong className="text-blue-800 bg-blue-100 px-2 py-0.5 rounded border border-blue-300">
+                🛡️ {user?.dcpZone || 'DCP Central Zone'} Jurisdiction
+              </strong>
+            )}
+          </span>
+        </div>
+      }
       actions={
         <a href="/api/v1/reports/district/excel" download className="inline-flex">
           <Button icon={FiDownload} variant="outline">
@@ -69,15 +113,31 @@ export const DistrictInstitutionsPage = () => {
       )}
 
       <Card>
+        {/* Search Bar for Institution Name or Police Station Name */}
+        <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-md">
+            <input
+              type="text"
+              placeholder="Search by Institution Name or Police Station Name (e.g. Chowk, Hazratganj)…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full text-xs pl-3 pr-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#D4AF37] bg-white font-semibold"
+            />
+          </div>
+          <span className="text-xs font-black text-slate-500">
+            Showing {filtered.length} of {visibleInstitutions.length} Institutions
+          </span>
+        </div>
+
         <div className="overflow-x-auto">
-          {institutions.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className="p-12 text-center space-y-3">
               <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto text-3xl">
                 🏫
               </div>
-              <p className="text-sm font-black text-[#0F2038]">No Institutions Registered Yet</p>
+              <p className="text-sm font-black text-[#0F2038]">No Matching Institutions Found</p>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                When institutions in {districtName} complete registration, they will automatically sync here in real-time.
+                {search ? `No institutions or Police Stations match "${search}".` : isZonalOfficer ? `No institutions registered in your assigned zone (${userZoneNorm}).` : `No institutions registered in ${districtName} yet.`}
               </p>
             </div>
           ) : (
@@ -96,7 +156,7 @@ export const DistrictInstitutionsPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {institutions.map(row => {
+                {filtered.map(row => {
                   const isUnlocked = institutionStore.isCertificateUnlocked(row._id);
 
                   return (

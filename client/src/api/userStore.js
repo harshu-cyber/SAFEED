@@ -4,7 +4,7 @@
  * Users created here can log in via AuthContext's fallback logic.
  */
 
-const STORE_KEY = 'safeed_users_store_v5';
+const STORE_KEY = 'safeed_users_store_v6';
 
 const DEFAULT_USERS = [
   {
@@ -45,6 +45,8 @@ function saveStore(data) {
 function cleanupLegacyStores() {
   try {
     const keysToRemove = [
+      'safeed_users_store_v5',
+      'safeed_users_store_v4',
       'safeed_users_store_v3',
       'safeed_users_store_v2',
       'safeed_users_store_v1',
@@ -66,6 +68,8 @@ function initStore() {
 
   // Filter out any stale pre-seeded dummy accounts from previous versions
   const dummyEmails = [
+    'cp1ko@safeed',
+    'si.sharma@uppolice.gov.in',
     'dcpwest@safeedup.gov.in',
     'dcpcentral@safeedup.gov.in',
     'dcpnorth@safeedup.gov.in',

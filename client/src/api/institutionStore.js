@@ -4,10 +4,20 @@
 // ============================================================
 
 const STORAGE_KEYS = {
-  INSTITUTIONS: 'safeed_institutions_store_v4',
+  INSTITUTIONS: 'safeed_institutions_store_v6',
   DOCUMENTS: 'safeed_documents_store_v2',
   DISTRICT_LOGS: 'safeed_district_action_logs_v1',
 };
+
+// Auto-purge all legacy demo institution stores
+(function purgeLegacyInstitutions() {
+  try {
+    if (!localStorage.getItem('safeed_institutions_purged_v6')) {
+      ['safeed_institutions_store_v1', 'safeed_institutions_store_v2', 'safeed_institutions_store_v3', 'safeed_institutions_store_v4', 'safeed_institutions_store_v5', 'safeed_institutions_store_v6'].forEach(k => localStorage.removeItem(k));
+      localStorage.setItem('safeed_institutions_purged_v6', 'true');
+    }
+  } catch {}
+})();
 
 // Normalize any zone string → one of: WEST | CENTRAL | NORTH | EAST | SOUTH | null
 const normalizeZone = (val = '') => {
@@ -39,7 +49,7 @@ export const institutionStore = {
       const stored = localStorage.getItem(STORAGE_KEYS.INSTITUTIONS);
       if (stored) {
         const list = JSON.parse(stored);
-        if (Array.isArray(list) && list.length > 0) {
+        if (Array.isArray(list)) {
           return list.map(inst => {
             const zoneKey = inst.zone || 'CENTRAL';
             return {
@@ -52,8 +62,6 @@ export const institutionStore = {
       }
     } catch {}
     localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(DEFAULT_INSTITUTIONS));
-    // Trigger instant cloud push so server gets default institutions
-    import('./cloudSync').then(m => m.cloudSync.push()).catch(() => {});
     return DEFAULT_INSTITUTIONS;
   },
 

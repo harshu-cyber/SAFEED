@@ -4,7 +4,7 @@
 // ============================================================
 
 const STORAGE_KEYS = {
-  INSTITUTIONS: 'safeed_institutions_store_v2',
+  INSTITUTIONS: 'safeed_institutions_store_v3',
   DOCUMENTS: 'safeed_documents_store_v2',
   DISTRICT_LOGS: 'safeed_district_action_logs_v1',
 };

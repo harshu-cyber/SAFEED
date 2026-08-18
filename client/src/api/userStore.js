@@ -4,7 +4,7 @@
  * Users created here can log in via AuthContext's fallback logic.
  */
 
-const STORE_KEY = 'safeed_users_store_v3';
+const STORE_KEY = 'safeed_users_store_v4';
 
 const DEFAULT_USERS = [
   {
@@ -84,8 +84,9 @@ function saveStore(data) {
 function cleanupLegacyStores() {
   try {
     const keysToRemove = [
-      'safeed_users_store_v1',
+      'safeed_users_store_v3',
       'safeed_users_store_v2',
+      'safeed_users_store_v1',
       'safeed_users_store',
       'users_store',
     ];

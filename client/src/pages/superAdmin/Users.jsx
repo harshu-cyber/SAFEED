@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { userStore } from '../../api/userStore';
+import { cloudSync } from '../../api/cloudSync';
 import { useAuth } from '../../context/AuthContext';
 import { ROLES, ROLE_LABELS } from '../../constants/roles';
 import {
@@ -431,17 +432,18 @@ export const UserManagementPage = () => {
   const [toast, setToast] = useState('');
 
   const loadUsers = () => {
-    try {
-      setUsers(userStore.getUsers());
-    } catch (e) {
-      console.error('Failed to load users:', e);
-    }
+    setUsers(userStore.getUsers());
   };
 
   useEffect(() => {
-    loadUsers();
+    // Pull from MongoDB Atlas then read local cache
+    cloudSync.pull().then(loadUsers).catch(loadUsers);
+    cloudSync.startAutoSync();
     const iv = setInterval(loadUsers, 5000);
-    return () => clearInterval(iv);
+    return () => {
+      clearInterval(iv);
+      cloudSync.stopAutoSync();
+    };
   }, []);
 
   const showToast = (msg) => {
@@ -459,7 +461,7 @@ export const UserManagementPage = () => {
     resetForm();
   };
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     setFormError('');
     if (!form.name.trim() || !form.email.trim() || !form.phone.trim()) {
@@ -475,30 +477,44 @@ export const UserManagementPage = () => {
       return;
     }
     try {
-      const newUser = userStore.createUser(form, currentUser?.name || 'Super Admin');
+      // Determine portal assignment
+      let assignedPortal = form.assignedPortal || form.role;
+      const payload = {
+        ...form,
+        email: form.email.toLowerCase(),
+        password: form.phone,
+        assignedPortal,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        createdBy: currentUser?.name || 'Super Admin',
+      };
+      // Write directly to MongoDB Atlas
+      await cloudSync.syncAction('CREATE_USER', payload);
       loadUsers();
       closeCreate();
-      setCreatedUser(newUser);
+      setCreatedUser(payload);
     } catch (err) {
-      setFormError(err.message || 'Failed to create user.');
+      setFormError(err.message || 'Failed to create user. The email may already exist in MongoDB Atlas.');
     }
   };
 
-  const handleSaveEdit = (id, updatedFields) => {
+  const handleSaveEdit = async (id, updatedFields) => {
     try {
-      const updated = userStore.updateUser(id, updatedFields);
+      // Find current user to include email for Atlas update
+      const existing = userStore.getUserById(id) || {};
+      await cloudSync.syncAction('UPDATE_USER', { _id: id, email: existing.email, ...updatedFields });
       loadUsers();
       setEditUser(null);
       setViewUser(null);
-      showToast(`✅ Profile updated for ${updated.name}`);
+      showToast(`✅ Profile updated for ${updatedFields.name || existing.name}`);
     } catch (err) {
       showToast(`❌ ${err.message || 'Failed to update user.'}`);
     }
   };
 
-  const handleToggle = (u) => {
+  const handleToggle = async (u) => {
     try {
-      userStore.toggleUserStatus(u._id);
+      await cloudSync.syncAction('TOGGLE_USER', { id: u._id });
       loadUsers();
       setViewUser(prev => prev && prev._id === u._id ? { ...prev, isActive: !prev.isActive } : prev);
       showToast(u.isActive ? '🔒 Account Locked.' : '🔓 Account Unlocked.');
@@ -507,13 +523,13 @@ export const UserManagementPage = () => {
     }
   };
 
-  const handleDelete = (u) => {
+  const handleDelete = async (u) => {
     if (!window.confirm(`Delete account for ${u.name}? This cannot be undone.`)) return;
     try {
-      userStore.deleteUser(u._id);
+      await cloudSync.syncAction('DELETE_USER', { id: u._id });
       loadUsers();
       setViewUser(null);
-      showToast('✅ User account deleted.');
+      showToast('✅ User account deleted from MongoDB Atlas.');
     } catch (err) {
       showToast('❌ ' + (err.message || 'Failed to delete user.'));
     }
@@ -533,7 +549,14 @@ export const UserManagementPage = () => {
     return matchRole && matchSearch;
   });
 
-  const stats = userStore.getStats();
+  const stats = {
+    total: users.length,
+    active: users.filter(u => u.isActive).length,
+    inspectors: users.filter(u => u.role === 'INSPECTION_OFFICER').length,
+    districtAdmins: users.filter(u => u.role === 'DISTRICT_ADMIN').length,
+    superAdmins: users.filter(u => u.role === 'SUPER_ADMIN').length,
+    police: users.filter(u => u.role === 'POLICE_OFFICER').length,
+  };
 
   return (
     <div className="min-h-screen bg-[#F5F7FA] p-6">

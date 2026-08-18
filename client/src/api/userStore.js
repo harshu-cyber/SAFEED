@@ -135,27 +135,11 @@ export const userStore = {
   },
 
   syncCloudUsers(cloudUsers) {
-    if (!Array.isArray(cloudUsers) || cloudUsers.length === 0) return;
-    let deletedList = [];
-    try {
-      deletedList = JSON.parse(localStorage.getItem('safeed_deleted_user_ids') || '[]');
-    } catch (_) {}
-
-    const store = initStore();
-
-    // CRITICAL: Always preserve the local Super Admin — never overwrite with cloud payload
-    const localSA = store.users.find(u => u.role === 'SUPER_ADMIN' || u.email === 'superadmin@safeed.ac.in');
-
-    // Merge: use cloud users but strip any cloud Super Admin or deleted users
-    const filteredCloud = cloudUsers.filter(u =>
-      u.role !== 'SUPER_ADMIN' &&
-      u.email !== 'superadmin@safeed.ac.in' &&
-      !deletedList.includes(u._id) &&
-      !deletedList.includes(u.email?.toLowerCase())
-    );
-
-    const merged = localSA ? [localSA, ...filteredCloud] : filteredCloud;
-    store.users = merged;
+    if (!Array.isArray(cloudUsers)) return;
+    // FULL OVERWRITE — MongoDB Atlas is the source of truth.
+    // Never merge local state into cloud payload.
+    const store = loadStore() || { users: [] };
+    store.users = cloudUsers;
     saveStore(store);
   },
 

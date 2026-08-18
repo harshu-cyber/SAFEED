@@ -1,37 +1,24 @@
 /**
- * cloudSync.js — SafeED-UP Global Real-Time Cloud Engine
- * Uses /api/sync Serverless endpoint for 100% reliable 0-latency state synchronization.
+ * cloudSync.js — SafeED-UP Direct MongoDB Atlas Sync Engine
+ *
+ * ARCHITECTURE:  MongoDB Atlas → /api/sync → React State
+ *
+ * CRITICAL RULES:
+ * - pull() is the ONLY data source for all React components
+ * - push() is DISABLED — localStorage state never overwrites MongoDB Atlas
+ * - All mutations go through /api/sync POST with explicit action payloads
+ * - LocalStorage is ONLY a temporary render cache, NEVER a source of truth
  */
 
 import { userStore } from './userStore';
 import { institutionStore } from './institutionStore';
 
 const SYNC_URL = '/api/sync';
-const SA_EMAIL = 'superadmin@safeed.ac.in';
 
 let pollInterval = null;
 let isBusy = false;
-let lastCloudTs = 0;
 
-export async function push() {
-  if (isBusy) return;
-  isBusy = true;
-  try {
-    const users = userStore.getUsers().filter(u => u.email !== SA_EMAIL && u.role !== 'SUPER_ADMIN');
-    const institutions = institutionStore.getInstitutions();
-
-    await fetch(SYNC_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ users, institutions }),
-    });
-  } catch (err) {
-    console.warn('[CloudSync] push failed:', err.message);
-  } finally {
-    isBusy = false;
-  }
-}
-
+// ── PULL: MongoDB Atlas → localStorage render cache ─────────────────────────
 export async function pull() {
   if (isBusy) return;
   isBusy = true;
@@ -42,16 +29,13 @@ export async function pull() {
     const json = await res.json();
     if (!json.success || !json.data) return;
 
-    const { users: cloudUsers, institutions: cloudInsts, updatedAt } = json.data;
-    const ts = new Date(updatedAt).getTime() || 0;
+    const { users: cloudUsers, institutions: cloudInsts } = json.data;
 
-    if (ts && ts <= lastCloudTs) return;
-    if (ts) lastCloudTs = ts;
-
-    if (Array.isArray(cloudUsers) && cloudUsers.length > 0) {
+    // Always overwrite localStorage from MongoDB Atlas — this IS the truth
+    if (Array.isArray(cloudUsers)) {
       userStore.syncCloudUsers(cloudUsers);
     }
-    if (Array.isArray(cloudInsts) && cloudInsts.length > 0) {
+    if (Array.isArray(cloudInsts)) {
       institutionStore.syncCloudInstitutions(cloudInsts);
     }
   } catch (err) {
@@ -61,13 +45,44 @@ export async function pull() {
   }
 }
 
+// ── PUSH: DISABLED ───────────────────────────────────────────────────────────
+// push() is intentionally disabled. All mutations are sent directly via
+// syncAction() with an explicit action, not from local state.
+export async function push() {
+  // NO-OP: Do not push localStorage state to MongoDB Atlas.
+  // Use syncAction() for all create/update/delete operations.
+}
+
+// ── SYNC ACTION: React → MongoDB Atlas (explicit mutation) ───────────────────
+export async function syncAction(action, payload) {
+  try {
+    const res = await fetch(SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, payload }),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || 'MongoDB Atlas action failed');
+    // After any mutation, refresh local cache from Atlas
+    if (json.data) {
+      if (Array.isArray(json.data.users)) userStore.syncCloudUsers(json.data.users);
+      if (Array.isArray(json.data.institutions)) institutionStore.syncCloudInstitutions(json.data.institutions);
+    }
+    return json.data;
+  } catch (err) {
+    console.error(`[CloudSync] ${action} failed:`, err.message);
+    throw err;
+  }
+}
+
 export const cloudSync = {
   push,
   pull,
+  syncAction,
   startAutoSync() {
     if (pollInterval) return;
-    pull();
-    pollInterval = setInterval(pull, 2000);
+    pull(); // Immediate pull on start
+    pollInterval = setInterval(pull, 5000); // Poll every 5s for live updates
   },
   stopAutoSync() {
     if (pollInterval) {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { institutionStore } from '../../api/institutionStore';
+import { cloudSync } from '../../api/cloudSync';
 import { InstitutionFullDetailModal } from '../../components/common/Modals/InstitutionFullDetailModal';
 import {
   FiDatabase, FiSearch, FiEye, FiCheckCircle, FiXCircle,
@@ -19,9 +20,14 @@ export const SuperInstitutionsList = () => {
 
   useEffect(() => {
     const load = () => setInstitutions(institutionStore.getInstitutions());
-    load();
+    // Pull directly from MongoDB Atlas first
+    cloudSync.pull().then(load).catch(load);
+    cloudSync.startAutoSync();
     const iv = setInterval(load, 5000);
-    return () => clearInterval(iv);
+    return () => {
+      clearInterval(iv);
+      cloudSync.stopAutoSync();
+    };
   }, []);
 
   const filtered = institutions.filter(i => {
@@ -217,7 +223,10 @@ export const SuperInstitutionsList = () => {
           {filtered.length === 0 && (
             <div className="text-center py-12 text-gray-400">
               <FiDatabase size={28} className="mx-auto mb-2 opacity-30" />
-              <p className="text-sm font-semibold">No institutions match your search</p>
+              <p className="text-sm font-semibold">
+                {institutions.length === 0 ? 'No institutions found.' : 'No institutions match your search.'}
+              </p>
+              <p className="text-xs text-gray-300 mt-1">All data is sourced from MongoDB Atlas.</p>
             </div>
           )}
         </div>

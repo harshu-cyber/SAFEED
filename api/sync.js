@@ -78,28 +78,70 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const { users, institutions } = req.body || {};
+      const { action, payload, users, institutions } = req.body || {};
 
-      if (Array.isArray(users)) {
-        for (const u of users) {
-          if (u.email && u.email !== 'superadmin@safeed.ac.in') {
-            await User.findOneAndUpdate(
-              { email: u.email.toLowerCase() },
-              { $set: u },
-              { upsert: true, new: true }
-            );
-          }
+      if (action === 'CREATE_USER' && payload) {
+        const emailLow = payload.email?.toLowerCase();
+        const existing = await User.findOne({ email: emailLow });
+        if (existing) {
+          return res.status(400).json({ success: false, error: 'A user with this email already exists in MongoDB Atlas.' });
+        }
+        await User.create(payload);
+      }
+      else if (action === 'UPDATE_USER' && payload) {
+        const { _id, email, ...updates } = payload;
+        if (email === 'superadmin@safeed.ac.in') {
+          return res.status(403).json({ success: false, error: 'Super Admin account cannot be modified.' });
+        }
+        await User.findOneAndUpdate(
+          { $or: [{ _id }, { email: email?.toLowerCase() }] },
+          { $set: updates }
+        );
+      }
+      else if (action === 'TOGGLE_USER' && payload?.id) {
+        const u = await User.findById(payload.id) || await User.findOne({ email: String(payload.id).toLowerCase() });
+        if (u && u.email !== 'superadmin@safeed.ac.in') {
+          u.isActive = !u.isActive;
+          await u.save();
         }
       }
-
-      if (Array.isArray(institutions)) {
-        for (const inst of institutions) {
-          if (inst.name) {
-            await Institution.findOneAndUpdate(
-              { name: inst.name },
-              { $set: inst },
-              { upsert: true, new: true }
-            );
+      else if (action === 'DELETE_USER' && payload?.id) {
+        const u = await User.findById(payload.id) || await User.findOne({ email: String(payload.id).toLowerCase() });
+        if (u && u.email !== 'superadmin@safeed.ac.in') {
+          await User.deleteOne({ _id: u._id });
+        }
+      }
+      else if (action === 'CREATE_INSTITUTION' && payload) {
+        await Institution.create(payload);
+      }
+      else if (action === 'UPDATE_INSTITUTION' && payload) {
+        const { _id, ...updates } = payload;
+        await Institution.findByIdAndUpdate(_id, { $set: updates });
+      }
+      else if (action === 'DELETE_INSTITUTION' && payload?.id) {
+        await Institution.deleteOne({ $or: [{ _id: payload.id }, { safeId: payload.id }] });
+      }
+      else if (Array.isArray(users) || Array.isArray(institutions)) {
+        if (Array.isArray(users)) {
+          for (const u of users) {
+            if (u.email && u.email !== 'superadmin@safeed.ac.in') {
+              await User.findOneAndUpdate(
+                { email: u.email.toLowerCase() },
+                { $set: u },
+                { upsert: true, new: true }
+              );
+            }
+          }
+        }
+        if (Array.isArray(institutions)) {
+          for (const inst of institutions) {
+            if (inst.name) {
+              await Institution.findOneAndUpdate(
+                { name: inst.name },
+                { $set: inst },
+                { upsert: true, new: true }
+              );
+            }
           }
         }
       }
@@ -109,7 +151,7 @@ module.exports = async function handler(req, res) {
 
       return res.status(200).json({
         success: true,
-        message: 'MongoDB Atlas persistent state updated.',
+        message: 'MongoDB Atlas operation successful.',
         data: {
           users: allUsers,
           institutions: allInsts,

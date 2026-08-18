@@ -52,6 +52,30 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (credentials) => {
+    const emailLower = credentials.email?.toLowerCase();
+
+    // ⚡ FAST-PATH: Super Admin credentials — always resolved locally, NEVER via backend
+    // This guarantees Super Admin always gets role:SUPER_ADMIN regardless of backend/cloud state
+    if (emailLower === 'superadmin@safeed.ac.in' && credentials.password === 'harshsafeed') {
+      const saUser = {
+        _id: 'u-super-1',
+        name: 'Super Admin (SafeED)',
+        email: 'superadmin@safeed.ac.in',
+        role: 'SUPER_ADMIN',
+        assignedPortal: 'SUPER_ADMIN',
+        designation: 'System Administrator',
+        badgeNumber: 'SA-001',
+        rankLevel: 'SUPER_ADMIN',
+        department: 'SafeED-UP HQ',
+        district: 'Lucknow',
+        state: 'Uttar Pradesh',
+        isActive: true,
+      };
+      localStorage.setItem('accessToken', 'sa_token_' + Date.now());
+      setUser(saUser);
+      return saUser;
+    }
+
     try {
       const res = await authApi.login(credentials);
       const { user, accessToken } = res.data.data;

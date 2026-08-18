@@ -126,6 +126,7 @@ class AuthService {
     if (mongoose.connection.readyState !== 1) {
       console.log(`💡 Serving login via Standalone Demo Fallback for: ${email}`);
       const demoUsers = [
+        { id: 'sa-001', name: 'Super Admin (SafeED)', email: 'superadmin@safeed.ac.in', role: 'SUPER_ADMIN', assignedPortal: 'SUPER_ADMIN', state: 'Uttar Pradesh', district: 'Lucknow' },
         { id: '1', name: 'Super Admin', email: 'superadmin@safeedup.gov.in', role: 'SUPER_ADMIN', state: 'Uttar Pradesh', district: 'Lucknow' },
         { id: '2', name: 'State Admin', email: 'stateadmin@safeedup.gov.in', role: 'STATE_ADMIN', state: 'Uttar Pradesh', district: 'Lucknow' },
         { id: '3', name: 'Suresh Kumar (District Admin)', email: 'districtadmin@safeedup.gov.in', role: 'DISTRICT_ADMIN', state: 'Uttar Pradesh', district: 'Lucknow' },

@@ -73,7 +73,11 @@ export const InspectorInspections = () => {
           </h1>
           <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
             <MdLocalPolice size={14} className="text-[#D4AF37]" />
-            <span>Assigned Inspector: <strong>{user?.name || 'DCP Officer'}</strong></span>
+            <span>Officer: <strong>{user?.name || 'Inspection Officer'}</strong></span>
+            <span className="text-slate-300">•</span>
+            <span>Designation: <strong>{user?.designation || user?.rankLevel || 'Sub-Inspector'}</strong></span>
+            <span className="text-slate-300">•</span>
+            <span>DCP Zone: <strong>{dcpZone}</strong></span>
             <span className="text-slate-300">•</span>
             <span>Total Assigned Institutions: <strong>{institutions.length}</strong></span>
           </p>

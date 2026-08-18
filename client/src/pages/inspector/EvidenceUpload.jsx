@@ -184,7 +184,7 @@ export const EvidenceUpload = () => {
           </p>
         </div>
         <div className="flex items-center gap-2 bg-[#0F2038] text-[#D4AF37] px-3.5 py-2 rounded-xl text-xs font-black border border-[#D4AF37]">
-          <MdLocalPolice size={16} /> {user?.name || 'DCP Inspection Officer'} ({user?.dcpZone || 'DCP Central'})
+          <MdLocalPolice size={16} /> {user?.name || 'Inspection Officer'} ({user?.designation || user?.rankLevel || 'Sub-Inspector'}) • {dcpZone}
         </div>
       </div>
 

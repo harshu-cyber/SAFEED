@@ -23,15 +23,15 @@ const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 // 🏛️ Police Ranks mapped to designated Portals (Inspection vs District Admin)
 const POLICE_RANKS = [
-  // 🛡️ Inspection Portal Ranks (Specific DCP Zone Safety Audits)
-  { value: 'DCP',  label: 'DCP — Deputy Commissioner of Police (Inspection Portal)', portal: 'INSPECTION_OFFICER', category: 'Inspection Portal' },
-  { value: 'ADCP', label: 'ADCP — Additional Deputy Commissioner of Police (Inspection Portal)', portal: 'INSPECTION_OFFICER', category: 'Inspection Portal' },
-  { value: 'ACP',  label: 'ACP — Assistant Commissioner of Police (Inspection Portal)', portal: 'INSPECTION_OFFICER', category: 'Inspection Portal' },
-  { value: 'SI',   label: 'SI — Sub-Inspector (Inspection Portal)', portal: 'INSPECTION_OFFICER', category: 'Inspection Portal' },
-  { value: 'SO',   label: 'SO — Station Officer (Inspection Portal)', portal: 'INSPECTION_OFFICER', category: 'Inspection Portal' },
+  // 🛡️ Inspection Portal Ranks (Field Officers for Zone Safety Audits)
   { value: 'PS',   label: 'PS — Police Station Official (Inspection Portal)', portal: 'INSPECTION_OFFICER', category: 'Inspection Portal' },
+  { value: 'SI',   label: 'SI — Sub-Inspector (Inspection Portal)', portal: 'INSPECTION_OFFICER', category: 'Inspection Portal' },
+  { value: 'SHO',  label: 'SHO — Station House Officer (Inspection Portal)', portal: 'INSPECTION_OFFICER', category: 'Inspection Portal' },
   
-  // 🏛️ District Authority Admin Portal Ranks (District Oversight — Covers Entire District Lucknow)
+  // 🏛️ District Authority Admin Portal Ranks (Command Officers — District-wide Oversight)
+  { value: 'ACP',  label: 'ACP — Assistant Commissioner of Police (District Admin Portal)', portal: 'DISTRICT_ADMIN', category: 'District Authority Portal' },
+  { value: 'ADCP', label: 'ADCP — Additional Deputy Commissioner of Police (District Admin Portal)', portal: 'DISTRICT_ADMIN', category: 'District Authority Portal' },
+  { value: 'DCP',  label: 'DCP — Deputy Commissioner of Police (District Admin Portal)', portal: 'DISTRICT_ADMIN', category: 'District Authority Portal' },
   { value: 'JCP',  label: 'JCP — Joint Commissioner of Police (District Admin Portal)', portal: 'DISTRICT_ADMIN', category: 'District Authority Portal' },
   { value: 'CP',   label: 'CP — Commissioner of Police (District Admin Portal)', portal: 'DISTRICT_ADMIN', category: 'District Authority Portal' },
   { value: 'DGP',  label: 'DGP — Director General of Police (District Admin Portal)', portal: 'DISTRICT_ADMIN', category: 'District Authority Portal' },
@@ -63,7 +63,7 @@ const DEFAULT_FORM = {
   email: '',
   phone: '',
   role: 'INSPECTION_OFFICER',
-  designation: 'Deputy Commissioner of Police',
+  designation: 'Sub-Inspector',
   badgeNumber: '',
   department: 'UP Police',
   dcpZone: 'DCP Central',
@@ -71,7 +71,7 @@ const DEFAULT_FORM = {
   state: 'Uttar Pradesh',
   joiningDate: new Date().toISOString().split('T')[0],
   bloodGroup: '',
-  rankLevel: 'DCP',
+  rankLevel: 'SI',
   postingStation: 'Hazratganj',
 };
 

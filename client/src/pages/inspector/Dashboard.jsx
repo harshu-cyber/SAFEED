@@ -125,7 +125,9 @@ export const InspectorDashboard = () => {
           </h1>
           <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
             <MdLocalPolice size={14} className="text-[#D4AF37]" />
-            <span>Officer: <strong>{user?.name || 'DCP Officer'}</strong></span>
+            <span>Officer: <strong>{user?.name || 'Inspection Officer'}</strong></span>
+            <span className="text-slate-300">•</span>
+            <span>Designation: <strong>{user?.designation || user?.rankLevel || 'Sub-Inspector'}</strong></span>
             <span className="text-slate-300">•</span>
             <span>Zone: <strong>{dcpZone}</strong></span>
             <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${ZONE_COLORS[dcpZone?.split(' ').pop()] || 'bg-slate-100 text-slate-700 border-slate-300'}`}>

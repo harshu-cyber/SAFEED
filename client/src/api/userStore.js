@@ -4,7 +4,7 @@
  * Users created here can log in via AuthContext's fallback logic.
  */
 
-const STORE_KEY = 'safeed_users_store_v4';
+const STORE_KEY = 'safeed_users_store_v5';
 
 const DEFAULT_USERS = [
   {
@@ -25,45 +25,6 @@ const DEFAULT_USERS = [
     isActive: true,
     createdAt: '2024-01-01T00:00:00Z',
     createdBy: 'SYSTEM',
-  },
-  {
-    _id: 'u-dist-tarun',
-    name: 'TARUN',
-    email: 'cp1ko@safeed',
-    username: 'cp1ko@safeed',
-    phone: '9876543210',
-    password: '9876543210',
-    role: 'DISTRICT_ADMIN',
-    assignedPortal: 'DISTRICT_ADMIN',
-    designation: 'District Authority',
-    badgeNumber: 'LKO-01',
-    department: 'UP Police',
-    district: 'Lucknow',
-    state: 'Uttar Pradesh',
-    joiningDate: '2024-02-01',
-    isActive: true,
-    createdAt: '2024-02-01T00:00:00Z',
-    createdBy: 'Super Admin',
-  },
-  {
-    _id: 'u-insp-1',
-    name: 'Inspector Sharma',
-    email: 'si.sharma@uppolice.gov.in',
-    username: 'si.sharma@uppolice.gov.in',
-    phone: '9412000003',
-    password: '9412000003',
-    role: 'INSPECTION_OFFICER',
-    assignedPortal: 'INSPECTION_OFFICER',
-    designation: 'SI Officer',
-    badgeNumber: 'UPP-4081',
-    department: 'UP Police',
-    dcpZone: 'DCP Central',
-    district: 'Lucknow',
-    state: 'Uttar Pradesh',
-    joiningDate: '2024-02-05',
-    isActive: true,
-    createdAt: '2024-02-05T00:00:00Z',
-    createdBy: 'Super Admin',
   },
 ];
 

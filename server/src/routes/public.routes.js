@@ -31,39 +31,6 @@ router.get('/seed', async (req, res) => {
       });
     }
 
-    // Ensure TARUN District Admin
-    let tarun = await User.findOne({ email: 'cp1ko@safeed' });
-    if (!tarun) {
-      tarun = await User.create({
-        name: 'TARUN',
-        email: 'cp1ko@safeed',
-        username: 'cp1ko@safeed',
-        phone: '9876543210',
-        password: '9876543210',
-        role: ROLES.DISTRICT_ADMIN,
-        district: 'Lucknow',
-        state: 'Uttar Pradesh',
-        isActive: true,
-      });
-    }
-
-    // Ensure Inspector Sharma
-    let insp = await User.findOne({ email: 'si.sharma@uppolice.gov.in' });
-    if (!insp) {
-      insp = await User.create({
-        name: 'Inspector Sharma',
-        email: 'si.sharma@uppolice.gov.in',
-        username: 'si.sharma@uppolice.gov.in',
-        phone: '9412000003',
-        password: '9412000003',
-        role: ROLES.INSPECTION_OFFICER,
-        dcpZone: 'DCP Central',
-        district: 'Lucknow',
-        state: 'Uttar Pradesh',
-        isActive: true,
-      });
-    }
-
     const countUsers = await User.countDocuments();
     const countInsts = await Institution.countDocuments();
 

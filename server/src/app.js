@@ -39,7 +39,7 @@ app.use(helmet({
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, server-to-server)
-    if (!origin || origin === env.CLIENT_URL || origin.startsWith('http://localhost:')) {
+    if (!origin || origin === env.CLIENT_URL || env.CLIENT_URL === '*' || origin.startsWith('http://localhost:') || origin.endsWith('.vercel.app')) {
       return callback(null, true);
     }
     return callback(new Error('CORS Policy violation: Access denied from unauthorized origin.'));
@@ -94,7 +94,7 @@ const fs = require('fs');
 const clientDistPath = path.join(__dirname, '../../client/dist');
 if (fs.existsSync(clientDistPath)) {
   app.use(express.static(clientDistPath));
-  app.get('*', (req, res, next) => {
+  app.get('/{*splat}', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path === '/health') {
       return next();
     }

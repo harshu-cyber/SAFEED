@@ -8,16 +8,7 @@ import { ROLES } from '../../constants/roles';
 import { FiChevronDown, FiChevronUp, FiUser, FiShield, FiArrowLeft, FiImage, FiEye, FiEyeOff, FiLock } from 'react-icons/fi';
 import { useLoginSound } from '../../hooks/useLoginSound';
 
-const DEMO_CREDENTIALS = [
-  { role: 'Commissioner of Police (CP)', email: 'cp@safeedup.gov.in', password: 'Password@123', color: 'bg-[#071A2F] text-[#D4AF37] border border-[#D4AF37]' },
-  { role: 'Joint Commissioner of Police (JCP)', email: 'jcp@safeedup.gov.in', password: 'Password@123', color: 'bg-[#1E3A5F] text-[#D4AF37] border border-[#D4AF37]' },
-  { role: 'DCP WEST (Inspector)', email: 'dcpwest@safeedup.gov.in', password: 'Password@123', color: 'bg-emerald-100 text-emerald-800' },
-  { role: 'DCP CENTRAL (Inspector)', email: 'dcpcentral@safeedup.gov.in', password: 'Password@123', color: 'bg-teal-100 text-teal-800' },
-  { role: 'DCP NORTH (Inspector)', email: 'dcpnorth@safeedup.gov.in', password: 'Password@123', color: 'bg-cyan-100 text-cyan-800' },
-  { role: 'DCP EAST (Inspector)', email: 'dcpeast@safeedup.gov.in', password: 'Password@123', color: 'bg-blue-100 text-blue-800' },
-  { role: 'DCP SOUTH (Inspector)', email: 'dcpsouth@safeedup.gov.in', password: 'Password@123', color: 'bg-indigo-100 text-indigo-800' },
-  { role: 'Super Admin', email: 'superadmin@safeedup.gov.in', password: 'Password@123', color: 'bg-purple-100 text-purple-800' },
-];
+
 
 const generateCaptchaCode = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -34,7 +25,6 @@ export const Login = () => {
   const navigate = useNavigate();
   const { playLoginSuccess } = useLoginSound();
   const [error, setError] = useState('');
-  const [showDemo, setShowDemo] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [captchaCode, setCaptchaCode] = useState(() => generateCaptchaCode());
   const [captchaInput, setCaptchaInput] = useState('');
@@ -167,11 +157,6 @@ export const Login = () => {
     }
   };
 
-  const fillDemo = (cred) => {
-    setValue('email', cred.email);
-    setValue('password', cred.password);
-  };
-
   return (
     <div>
       {error && (
@@ -291,35 +276,6 @@ export const Login = () => {
           </Link>
         </div>
       </form>
-
-      {/* Demo Credentials Panel */}
-      <div className="mt-5 border-2 border-dashed border-[#1E3A5F] rounded-xl overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setShowDemo(v => !v)}
-          className="w-full flex items-center justify-between px-3 py-2.5 bg-[#162B44] hover:bg-[#1E3A5F] transition-colors text-left"
-        >
-          <span className="text-[11px] font-black text-slate-300 flex items-center gap-1.5">
-            <FiShield size={12} className="text-[#D4AF37]" /> {t('demoAccountsTitle')}
-          </span>
-          {showDemo ? <FiChevronUp size={13} className="text-slate-400" /> : <FiChevronDown size={13} className="text-slate-400" />}
-        </button>
-        {showDemo && (
-          <div className="p-3 grid grid-cols-2 gap-2">
-            {DEMO_CREDENTIALS.map(cred => (
-              <button
-                key={cred.email}
-                type="button"
-                onClick={() => fillDemo(cred)}
-                className={`text-left p-2 rounded-xl border hover:border-[#D4AF37] transition-all cursor-pointer ${cred.color}`}
-              >
-                <p className="text-[10px] font-black">{cred.role}</p>
-                <p className="text-[9px] opacity-80 truncate font-mono">{cred.email}</p>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
 
       <div className="mt-4 pt-3 border-t border-[#1E3A5F] text-center">
         <p className="text-xs text-[#CBD5E1]">

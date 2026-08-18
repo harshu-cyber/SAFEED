@@ -114,13 +114,72 @@ export const AuthProvider = ({ children }) => {
           institutionId: inst._id,
           institutionName: inst.name,
         }));
-      } else if (emailLower.includes('super')) {
-        fallbackUser = { _id: 'u1', name: 'Super Admin', email: credentials.email, role: 'SUPER_ADMIN', state: 'Uttar Pradesh', district: 'Lucknow' };
-      } else if (emailLower.includes('inspector')) {
-        fallbackUser = { _id: 'u4', name: 'DCP Inspection Officer', email: credentials.email, role: 'INSPECTION_OFFICER', dcpZone: 'DCP Central', state: 'Uttar Pradesh', district: 'Lucknow' };
       } else {
-        // No matching institution found — user must register first
-        throw new Error('No matching institution found. Please register your school first or check your login credentials.');
+        // 🌐 Dynamic Smart Cross-Device Officer Fallback
+        // Derive user role from email keywords or rank format
+        let detectedRole = 'INSPECTION_OFFICER';
+        let assignedPortal = 'INSPECTION_OFFICER';
+        let rankLevel = 'SI';
+        let dcpZone = 'DCP Central';
+
+        if (emailLower.includes('super')) {
+          detectedRole = 'SUPER_ADMIN';
+          assignedPortal = 'SUPER_ADMIN';
+          rankLevel = 'SUPER_ADMIN';
+        } else if (emailLower.includes('dgp') || emailLower.includes('cp') || emailLower.includes('jcp') || emailLower.includes('commissioner')) {
+          detectedRole = 'DISTRICT_ADMIN';
+          assignedPortal = 'DISTRICT_ADMIN';
+          rankLevel = emailLower.includes('dgp') ? 'DGP' : emailLower.includes('jcp') ? 'JCP' : 'CP';
+          dcpZone = null;
+        } else if (emailLower.includes('dcp') || emailLower.includes('adcp') || emailLower.includes('acp')) {
+          detectedRole = 'DISTRICT_ADMIN';
+          assignedPortal = 'DISTRICT_ADMIN';
+          rankLevel = emailLower.includes('adcp') ? 'ADCP' : emailLower.includes('acp') ? 'ACP' : 'DCP';
+          if (emailLower.includes('west')) dcpZone = 'DCP West';
+          else if (emailLower.includes('north')) dcpZone = 'DCP North';
+          else if (emailLower.includes('east')) dcpZone = 'DCP East';
+          else if (emailLower.includes('south')) dcpZone = 'DCP South';
+          else dcpZone = 'DCP Central';
+        } else if (emailLower.includes('sho') || emailLower.includes('si') || emailLower.includes('ps') || emailLower.includes('inspector') || emailLower.includes('police')) {
+          detectedRole = 'INSPECTION_OFFICER';
+          assignedPortal = 'INSPECTION_OFFICER';
+          rankLevel = emailLower.includes('sho') ? 'SHO' : emailLower.includes('ps') ? 'PS' : 'SI';
+        } else if (emailLower.includes('district') || emailLower.includes('admin')) {
+          detectedRole = 'DISTRICT_ADMIN';
+          assignedPortal = 'DISTRICT_ADMIN';
+          rankLevel = 'CP';
+          dcpZone = null;
+        }
+
+        // Create fallback user dynamically on this device so future logins work
+        const nameFromEmail = emailLower.split('@')[0].toUpperCase().replace('.', ' ');
+        fallbackUser = {
+          _id: 'u-dyn-' + Date.now(),
+          name: nameFromEmail || 'Official Officer',
+          email: credentials.email,
+          role: detectedRole,
+          assignedPortal,
+          rankLevel,
+          dcpZone,
+          designation: `${rankLevel} Officer`,
+          district: 'Lucknow',
+          state: 'Uttar Pradesh',
+        };
+
+        try {
+          userStore.createUser({
+            name: fallbackUser.name,
+            email: credentials.email,
+            phone: credentials.password || '9412000000',
+            role: detectedRole,
+            assignedPortal,
+            rankLevel,
+            dcpZone,
+            district: 'Lucknow',
+          }, 'System Fallback');
+        } catch (_) {
+          // ignore duplicate in local store
+        }
       }
 
       const token = 'demo_token_' + Date.now();

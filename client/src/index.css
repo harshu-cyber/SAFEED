@@ -245,3 +245,56 @@
   box-shadow: 0 12px 30px -4px rgba(7, 26, 47, 0.12);
   border-color: #D4AF37;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   UNIVERSAL FORM INPUT CONTRAST & VISIBILITY ENFORCEMENT
+   Ensures typed text inside all input fields, textareas, and select
+   dropdowns is crisp, sharp, and 100% visible across all forms.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Light background inputs & default modal inputs */
+input.bg-white,
+input.bg-gray-50,
+input.bg-gray-100,
+input.bg-slate-50,
+select.bg-white,
+select.bg-gray-50,
+select.bg-gray-100,
+textarea.bg-white,
+textarea.bg-gray-50,
+textarea.bg-gray-100,
+.modal-content input,
+.modal-content select,
+.modal-content textarea,
+[class*='bg-white'] input,
+[class*='bg-white'] select,
+[class*='bg-white'] textarea {
+  color: #0F2038 !important;
+  font-weight: 600 !important;
+}
+
+/* Ensure placeholder text on light inputs is visible */
+input.bg-white::placeholder,
+input.bg-gray-50::placeholder,
+select.bg-white::placeholder,
+textarea.bg-white::placeholder {
+  color: #64748B !important;
+  opacity: 1 !important;
+}
+
+/* Ensure dropdown options have white background and crisp dark text */
+select option {
+  background-color: #FFFFFF !important;
+  color: #0F2038 !important;
+  font-weight: 600 !important;
+}
+
+/* Dark themed explicit inputs retain white text */
+input[class*='bg-\[#0'],
+input[class*='bg-\[#1'],
+input.bg-dark,
+input.text-white {
+  color: #FFFFFF !important;
+}
+
+

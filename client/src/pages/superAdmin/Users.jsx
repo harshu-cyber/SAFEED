@@ -59,7 +59,7 @@ const Field = ({ label, hint, required, children }) => (
   </div>
 );
 
-const inputClass = "w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] bg-gray-50";
+const inputClass = "w-full px-3.5 py-2.5 text-xs font-semibold border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-[#D4AF37] bg-white text-[#0F2038] placeholder:text-gray-400 shadow-xs transition-all";
 
 // Popup shown right after creating a user — shows credentials
 const CredentialsPopup = ({ user, onClose }) => {

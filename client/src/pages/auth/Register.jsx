@@ -26,6 +26,19 @@ const DCP_ZONES = [
   { value: 'SOUTH',   label: 'South Zone  (DCP South)   — दक्षिण क्षेत्र' },
 ];
 
+const POLICE_STATIONS = [
+  'Chowk', 'Wazirganj', 'Thakurganj', 'Saadatganj', 'Bazarkhala', 'Talkatora',
+  'Kaisarbagh', 'Aminabad', 'Naka', 'Kakori', 'Dubagga', 'Para',
+  'Hazratganj', 'Husainganj', 'Gautampalli', 'Mahila Thana', 'Mahanagar',
+  'Hasanganj', 'Madehganj', 'Cantt', 'Ashiyana', 'Alambagh', 'Manaknagar',
+  'Aliganj', 'Madiyaon', 'Janakipuram', 'Malihabad', 'Rahimabad', 'Maal',
+  'Itunja', 'B.K.T.', 'Sairpur', 'Mahigawan', 'Mahila Thana-2', 'Ghazipur',
+  'Gudamba', 'Indiranagar', 'Vikasnagar', 'Gomtinagar', 'Gomtinagar Vistar',
+  'Cyber Thana', 'Vibhutikhand', 'Chinhat', 'BBD', 'Mohanlalganj', 'Nagram',
+  'Nigoha', 'Gosainganj', 'PGI', 'Sushant Golf City', 'Krishnanagar',
+  'Sarojininagar', 'Banthra', 'Bijnour'
+];
+
 // ✅ Credentials Popup Modal
 const CredentialsPopup = ({ credentials, onClose }) => {
   const [copied, setCopied] = useState(false);
@@ -259,7 +272,7 @@ export const Register = () => {
           {/* Contact Email & Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className={labelClass}>Official Email (Username) <span className="text-rose-500">*</span></label>
+              <label className={labelClass}>Official Email <span className="text-rose-500">*</span></label>
               <input
                 type="email"
                 {...register('email', { required: 'Official email is required' })}
@@ -269,7 +282,7 @@ export const Register = () => {
               {errors.email && <p className="text-[10px] text-rose-400 mt-0.5">{errors.email.message}</p>}
             </div>
             <div>
-              <label className={labelClass}>Mobile Number (Password) <span className="text-rose-500">*</span></label>
+              <label className={labelClass}>Mobile Number <span className="text-rose-500">*</span></label>
               <input
                 type="tel"
                 {...register('phone', { required: 'Mobile number is required', pattern: { value: /^[0-9]{10}$/, message: '10-digit mobile number' } })}
@@ -333,12 +346,15 @@ export const Register = () => {
           {/* Nearest Police Station */}
           <div>
             <label className={labelClass}>Nearest Police Station (थाना) <span className="text-rose-500">*</span></label>
-            <input
-              type="text"
+            <select
               {...register('nearestPoliceStation', { required: 'Nearest police station is required' })}
-              placeholder="e.g. Hazratganj Police Station, Lucknow (थाना हज़रतगंज)"
               className={`${inputClass} border-[#D4AF37]/40 font-bold text-white`}
-            />
+            >
+              <option value="" className="bg-[#0B223D] text-white">-- Select Nearest Police Station (थाना चुनें) --</option>
+              {POLICE_STATIONS.map(ps => (
+                <option key={ps} value={ps} className="bg-[#0B223D] text-white">{ps} Police Station (थाना {ps})</option>
+              ))}
+            </select>
             {errors.nearestPoliceStation && <p className="text-[10px] text-rose-400 font-bold">{errors.nearestPoliceStation.message}</p>}
           </div>
 

@@ -12,6 +12,19 @@ import { MdVerified, MdLocalPolice } from 'react-icons/md';
 const inputClass = 'w-full text-xs px-3 py-2.5 border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-[#D4AF37] transition-all bg-white font-semibold';
 const labelClass = 'block text-xs font-black text-[#0F2038] mb-1';
 
+const POLICE_STATIONS = [
+  'Chowk', 'Wazirganj', 'Thakurganj', 'Saadatganj', 'Bazarkhala', 'Talkatora',
+  'Kaisarbagh', 'Aminabad', 'Naka', 'Kakori', 'Dubagga', 'Para',
+  'Hazratganj', 'Husainganj', 'Gautampalli', 'Mahila Thana', 'Mahanagar',
+  'Hasanganj', 'Madehganj', 'Cantt', 'Ashiyana', 'Alambagh', 'Manaknagar',
+  'Aliganj', 'Madiyaon', 'Janakipuram', 'Malihabad', 'Rahimabad', 'Maal',
+  'Itunja', 'B.K.T.', 'Sairpur', 'Mahigawan', 'Mahila Thana-2', 'Ghazipur',
+  'Gudamba', 'Indiranagar', 'Vikasnagar', 'Gomtinagar', 'Gomtinagar Vistar',
+  'Cyber Thana', 'Vibhutikhand', 'Chinhat', 'BBD', 'Mohanlalganj', 'Nagram',
+  'Nigoha', 'Gosainganj', 'PGI', 'Sushant Golf City', 'Krishnanagar',
+  'Sarojininagar', 'Banthra', 'Bijnour'
+];
+
 export const InstitutionProfile = () => {
   const { user } = useAuth();
   const [institution, setInstitution] = useState(null);
@@ -313,11 +326,11 @@ export const InstitutionProfile = () => {
               {errors.principal && <p className="text-[10px] text-rose-600 mt-0.5">{errors.principal.message}</p>}
             </div>
             <div>
-              <label className={labelClass}>Registered Mobile (Password)</label>
+              <label className={labelClass}>Registered Mobile</label>
               <input type="text" {...register('phone')} className={`${inputClass} font-mono`} />
             </div>
             <div>
-              <label className={labelClass}>Official Email ID (Username)</label>
+              <label className={labelClass}>Official Email ID</label>
               <input type="email" {...register('email')} disabled className="w-full text-xs px-3 py-2.5 border-2 border-slate-100 rounded-xl bg-slate-100 font-mono" />
             </div>
             <div>
@@ -327,13 +340,16 @@ export const InstitutionProfile = () => {
             <div className="sm:col-span-2">
               <label className={labelClass}>Nearest Police Station (संबंधित थाना) <span className="text-rose-500">*</span></label>
               <div className="relative">
-                <input
-                  type="text"
-                  placeholder="e.g. Hazratganj Police Station, Lucknow (थाना हज़रतगंज)"
+                <select
                   {...register('nearestPoliceStation', { required: 'Nearest police station is required for emergency dispatch' })}
                   className={`${inputClass} pl-8 border-2 border-blue-300 focus:border-blue-500 font-bold`}
-                />
-                <MdLocalPolice size={16} className="absolute left-2.5 top-3 text-blue-800" />
+                >
+                  <option value="">-- Select Nearest Police Station (थाना चुनें) --</option>
+                  {POLICE_STATIONS.map(ps => (
+                    <option key={ps} value={ps}>{ps} Police Station (थाना {ps})</option>
+                  ))}
+                </select>
+                <MdLocalPolice size={16} className="absolute left-2.5 top-3.5 text-blue-800 pointer-events-none" />
               </div>
               {errors.nearestPoliceStation && <p className="text-[10px] text-rose-600 mt-0.5">{errors.nearestPoliceStation.message}</p>}
             </div>

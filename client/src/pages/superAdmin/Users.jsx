@@ -20,8 +20,35 @@ const ROLE_OPTIONS = [
 
 const DCP_ZONES = ['DCP West', 'DCP Central', 'DCP North', 'DCP East', 'DCP South'];
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-const RANKS = ['Sub-Inspector', 'Inspector', 'DCP', 'SP', 'SSP', 'DIG', 'IG', 'ADG', 'DGP', 'IPS Officer'];
-const UP_DISTRICTS = ['Lucknow', 'Agra', 'Kanpur', 'Varanasi', 'Allahabad', 'Meerut', 'Ghaziabad', 'Noida', 'Bareilly', 'Mathura'];
+
+// 🏛️ Police Ranks mapped to designated Portals (Inspection vs District Admin)
+const POLICE_RANKS = [
+  // 🛡️ Inspection Portal Ranks (Specific DCP Zone Safety Audits)
+  { value: 'DCP',  label: 'DCP — Deputy Commissioner of Police (Inspection Portal)', portal: 'INSPECTION_OFFICER', category: 'Inspection Portal' },
+  { value: 'ADCP', label: 'ADCP — Additional Deputy Commissioner of Police (Inspection Portal)', portal: 'INSPECTION_OFFICER', category: 'Inspection Portal' },
+  { value: 'ACP',  label: 'ACP — Assistant Commissioner of Police (Inspection Portal)', portal: 'INSPECTION_OFFICER', category: 'Inspection Portal' },
+  { value: 'SI',   label: 'SI — Sub-Inspector (Inspection Portal)', portal: 'INSPECTION_OFFICER', category: 'Inspection Portal' },
+  { value: 'SO',   label: 'SO — Station Officer (Inspection Portal)', portal: 'INSPECTION_OFFICER', category: 'Inspection Portal' },
+  { value: 'PS',   label: 'PS — Police Station Official (Inspection Portal)', portal: 'INSPECTION_OFFICER', category: 'Inspection Portal' },
+  
+  // 🏛️ District Authority Admin Portal Ranks (District Oversight — Covers Entire District Lucknow)
+  { value: 'JCP',  label: 'JCP — Joint Commissioner of Police (District Admin Portal)', portal: 'DISTRICT_ADMIN', category: 'District Authority Portal' },
+  { value: 'CP',   label: 'CP — Commissioner of Police (District Admin Portal)', portal: 'DISTRICT_ADMIN', category: 'District Authority Portal' },
+  { value: 'DGP',  label: 'DGP — Director General of Police (District Admin Portal)', portal: 'DISTRICT_ADMIN', category: 'District Authority Portal' },
+];
+
+const LUCKNOW_POLICE_STATIONS = [
+  'Chowk', 'Wazirganj', 'Thakurganj', 'Saadatganj', 'Bazarkhala', 'Talkatora',
+  'Kaisarbagh', 'Aminabad', 'Naka', 'Kakori', 'Dubagga', 'Para',
+  'Hazratganj', 'Husainganj', 'Gautampalli', 'Mahila Thana', 'Mahanagar',
+  'Hasanganj', 'Madehganj', 'Cantt', 'Ashiyana', 'Alambagh', 'Manaknagar',
+  'Aliganj', 'Madiyaon', 'Janakipuram', 'Malihabad', 'Rahimabad', 'Maal',
+  'Itunja', 'B.K.T.', 'Sairpur', 'Mahigawan', 'Mahila Thana-2', 'Ghazipur',
+  'Gudamba', 'Indiranagar', 'Vikasnagar', 'Gomtinagar', 'Gomtinagar Vistar',
+  'Cyber Thana', 'Vibhutikhand', 'Chinhat', 'BBD', 'Mohanlalganj', 'Nagram',
+  'Nigoha', 'Gosainganj', 'PGI', 'Sushant Golf City', 'Krishnanagar',
+  'Sarojininagar', 'Banthra', 'Bijnour'
+];
 
 const ROLE_BADGE_COLOR = {
   SUPER_ADMIN: 'bg-purple-100 text-purple-700 border-purple-200',
@@ -36,7 +63,7 @@ const DEFAULT_FORM = {
   email: '',
   phone: '',
   role: 'INSPECTION_OFFICER',
-  designation: '',
+  designation: 'Deputy Commissioner of Police',
   badgeNumber: '',
   department: 'UP Police',
   dcpZone: 'DCP Central',
@@ -44,8 +71,8 @@ const DEFAULT_FORM = {
   state: 'Uttar Pradesh',
   joiningDate: new Date().toISOString().split('T')[0],
   bloodGroup: '',
-  rankLevel: '',
-  postingStation: '',
+  rankLevel: 'DCP',
+  postingStation: 'Hazratganj',
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -350,16 +377,16 @@ const EditUserModal = ({ user, onClose, onSave }) => {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="District" required>
-              <select value={editForm.district} onChange={e => setEditForm({ ...editForm, district: e.target.value })} className={inputClass}>
-                {UP_DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
+            <Field label="District">
+              <input type="text" value="Lucknow" readOnly className={inputClass + ' bg-gray-100 text-gray-400 cursor-not-allowed'} />
             </Field>
-            <Field label="DCP Zone Assignment">
-              <select value={editForm.dcpZone} onChange={e => setEditForm({ ...editForm, dcpZone: e.target.value })} className={inputClass}>
-                {DCP_ZONES.map(z => <option key={z} value={z}>{z}</option>)}
-              </select>
-            </Field>
+            {(editForm.assignedPortal === 'INSPECTION_OFFICER' || editForm.role === 'INSPECTION_OFFICER') && (
+              <Field label="DCP Zone Assignment">
+                <select value={editForm.dcpZone} onChange={e => setEditForm({ ...editForm, dcpZone: e.target.value })} className={inputClass}>
+                  {DCP_ZONES.map(z => <option key={z} value={z}>{z}</option>)}
+                </select>
+              </Field>
+            )}
           </div>
 
           <Field label="Assigned Admin Portal (Login Destination)" required>
@@ -711,17 +738,38 @@ export const UserManagementPage = () => {
                   <Field label="Official Designation" required>
                     <input type="text" required placeholder="e.g. Deputy Commissioner of Police" value={form.designation} onChange={e => setForm(f => ({ ...f, designation: e.target.value }))} className={inputClass} />
                   </Field>
-                  <Field label="Rank Level">
-                    <select value={form.rankLevel} onChange={e => setForm(f => ({ ...f, rankLevel: e.target.value }))} className={inputClass}>
-                      <option value="">Select Rank…</option>
-                      {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+                  <Field label="Police Rank" required hint={form.rankLevel ? `• Will be assigned to: ${POLICE_RANKS.find(r => r.value === form.rankLevel)?.category || ''}` : ''}>
+                    <select
+                      value={form.rankLevel}
+                      onChange={e => {
+                        const rank = POLICE_RANKS.find(r => r.value === e.target.value);
+                        setForm(f => ({
+                          ...f,
+                          rankLevel: e.target.value,
+                          assignedPortal: rank ? rank.portal : f.assignedPortal,
+                          role: rank ? rank.portal : f.role,
+                          dcpZone: rank && rank.portal === 'DISTRICT_ADMIN' ? '' : f.dcpZone,
+                        }));
+                      }}
+                      className={inputClass}
+                    >
+                      <option value="">Select Police Rank…</option>
+                      <optgroup label="🛡️ Inspection Portal Ranks (DCP Zone Officers)">
+                        {POLICE_RANKS.filter(r => r.portal === 'INSPECTION_OFFICER').map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                      </optgroup>
+                      <optgroup label="🏛️ District Authority Admin Portal Ranks (District-Level Officers)">
+                        {POLICE_RANKS.filter(r => r.portal === 'DISTRICT_ADMIN').map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                      </optgroup>
                     </select>
                   </Field>
                   <Field label="Department">
                     <input type="text" placeholder="e.g. UP Police — North Zone" value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} className={inputClass} />
                   </Field>
-                  <Field label="Posting Station">
-                    <input type="text" placeholder="e.g. Hazratganj Police Station" value={form.postingStation} onChange={e => setForm(f => ({ ...f, postingStation: e.target.value }))} className={inputClass} />
+                  <Field label="Posting Station (Lucknow)">
+                    <select value={form.postingStation} onChange={e => setForm(f => ({ ...f, postingStation: e.target.value }))} className={inputClass}>
+                      <option value="">Select Police Station…</option>
+                      {LUCKNOW_POLICE_STATIONS.map(s => <option key={s} value={s}>{s} Police Station</option>)}
+                    </select>
                   </Field>
                   {form.role === 'INSPECTION_OFFICER' && (
                     <Field label="DCP Zone Assignment" required>
@@ -737,10 +785,8 @@ export const UserManagementPage = () => {
               <div>
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">📍 Jurisdiction</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Field label="District" required>
-                    <select required value={form.district} onChange={e => setForm(f => ({ ...f, district: e.target.value }))} className={inputClass}>
-                      {UP_DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
+                  <Field label="District">
+                    <input type="text" value="Lucknow" readOnly className={inputClass + ' bg-gray-100 text-gray-400 cursor-not-allowed'} />
                   </Field>
                   <Field label="State">
                     <input type="text" value="Uttar Pradesh" readOnly className={inputClass + ' bg-gray-100 text-gray-400 cursor-not-allowed'} />

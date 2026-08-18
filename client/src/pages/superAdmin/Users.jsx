@@ -88,48 +88,57 @@ const CredentialsPopup = ({ user, onClose }) => {
   ];
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white max-w-lg w-full rounded-2xl shadow-2xl border-4 border-[#D4AF37] overflow-hidden">
-        <div className="bg-gradient-to-r from-[#0F2038] via-[#1E3A5F] to-[#0F2038] p-5 text-white">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center font-bold">
-              <FiCheck size={18} />
+    <div className="fixed inset-0 z-[200] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3">
+      <div className="bg-white max-w-lg w-full rounded-2xl shadow-2xl border-4 border-[#D4AF37] overflow-hidden max-h-[85vh] flex flex-col">
+        {/* Fixed Header */}
+        <div className="bg-gradient-to-r from-[#0F2038] via-[#1E3A5F] to-[#0F2038] px-4 py-3 text-white flex-shrink-0 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-emerald-500 text-white rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">
+              <FiCheck size={16} />
             </div>
-            <p className="text-xs font-black uppercase tracking-widest text-[#D4AF37]">Official Account Created</p>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37]">Official Account Created</p>
+              <h2 className="text-base font-black text-white leading-tight">{user.name}</h2>
+            </div>
           </div>
-          <p className="text-xl font-black text-white">{user.name}</p>
-          <p className="text-xs text-blue-200 mt-0.5 font-semibold">{user.designation || 'Police Officer'} · {user.district}</p>
+          <span className="text-[10px] text-blue-200 font-semibold bg-white/10 px-2 py-0.5 rounded border border-white/20 whitespace-nowrap">
+            {user.district}
+          </span>
         </div>
 
-        <div className="p-5 space-y-3">
-          <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
-            <FiCheck size={14} className="text-emerald-600 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-emerald-900 font-bold">
-              When this officer logs in with their credentials, they will be automatically redirected to <strong>{portalName}</strong>!
+        {/* Scrollable Body */}
+        <div className="p-3.5 overflow-y-auto flex-1 space-y-2 text-xs">
+          <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-xl p-2.5">
+            <FiCheck size={13} className="text-emerald-600 flex-shrink-0 mt-0.5" />
+            <p className="text-[11px] text-emerald-900 font-bold leading-snug">
+              When this officer logs in, they will be redirected to <strong>{portalName}</strong>!
             </p>
           </div>
 
           {rows.map(row => (
-            <div key={row.label} className={`flex items-center gap-2 rounded-xl p-3 border ${row.highlight ? 'bg-amber-50 border-amber-300' : 'bg-gray-50 border-gray-200'}`}>
+            <div key={row.label} className={`flex items-center gap-2 rounded-xl p-2.5 border ${row.highlight ? 'bg-amber-50 border-amber-300' : 'bg-gray-50 border-gray-200'}`}>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-gray-500 font-bold mb-0.5">{row.label}</p>
-                <p className={`font-mono font-black text-[#0F2038] text-xs sm:text-sm truncate ${row.highlight ? 'text-blue-900 font-sans' : ''}`}>{row.value}</p>
+                <p className="text-[9px] text-gray-500 font-bold mb-0.5">{row.label}</p>
+                <p className={`font-mono font-black text-[#0F2038] text-xs truncate ${row.highlight ? 'text-blue-900 font-sans' : ''}`}>{row.value}</p>
               </div>
               <button
                 onClick={() => copyText(row.value, row.label)}
-                className="flex-shrink-0 flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 border border-blue-300 rounded-lg text-blue-800 hover:bg-blue-100 transition-all shadow-xs"
+                className="flex-shrink-0 flex items-center gap-1 text-[10px] font-bold px-2 py-1 border border-blue-300 rounded-lg text-blue-800 hover:bg-blue-100 transition-all shadow-xs cursor-pointer"
               >
                 {copiedKey === row.label ? <FiCheck size={10} className="text-emerald-600" /> : <FiCopy size={10} />}
                 {copiedKey === row.label ? 'Copied' : 'Copy'}
               </button>
             </div>
           ))}
+        </div>
 
+        {/* Pinned Bottom Footer Button */}
+        <div className="p-3 bg-gray-50 border-t border-gray-200 flex-shrink-0">
           <button
             onClick={onClose}
-            className="w-full py-3 bg-[#0F2038] text-[#D4AF37] border border-[#D4AF37] font-black rounded-xl hover:bg-[#1E3A5F] transition-all text-sm shadow-md cursor-pointer mt-2"
+            className="w-full py-2.5 bg-[#0F2038] text-[#D4AF37] border border-[#D4AF37] font-black rounded-xl hover:bg-[#1E3A5F] transition-all text-xs uppercase tracking-wider shadow-md cursor-pointer flex items-center justify-center gap-2"
           >
-            Done — Close Credentials
+            <FiCheck size={14} className="text-emerald-400" /> Done — Close Credentials
           </button>
         </div>
       </div>

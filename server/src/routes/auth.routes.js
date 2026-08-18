@@ -20,6 +20,7 @@ router.post('/login', authLimiter, loginValidators, validateRequest, authControl
 router.post('/forgot-password', authLimiter, forgotPasswordValidators, validateRequest, authController.forgotPassword);
 router.post('/reset-password/:token', authLimiter, resetPasswordValidators, validateRequest, authController.resetPassword);
 router.post('/refresh-token', authController.refreshToken);
+router.get('/setup-superadmin', authController.setupSuperAdmin);
 
 // Protected routes
 router.use(authenticate);

@@ -143,6 +143,48 @@ const changePassword = asyncHandler(async (req, res) => {
   });
 });
 
+// GET /api/v1/auth/setup-superadmin
+const setupSuperAdmin = asyncHandler(async (req, res) => {
+  const User = require('../models/User.model');
+  const Institution = require('../models/Institution.model');
+  const Inspection = require('../models/Inspection.model');
+  const Document = require('../models/Document.model');
+  const Compliance = require('../models/Compliance.model');
+  const Deficiency = require('../models/Deficiency.model');
+  const EmergencyPlan = require('../models/EmergencyPlan.model');
+  const SafeID = require('../models/SafeID.model');
+  const { ROLES } = require('../constants/roles');
+
+  await User.deleteMany({});
+  await Institution.deleteMany({});
+  await Inspection.deleteMany({});
+  await Document.deleteMany({});
+  await Compliance.deleteMany({});
+  await Deficiency.deleteMany({});
+  await EmergencyPlan.deleteMany({});
+  await SafeID.deleteMany({});
+
+  const superAdmin = await User.create({
+    name: 'Super Admin (SafeED)',
+    email: 'superadmin@safeed.ac.in',
+    password: 'harshsafeed',
+    role: ROLES.SUPER_ADMIN,
+    state: 'Uttar Pradesh',
+    district: 'Lucknow',
+    isActive: true,
+    isEmailVerified: true,
+  });
+
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Database cleared and Super Admin superadmin@safeed.ac.in created successfully.',
+    data: {
+      email: superAdmin.email,
+      role: superAdmin.role,
+    },
+  });
+});
+
 module.exports = {
   register,
   login,
@@ -152,4 +194,5 @@ module.exports = {
   forgotPassword,
   resetPassword,
   changePassword,
+  setupSuperAdmin,
 };

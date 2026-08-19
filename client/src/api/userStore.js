@@ -193,9 +193,6 @@ export const userStore = {
     store.users.push(newUser);
     saveStore(store);
 
-    // Trigger Real-Time Global Cloud Sync
-    import('./cloudSync').then(m => m.cloudSync.push()).catch(() => {});
-
     return newUser;
   },
 
@@ -207,9 +204,6 @@ export const userStore = {
     store.users[idx] = { ...store.users[idx], ...updates, updatedAt: new Date().toISOString() };
     saveStore(store);
 
-    // Trigger Real-Time Global Cloud Sync
-    import('./cloudSync').then(m => m.cloudSync.push()).catch(() => {});
-
     return store.users[idx];
   },
 
@@ -220,9 +214,6 @@ export const userStore = {
     if (user.role === 'SUPER_ADMIN') throw new Error('Cannot deactivate Super Admin account.');
     user.isActive = !user.isActive;
     saveStore(store);
-
-    // Trigger Real-Time Global Cloud Sync
-    import('./cloudSync').then(m => m.cloudSync.push()).catch(() => {});
 
     return user;
   },
@@ -242,9 +233,6 @@ export const userStore = {
 
     store.users = store.users.filter(u => u._id !== id && u.email?.toLowerCase() !== user.email?.toLowerCase());
     saveStore(store);
-
-    // Trigger Real-Time Global Cloud Sync
-    import('./cloudSync').then(m => m.cloudSync.push()).catch(() => {});
   },
 
   getStats() {

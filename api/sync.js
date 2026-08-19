@@ -4,7 +4,10 @@
 // ============================================================
 const mongoose = require('mongoose');
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://SAFEED:Clekhak1701@cluster0.8vmsujy.mongodb.net/safeedup?retryWrites=true&w=majority&appName=Cluster0';
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI environment variable is not set. Configure it in Vercel project settings.');
+}
 
 let isConnected = false;
 async function connectDB() {

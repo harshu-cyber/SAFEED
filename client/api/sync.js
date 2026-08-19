@@ -4,14 +4,14 @@
 // ============================================================
 const mongoose = require('mongoose');
 
-const MONGODB_URI = process.env.MONGODB_URI;
-if (!MONGODB_URI) {
-  throw new Error('MONGODB_URI environment variable is not set. Configure it in Vercel project settings.');
-}
-
 let isConnected = false;
 async function connectDB() {
   if (isConnected && mongoose.connection.readyState === 1) return;
+  const MONGODB_URI = process.env.MONGODB_URI;
+  if (!MONGODB_URI) {
+    console.warn('MongoDB Atlas URI (process.env.MONGODB_URI) is not configured.');
+    return;
+  }
   try {
     await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 8000 });
     isConnected = true;

@@ -73,7 +73,8 @@ export async function syncAction(action, payload) {
     try {
       json = JSON.parse(text);
     } catch {
-      throw new Error(`Server connection error (${res.status}). Ensure MONGODB_URI is set in Vercel project settings.`);
+      const cleanSnippet = text.replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ').slice(0, 120);
+      throw new Error(`Server error (${res.status}): ${cleanSnippet || 'Invalid response format'}`);
     }
 
     if (!json.success) throw new Error(json.error || 'MongoDB Atlas action failed');

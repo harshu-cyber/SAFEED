@@ -9,8 +9,12 @@ dotenv.config({ path: path.join(__dirname, '../server/.env') });
 
 const app = require('../server/src/app');
 const connectDB = require('../server/src/config/db');
+const syncHandler = require('./sync');
 
 module.exports = async (req, res) => {
+  if (req.url === '/api/sync' || req.url?.startsWith('/api/sync?')) {
+    return syncHandler(req, res);
+  }
   try {
     await connectDB();
   } catch (err) {

@@ -40,6 +40,7 @@ async function syncHandler(req, res) {
 
       // Auto-seed default institutions across all 5 zones if empty
       if (institutions.length === 0) {
+        const dummyAdminId = new mongoose.Types.ObjectId();
         const DEFAULT_INSTS = [
           {
             safeId: 'SAFE-UP-LKO-100101',
@@ -59,6 +60,7 @@ async function syncHandler(req, res) {
             assignedInspector: 'DCP Central',
             assignedInspectorZone: 'CENTRAL',
             affiliationBoard: 'CBSE',
+            adminUserId: dummyAdminId,
             address: { street: 'Hazratganj Main Road', district: 'Lucknow', state: 'Uttar Pradesh' },
             contactPerson: { name: 'Dr. Rajesh Sharma', email: 'principal@srpublic.edu.in', phone: '9839012345' },
           },
@@ -80,6 +82,7 @@ async function syncHandler(req, res) {
             assignedInspector: 'DCP North',
             assignedInspectorZone: 'NORTH',
             affiliationBoard: 'Other',
+            adminUserId: dummyAdminId,
             address: { street: 'Kapoorthala, Aliganj', district: 'Lucknow', state: 'Uttar Pradesh' },
             contactPerson: { name: 'Sanjeev Agarwal', email: 'director@allenlko.ac.in', phone: '9839054321' },
           },
@@ -101,6 +104,7 @@ async function syncHandler(req, res) {
             assignedInspector: 'DCP East',
             assignedInspectorZone: 'EAST',
             affiliationBoard: 'CBSE',
+            adminUserId: dummyAdminId,
             address: { street: 'Gomti Nagar Phase 2', district: 'Lucknow', state: 'Uttar Pradesh' },
             contactPerson: { name: 'Sunita Verma', email: 'admin@dpsgomtinagar.com', phone: '9839088888' },
           },
@@ -122,6 +126,7 @@ async function syncHandler(req, res) {
             assignedInspector: 'DCP West',
             assignedInspectorZone: 'WEST',
             affiliationBoard: 'Other',
+            adminUserId: dummyAdminId,
             address: { street: 'Chowk Crossing', district: 'Lucknow', state: 'Uttar Pradesh' },
             contactPerson: { name: 'Vikram Singh', email: 'head@fiitjeechowk.ac.in', phone: '9839077777' },
           },
@@ -143,6 +148,7 @@ async function syncHandler(req, res) {
             assignedInspector: 'DCP South',
             assignedInspectorZone: 'SOUTH',
             affiliationBoard: 'ICSE',
+            adminUserId: dummyAdminId,
             address: { street: 'Sector H, Ashiyana', district: 'Lucknow', state: 'Uttar Pradesh' },
             contactPerson: { name: 'Father Thomas', email: 'principal@stjosephlko.edu.in', phone: '9839066666' },
           },

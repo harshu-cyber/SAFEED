@@ -34,9 +34,119 @@ async function syncHandler(req, res) {
     }
 
     if (req.method === 'GET') {
-      const users = await User.find({}).select('-password').lean();
+      let users = await User.find({}).select('-password').lean();
       const institutions = await Institution.find({}).lean();
       const complaints = await Complaint.find({}).lean();
+
+      // Auto-seed default system admin users if empty
+      if (users.length === 0) {
+        const DEFAULT_USERS = [
+          {
+            name: 'Super Admin (SafeED)',
+            email: 'superadmin@safeed.ac.in',
+            phone: '9876543210',
+            password: 'SuperAdminPass123',
+            role: 'SUPER_ADMIN',
+            assignedPortal: 'SUPER_ADMIN',
+            state: 'Uttar Pradesh',
+            district: 'Lucknow',
+            designation: 'Director General',
+            department: 'SafeED Command Center',
+            badgeNumber: 'SA-UP-01',
+            employeeId: 'SA-UP-01',
+            isActive: true,
+          },
+          {
+            name: 'Super Admin',
+            email: 'superadmin@safeedup.gov.in',
+            phone: '9876543211',
+            password: 'SuperAdminPass123',
+            role: 'SUPER_ADMIN',
+            assignedPortal: 'SUPER_ADMIN',
+            state: 'Uttar Pradesh',
+            district: 'Lucknow',
+            designation: 'Chief Administrator',
+            department: 'SafeED Command Center',
+            badgeNumber: 'SA-UP-02',
+            employeeId: 'SA-UP-02',
+            isActive: true,
+          },
+          {
+            name: 'Suresh Kumar (District Admin)',
+            email: 'districtadmin@safeedup.gov.in',
+            phone: '9876543212',
+            password: 'DistrictAdminPass123',
+            role: 'DISTRICT_ADMIN',
+            assignedPortal: 'DISTRICT_ADMIN',
+            state: 'Uttar Pradesh',
+            district: 'Lucknow',
+            designation: 'District Magistrate',
+            department: 'District Authority',
+            badgeNumber: 'DM-LKO-01',
+            employeeId: 'DM-LKO-01',
+            isActive: true,
+          },
+          {
+            name: 'DCP Central (Inspection Officer)',
+            email: 'inspector@safeedup.gov.in',
+            phone: '9876543213',
+            password: 'InspectorPass123',
+            role: 'INSPECTION_OFFICER',
+            assignedPortal: 'INSPECTION_OFFICER',
+            state: 'Uttar Pradesh',
+            district: 'Lucknow',
+            dcpZone: 'CENTRAL',
+            designation: 'Deputy Commissioner of Police',
+            department: 'UP Police',
+            postingStation: 'Hazratganj Police Station',
+            policeRank: 'DCP',
+            badgeNumber: 'DCP-C-01',
+            employeeId: 'DCP-C-01',
+            isActive: true,
+          },
+          {
+            name: 'ACP Vikram Rathore',
+            email: 'police@safeedup.gov.in',
+            phone: '9876543214',
+            password: 'PolicePass123',
+            role: 'POLICE_OFFICER',
+            assignedPortal: 'POLICE_OFFICER',
+            state: 'Uttar Pradesh',
+            district: 'Lucknow',
+            designation: 'Assistant Commissioner of Police',
+            department: 'UP Police',
+            postingStation: 'Lucknow Central',
+            policeRank: 'ACP',
+            badgeNumber: 'ACP-LKO-01',
+            employeeId: 'ACP-LKO-01',
+            isActive: true,
+          },
+          {
+            name: 'Chief Fire Officer',
+            email: 'fire@safeedup.gov.in',
+            phone: '9876543215',
+            password: 'FirePass123',
+            role: 'FIRE_OFFICER',
+            assignedPortal: 'FIRE_OFFICER',
+            state: 'Uttar Pradesh',
+            district: 'Lucknow',
+            designation: 'Chief Fire Officer',
+            department: 'UP Fire Service',
+            badgeNumber: 'CFO-LKO-01',
+            employeeId: 'CFO-LKO-01',
+            isActive: true,
+          },
+        ];
+
+        try {
+          for (const u of DEFAULT_USERS) {
+            await User.create(u);
+          }
+          users = await User.find({}).select('-password').lean();
+        } catch (seedErr) {
+          console.warn('Auto seed user notice:', seedErr.message);
+        }
+      }
       return res.status(200).json({
         success: true,
         data: { users, institutions, complaints },

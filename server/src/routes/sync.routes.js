@@ -43,38 +43,49 @@ async function syncHandler(req, res) {
     if (req.method === 'POST') {
       const { action, payload } = req.body || {};
 
-      if (action === 'createUser' && payload) {
+      if ((action === 'CREATE_USER' || action === 'createUser') && payload) {
         const emailLow = payload.email?.toLowerCase();
-        const existing = await User.findOne({ email: emailLow });
+        let existing = null;
+        if (emailLow) existing = await User.findOne({ email: emailLow });
         if (!existing) {
-          // Provide default password if missing in payload
           const userDoc = {
             name: payload.name || payload.officialName || 'Official User',
-            email: emailLow,
-            password: payload.password || 'SafeED@2026',
-            role: payload.role || 'CITIZEN',
-            district: payload.district || payload.postingStation || null,
-            designation: payload.designation || payload.officialDesignation || null,
-            isActive: payload.status !== 'Suspended',
+            email: emailLow || `user_${Date.now()}@safeedup.gov.in`,
+            password: payload.password || payload.phone || 'SafeED@2026',
+            role: payload.role || 'INSPECTION_OFFICER',
+            phone: payload.phone || '',
+            badgeNumber: payload.badgeNumber || '',
+            department: payload.department || 'UP Police',
+            district: payload.district || payload.postingStation || 'Lucknow',
+            designation: payload.designation || payload.officialDesignation || '',
+            dcpZone: payload.dcpZone || null,
+            isActive: payload.isActive !== false,
           };
-          const newUser = new User(userDoc);
-          await newUser.save();
+          await User.create(userDoc);
         }
-      } else if (action === 'updateUser' && payload && payload.id) {
-        await User.findOneAndUpdate(
-          { $or: [{ _id: mongoose.Types.ObjectId.isValid(payload.id) ? payload.id : null }, { email: payload.email }] },
-          { $set: payload },
-          { new: true }
-        );
-      } else if (action === 'toggleUserStatus' && payload && payload.id) {
-        const u = await User.findOne({ $or: [{ _id: mongoose.Types.ObjectId.isValid(payload.id) ? payload.id : null }, { email: payload.email }] });
+      } else if ((action === 'UPDATE_USER' || action === 'updateUser') && payload) {
+        const targetId = payload._id || payload.id;
+        const query = targetId && mongoose.Types.ObjectId.isValid(targetId) 
+          ? { _id: targetId } 
+          : { email: payload.email?.toLowerCase() };
+        await User.findOneAndUpdate(query, { $set: payload }, { new: true });
+      } else if ((action === 'TOGGLE_USER' || action === 'toggleUserStatus') && payload) {
+        const targetId = payload.id || payload._id;
+        const query = targetId && mongoose.Types.ObjectId.isValid(targetId) 
+          ? { _id: targetId } 
+          : { email: payload.email?.toLowerCase() };
+        const u = await User.findOne(query);
         if (u) {
           u.isActive = !u.isActive;
           await u.save();
         }
-      } else if (action === 'deleteUser' && payload && payload.id) {
-        await User.deleteOne({ $or: [{ _id: mongoose.Types.ObjectId.isValid(payload.id) ? payload.id : null }, { email: payload.email }] });
-      } else if (action === 'createInstitution' && payload) {
+      } else if ((action === 'DELETE_USER' || action === 'deleteUser') && payload) {
+        const targetId = payload.id || payload._id;
+        const query = targetId && mongoose.Types.ObjectId.isValid(targetId) 
+          ? { _id: targetId } 
+          : { email: payload.email?.toLowerCase() };
+        await User.deleteOne(query);
+      } else if ((action === 'CREATE_INSTITUTION' || action === 'createInstitution') && payload) {
         const existing = await Institution.findOne({ name: payload.name });
         if (!existing) {
           const instDoc = {
@@ -91,17 +102,18 @@ async function syncHandler(req, res) {
             },
             adminUserId: payload.adminUserId || new mongoose.Types.ObjectId(),
           };
-          const newInst = new Institution(instDoc);
-          await newInst.save();
+          await Institution.create(instDoc);
         }
-      } else if (action === 'updateInstitution' && payload && payload.id) {
-        await Institution.findOneAndUpdate(
-          { _id: mongoose.Types.ObjectId.isValid(payload.id) ? payload.id : null },
-          { $set: payload },
-          { new: true }
-        );
-      } else if (action === 'deleteInstitution' && payload && payload.id) {
-        await Institution.deleteOne({ _id: mongoose.Types.ObjectId.isValid(payload.id) ? payload.id : null });
+      } else if ((action === 'UPDATE_INSTITUTION' || action === 'updateInstitution') && payload) {
+        const targetId = payload._id || payload.id;
+        if (targetId) {
+          await Institution.findByIdAndUpdate(targetId, { $set: payload });
+        }
+      } else if ((action === 'DELETE_INSTITUTION' || action === 'deleteInstitution') && payload) {
+        const targetId = payload.id || payload._id;
+        if (targetId) {
+          await Institution.deleteOne({ _id: targetId });
+        }
       }
 
       // Return latest fresh state after mutation

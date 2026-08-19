@@ -6,17 +6,19 @@ const mongoose = require('mongoose');
 
 let isConnected = false;
 async function connectDB() {
-  if (isConnected && mongoose.connection.readyState === 1) return;
+  if (isConnected && mongoose.connection.readyState === 1) return true;
   const MONGODB_URI = process.env.MONGODB_URI;
   if (!MONGODB_URI) {
     console.warn('MongoDB Atlas URI (process.env.MONGODB_URI) is not configured.');
-    return;
+    return false;
   }
   try {
     await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 8000 });
     isConnected = true;
+    return true;
   } catch (err) {
     console.error('MongoDB Atlas Connect Error:', err.message);
+    return false;
   }
 }
 
@@ -54,7 +56,13 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    await connectDB();
+    const ok = await connectDB();
+    if (!ok) {
+      return res.status(500).json({
+        success: false,
+        error: 'MongoDB Atlas is not connected. Please add MONGODB_URI in Vercel Project Settings -> Environment Variables.',
+      });
+    }
 
     // Check if purge requested
     if (req.query.purge === 'true' || req.body?.purge === true) {

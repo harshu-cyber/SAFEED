@@ -4,6 +4,7 @@
 const mongoose = require('mongoose');
 const User = require('../models/User.model');
 const Institution = require('../models/Institution.model');
+const Complaint = require('../models/Complaint.model');
 const connectDB = require('../config/db');
 
 async function syncHandler(req, res) {
@@ -24,19 +25,21 @@ async function syncHandler(req, res) {
     if (req.query.purge === 'true' || req.body?.purge === true) {
       await User.deleteMany({});
       await Institution.deleteMany({});
+      await Complaint.deleteMany({});
       return res.status(200).json({
         success: true,
         message: 'MongoDB Atlas purged cleanly.',
-        data: { users: [], institutions: [] },
+        data: { users: [], institutions: [], complaints: [] },
       });
     }
 
     if (req.method === 'GET') {
       const users = await User.find({}).select('-password').lean();
       const institutions = await Institution.find({}).lean();
+      const complaints = await Complaint.find({}).lean();
       return res.status(200).json({
         success: true,
-        data: { users, institutions },
+        data: { users, institutions, complaints },
       });
     }
 
@@ -116,34 +119,130 @@ async function syncHandler(req, res) {
             ? { _id: targetId } 
             : { email: payload.email?.toLowerCase() };
           await User.deleteOne(query);
-        } else if ((action === 'CREATE_INSTITUTION' || action === 'createInstitution') && payload) {
-          const existing = await Institution.findOne({ name: payload.name });
+        } else if ((action === 'CREATE_INSTITUTION' || action === 'createInstitution' || action === 'registerInstitution') && payload) {
+          const instName = payload.name || payload.institutionName;
+          if (!instName) {
+            return res.status(400).json({ success: false, error: 'Institution name is required.' });
+          }
+          const existing = await Institution.findOne({ name: instName });
           if (!existing) {
+            const rawZone = String(payload.zone || payload.assignedInspectorZone || 'CENTRAL').toUpperCase();
+            let zoneStr = 'CENTRAL';
+            if (rawZone.includes('WEST')) zoneStr = 'WEST';
+            else if (rawZone.includes('NORTH')) zoneStr = 'NORTH';
+            else if (rawZone.includes('EAST')) zoneStr = 'EAST';
+            else if (rawZone.includes('SOUTH')) zoneStr = 'SOUTH';
+
+            const districtStr = payload.district || 'Lucknow';
+            const districtCode = districtStr.slice(0, 3).toUpperCase();
+            const safeId = payload.safeId || `SAFE-UP-${districtCode}-${Math.floor(100000 + Math.random() * 900000)}`;
+
             const instDoc = {
-              name: payload.name,
-              type: payload.type || 'SCHOOL',
-              registrationNumber: payload.registrationNumber || `REG-${Date.now()}`,
-              address: {
-                district: payload.district || 'Lucknow',
+              safeId,
+              name: instName,
+              type: payload.type || payload.institutionType || 'SCHOOL',
+              district: districtStr,
+              zone: zoneStr,
+              totalStudents: parseInt(payload.totalStudents || 0),
+              staffCount: parseInt(payload.staffCount || payload.totalTeachers || 0),
+              classroomCount: parseInt(payload.classroomCount || payload.totalClassrooms || 0),
+              floorCount: parseInt(payload.floorCount || payload.buildingFloors || 1),
+              exitGateCount: parseInt(payload.exitGateCount || 2),
+              nearestPoliceStation: payload.nearestPoliceStation || `${districtStr} Police Station`,
+              status: payload.status || 'PENDING_DOCUMENT_VERIFICATION',
+              riskLevel: payload.riskLevel || 'UNDER_REVIEW',
+              address: typeof payload.address === 'object' ? payload.address : {
+                street: payload.address || `${districtStr}, Uttar Pradesh`,
+                district: districtStr,
                 state: payload.state || 'Uttar Pradesh',
               },
               contactPerson: {
-                name: payload.contactName || 'Principal',
+                name: payload.principal || payload.contactName || 'Principal',
                 email: payload.email || 'admin@inst.edu.in',
+                phone: payload.contact || payload.phone || '',
               },
+              affiliationBoard: payload.affiliationBoard || 'CBSE',
+              affiliationCode: payload.affiliationCode || '',
+              assignedInspector: payload.assignedInspector || `DCP ${zoneStr}`,
+              assignedInspectorZone: zoneStr,
+              districtRemarks: payload.districtRemarks || [],
               adminUserId: payload.adminUserId || new mongoose.Types.ObjectId(),
             };
             await Institution.create(instDoc);
           }
         } else if ((action === 'UPDATE_INSTITUTION' || action === 'updateInstitution') && payload) {
           const targetId = payload._id || payload.id;
-          if (targetId) {
-            await Institution.findByIdAndUpdate(targetId, { $set: payload });
+          if (targetId && mongoose.Types.ObjectId.isValid(targetId)) {
+            await Institution.findByIdAndUpdate(targetId, { $set: payload }, { new: true });
+          } else if (payload.name) {
+            await Institution.findOneAndUpdate({ name: payload.name }, { $set: payload }, { new: true });
           }
         } else if ((action === 'DELETE_INSTITUTION' || action === 'deleteInstitution') && payload) {
           const targetId = payload.id || payload._id;
           if (targetId) {
             await Institution.deleteOne({ _id: targetId });
+          }
+        } else if ((action === 'CREATE_COMPLAINT' || action === 'submitComplaint') && payload) {
+          const ticket = payload.complaintTicket || `CMP-UP-${Math.floor(100000 + Math.random() * 900000)}`;
+          const rawZone = String(payload.zone || 'CENTRAL').toUpperCase();
+          let zoneStr = 'CENTRAL';
+          if (rawZone.includes('WEST')) zoneStr = 'WEST';
+          else if (rawZone.includes('NORTH')) zoneStr = 'NORTH';
+          else if (rawZone.includes('EAST')) zoneStr = 'EAST';
+          else if (rawZone.includes('SOUTH')) zoneStr = 'SOUTH';
+
+          const cmpDoc = {
+            complaintTicket: ticket,
+            institutionName: payload.institutionName,
+            institutionId: payload.institutionId || null,
+            district: payload.district || 'Lucknow',
+            zone: zoneStr,
+            category: payload.category || 'FIRE_SAFETY_HAZARD',
+            complainantName: payload.complainantName || 'Anonymous Citizen',
+            complainantPhone: payload.complainantPhone || 'Hidden',
+            complainantEmail: payload.complainantEmail || '',
+            description: payload.description || 'Public safety concern reported',
+            status: payload.status || 'PENDING_DISTRICT_ACTION',
+            assignedInspector: payload.assignedInspector || null,
+            assignedInspectorZone: payload.assignedInspectorZone || null,
+            assignedAt: payload.assignedAt || null,
+            districtDirectives: payload.districtDirectives || '',
+            resolutionRemarks: payload.resolutionRemarks || '',
+            resolvedAt: payload.resolvedAt || null,
+            submittedAt: payload.submittedAt || new Date().toLocaleDateString('en-IN', {
+              day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+            }),
+          };
+          await Complaint.create(cmpDoc);
+        } else if ((action === 'ASSIGN_COMPLAINT' || action === 'assignComplaint') && payload) {
+          const cid = payload.complaintId || payload._id || payload.id;
+          if (cid) {
+            await Complaint.findOneAndUpdate(
+              { $or: [{ _id: mongoose.Types.ObjectId.isValid(cid) ? cid : null }, { complaintTicket: cid }] },
+              {
+                $set: {
+                  status: 'INVESTIGATION_ASSIGNED',
+                  assignedInspector: payload.assignedInspector,
+                  assignedInspectorZone: payload.assignedInspectorZone,
+                  assignedAt: payload.assignedAt || new Date().toLocaleDateString('en-IN'),
+                  districtDirectives: payload.districtDirectives || 'Investigate site safety immediately.',
+                },
+              }
+            );
+          }
+        } else if ((action === 'RESOLVE_COMPLAINT' || action === 'resolveComplaint') && payload) {
+          const cid = payload.complaintId || payload._id || payload.id;
+          if (cid) {
+            await Complaint.findOneAndUpdate(
+              { $or: [{ _id: mongoose.Types.ObjectId.isValid(cid) ? cid : null }, { complaintTicket: cid }] },
+              {
+                $set: {
+                  status: 'RESOLVED',
+                  resolutionRemarks: payload.resolutionRemarks || 'Site inspection completed.',
+                  resolvedAt: payload.resolvedAt || new Date().toLocaleDateString('en-IN'),
+                },
+              }
+            );
           }
         }
       } catch (actionErr) {
@@ -164,9 +263,10 @@ async function syncHandler(req, res) {
       // Return latest fresh state after mutation
       const users = await User.find({}).select('-password').lean();
       const institutions = await Institution.find({}).lean();
+      const complaints = await Complaint.find({}).lean();
       return res.status(200).json({
         success: true,
-        data: { users, institutions },
+        data: { users, institutions, complaints },
       });
     }
 

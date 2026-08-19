@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { complaintStore } from '../../api/complaintStore';
 import { institutionStore } from '../../api/institutionStore';
+import { cloudSync } from '../../api/cloudSync';
 import { FiShield, FiAlertTriangle, FiCheckCircle, FiUpload, FiSend, FiFileText } from 'react-icons/fi';
 import { MdVerified, MdLocalPolice } from 'react-icons/md';
 
@@ -20,7 +21,7 @@ export const SubmitConcernPage = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Submit complaint to real-time complaintStore
+    // Submit complaint to real-time complaintStore & sync to MongoDB Atlas
     const newComplaint = complaintStore.submitComplaint({
       complainantName,
       complainantPhone,
@@ -30,6 +31,8 @@ export const SubmitConcernPage = () => {
       category,
       description,
     });
+
+    cloudSync.syncAction('CREATE_COMPLAINT', newComplaint).catch(err => console.warn('[SubmitConcern] Cloud sync failed:', err));
 
     setTicketId(newComplaint.complaintTicket);
     setSubmitted(true);

@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { institutionStore } from '../../api/institutionStore';
+import { cloudSync } from '../../api/cloudSync';
 import axiosInstance from '../../api/axiosInstance';
 import {
   FiUser, FiMail, FiPhone, FiMapPin, FiFileText,
@@ -169,8 +170,11 @@ export const Register = () => {
   const onSubmit = async (data) => {
     setError('');
 
-    // ✅ Create real-time institution record in client store!
+    // ✅ Create real-time institution record in client store & sync to MongoDB Atlas!
     const newInst = institutionStore.registerInstitution(data);
+
+    // Direct MongoDB Atlas sync
+    cloudSync.syncAction('CREATE_INSTITUTION', newInst).catch(err => console.warn('[Register] Cloud sync failed:', err));
 
     const generatedCredentials = {
       username: data.email.toLowerCase(),

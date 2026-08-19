@@ -6,6 +6,11 @@
 const STORAGE_KEY = 'safeed_complaints_store_v1';
 
 export const complaintStore = {
+  syncCloudComplaints: (cloudComplaints) => {
+    if (!Array.isArray(cloudComplaints)) return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudComplaints));
+  },
+
   getComplaints: () => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);

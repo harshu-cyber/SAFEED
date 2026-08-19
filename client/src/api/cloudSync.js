@@ -12,6 +12,7 @@
 
 import { userStore } from './userStore';
 import { institutionStore } from './institutionStore';
+import { complaintStore } from './complaintStore';
 
 const rawBase = import.meta.env.VITE_API_URL || '';
 const cleanDomain = rawBase ? rawBase.replace(/\/+$/, '').replace(/\/api(\/v1)?$/, '') : '';
@@ -37,7 +38,7 @@ export async function pull() {
     }
     if (!json || !json.success || !json.data) return;
 
-    const { users: cloudUsers, institutions: cloudInsts } = json.data;
+    const { users: cloudUsers, institutions: cloudInsts, complaints: cloudComplaints } = json.data;
 
     // Always overwrite localStorage from MongoDB Atlas — this IS the truth
     if (Array.isArray(cloudUsers)) {
@@ -45,6 +46,9 @@ export async function pull() {
     }
     if (Array.isArray(cloudInsts)) {
       institutionStore.syncCloudInstitutions(cloudInsts);
+    }
+    if (Array.isArray(cloudComplaints)) {
+      complaintStore.syncCloudComplaints(cloudComplaints);
     }
   } catch (err) {
     console.warn('[CloudSync] pull failed:', err.message);
@@ -87,6 +91,7 @@ export async function syncAction(action, payload) {
     if (json.data) {
       if (Array.isArray(json.data.users)) userStore.syncCloudUsers(json.data.users);
       if (Array.isArray(json.data.institutions)) institutionStore.syncCloudInstitutions(json.data.institutions);
+      if (Array.isArray(json.data.complaints)) complaintStore.syncCloudComplaints(json.data.complaints);
     }
     return json.data;
   } catch (err) {

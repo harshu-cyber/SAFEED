@@ -26,8 +26,14 @@ export async function pull() {
     const res = await fetch(SYNC_URL, { method: 'GET' });
     if (!res.ok) return;
 
-    const json = await res.json();
-    if (!json.success || !json.data) return;
+    const text = await res.text();
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      return;
+    }
+    if (!json || !json.success || !json.data) return;
 
     const { users: cloudUsers, institutions: cloudInsts } = json.data;
 
@@ -61,7 +67,15 @@ export async function syncAction(action, payload) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, payload }),
     });
-    const json = await res.json();
+
+    const text = await res.text();
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      throw new Error(`Server connection error (${res.status}). Ensure MONGODB_URI is set in Vercel project settings.`);
+    }
+
     if (!json.success) throw new Error(json.error || 'MongoDB Atlas action failed');
     // After any mutation, refresh local cache from Atlas
     if (json.data) {

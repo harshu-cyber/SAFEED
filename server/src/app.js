@@ -91,8 +91,11 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API Routes
-app.all('/api/sync', require('./routes/sync.routes'));
+// API Routes (Sync Endpoint mounted on /sync, /api/sync, and /api/v1/sync for total compatibility)
+const syncRoutes = require('./routes/sync.routes');
+app.all('/sync', syncRoutes);
+app.all('/api/sync', syncRoutes);
+app.all('/api/v1/sync', syncRoutes);
 app.use('/api/v1', routes);
 
 // Serve Frontend (Client Build) in Single-Server Deployment

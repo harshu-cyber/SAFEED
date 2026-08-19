@@ -14,12 +14,15 @@ async function connectDB() {
     return { ok: false, reason: 'MONGODB_URI is not set in Vercel Environment Variables. Please add it and Redeploy.' };
   }
   try {
-    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 8000 });
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+    });
     isConnected = true;
     return { ok: true };
   } catch (err) {
     console.error('MongoDB Atlas Connect Error:', err.message);
-    return { ok: false, reason: `MongoDB connection error: ${err.message}` };
+    return { ok: false, reason: `MongoDB Atlas connection error (${err.message}). Please check MongoDB Atlas Network Access (allow 0.0.0.0/0) and password.` };
   }
 }
 
@@ -48,15 +51,15 @@ const instSchema = new mongoose.Schema({
 const Institution = mongoose.models.Institution || mongoose.model('Institution', instSchema);
 
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
   try {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+
     const conn = await connectDB();
     if (!conn.ok) {
       return res.status(500).json({

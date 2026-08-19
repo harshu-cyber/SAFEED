@@ -3,6 +3,8 @@
 // Zone-Based DCP Filtering | District Authority Support | 100% Real-Time
 // ============================================================
 
+import { cloudSync } from './cloudSync';
+
 const STORAGE_KEYS = {
   INSTITUTIONS: 'safeed_institutions_store_v6',
   DOCUMENTS: 'safeed_documents_store_v2',
@@ -364,6 +366,9 @@ export const institutionStore = {
     });
 
     localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(updated));
+    if (updatedTarget) {
+      cloudSync.syncAction('TOGGLE_QR_LOCK', updatedTarget).catch(err => console.warn('[lockQR] sync failed:', err));
+    }
     return updatedTarget;
   },
 
@@ -399,6 +404,9 @@ export const institutionStore = {
     });
 
     localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(updated));
+    if (updatedTarget) {
+      cloudSync.syncAction('TOGGLE_QR_LOCK', updatedTarget).catch(err => console.warn('[unlockQR] sync failed:', err));
+    }
     return updatedTarget;
   },
 

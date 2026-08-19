@@ -62,6 +62,22 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    badgeNumber: {
+      type: String,
+      trim: true,
+    },
+    postingStation: {
+      type: String,
+      trim: true,
+    },
+    policeRank: {
+      type: String,
+      trim: true,
+    },
+    dcpZone: {
+      type: String,
+      trim: true,
+    },
     isActive: {
       type: Boolean,
       default: true,

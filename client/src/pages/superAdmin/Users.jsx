@@ -236,7 +236,7 @@ const UserDetailModal = ({ user, onClose, onToggle, onDelete, onEdit }) => {
             {[
               { icon: FiMail, label: 'Email / Username', value: user.email || '—' },
               { icon: FiPhone, label: 'Phone / Password', value: user.phone || '—', mono: true },
-              { icon: FiAward, label: 'Badge Number', value: user.badgeNumber || '—' },
+              { icon: FiAward, label: 'Badge Number', value: user.badgeNumber || user.employeeId || '—' },
               { icon: FiShield, label: 'Department', value: user.department || '—' },
               { icon: FiMapPin, label: 'District', value: user.district || '—' },
               { icon: FiCalendar, label: 'Joining Date', value: user.joiningDate || '—' },
@@ -496,6 +496,10 @@ export const UserManagementPage = () => {
       let assignedPortal = form.assignedPortal || form.role;
       const payload = {
         ...form,
+        badgeNumber: form.badgeNumber,
+        employeeId: form.badgeNumber,
+        postingStation: form.postingStation,
+        policeRank: form.rankLevel,
         email: form.email.toLowerCase(),
         password: form.phone,
         assignedPortal,
@@ -881,7 +885,7 @@ export const UserManagementPage = () => {
                             <span className="max-w-[130px] truncate block">{u.name}</span>
                             <FiEye size={9} className="text-purple-400 flex-shrink-0" />
                           </button>
-                          <p className="text-[9px] text-gray-400 font-mono">{u.badgeNumber || '—'}</p>
+                          <p className="text-[9px] text-gray-400 font-mono">{u.badgeNumber || u.employeeId || '—'}</p>
                         </div>
                       </div>
                     </td>
@@ -905,15 +909,40 @@ export const UserManagementPage = () => {
                         {ROLE_LABELS[u.role] || u.role}
                       </span>
                     </td>
-                    {/* Zone/District */}
+                    {/* Location: Police Station for PS, SI, SO vs Lucknow for DGP, CP, JCP */}
                     <td className="px-4 py-3">
-                      {u.dcpZone ? (
-                        <span className="flex items-center gap-1 text-[11px] font-bold text-blue-800 whitespace-nowrap">
-                          <MdLocalPolice className="text-[#D4AF37]" size={13} /> {u.dcpZone}
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-gray-500">{u.district || '—'}</span>
-                      )}
+                      {(() => {
+                        const station = u.postingStation || u.policeStation || u.nearestPoliceStation;
+                        const rank = (u.rankLevel || u.policeRank || '').toUpperCase();
+                        const isStationRank = ['PS', 'SI', 'SHO', 'SO'].includes(rank) || (u.role === 'INSPECTION_OFFICER' && station);
+                        const isTopRank = ['DGP', 'CP', 'JCP', 'ADGP', 'IGP', 'DIGP'].includes(rank);
+
+                        if (isStationRank && station) {
+                          const stationClean = station.toLowerCase().includes('station') || station.toLowerCase().includes('thana') ? station : `${station} Police Station`;
+                          return (
+                            <span className="flex items-center gap-1 text-[11px] font-black text-amber-900 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-lg whitespace-nowrap">
+                              <MdLocalPolice className="text-[#D4AF37]" size={14} /> {stationClean}
+                            </span>
+                          );
+                        }
+                        if (isTopRank) {
+                          return (
+                            <span className="flex items-center gap-1 text-[11px] font-black text-purple-900 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-lg whitespace-nowrap">
+                              🏛️ {u.district || 'Lucknow HQ'}
+                            </span>
+                          );
+                        }
+                        if (u.dcpZone) {
+                          return (
+                            <span className="flex items-center gap-1 text-[11px] font-bold text-blue-800 whitespace-nowrap">
+                              <MdLocalPolice className="text-[#D4AF37]" size={13} /> {u.dcpZone}
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="text-[11px] text-gray-600 font-medium">{u.district || 'Lucknow'}</span>
+                        );
+                      })()}
                     </td>
                     {/* Status */}
                     <td className="px-4 py-3">

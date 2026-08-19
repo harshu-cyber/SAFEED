@@ -74,6 +74,7 @@ async function syncHandler(req, res) {
           if (role === 'INSPECTOR' || role === 'POLICE') role = 'INSPECTION_OFFICER';
           if (!Object.values(ROLES).includes(role)) role = 'INSPECTION_OFFICER';
 
+          const badgeNum = payload.badgeNumber || payload.employeeId || payload.badge || undefined;
           const userDoc = {
             name: (payload.name || payload.officialName || 'Official User').trim(),
             email: emailLow,
@@ -83,10 +84,14 @@ async function syncHandler(req, res) {
             district: payload.district || 'Lucknow',
             designation: payload.designation || payload.officialDesignation || 'Sub-Inspector',
             department: payload.department || 'UP Police',
+            postingStation: payload.postingStation || payload.policeStation || payload.nearestPoliceStation,
+            policeRank: payload.policeRank || payload.rankLevel || payload.rank,
+            dcpZone: payload.dcpZone || payload.zone,
+            badgeNumber: badgeNum,
+            employeeId: badgeNum,
             isActive: payload.isActive !== false,
           };
           if (phone) userDoc.phone = phone;
-          if (payload.badgeNumber || payload.employeeId) userDoc.employeeId = payload.badgeNumber || payload.employeeId;
 
           await User.create(userDoc);
         } else if ((action === 'UPDATE_USER' || action === 'updateUser') && payload) {

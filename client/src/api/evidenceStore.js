@@ -1,3 +1,5 @@
+import { cloudSync } from './cloudSync';
+
 // ============================================================
 // SafeED-UP — Inspection Evidence Store
 // 100% FRESH REAL-TIME DATA (Starts Empty)
@@ -38,6 +40,8 @@ export const evidenceStore = {
 
     list.unshift(newRecord);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+
+    cloudSync.syncAction('SUBMIT_EVIDENCE', newRecord).catch(err => console.warn('[submitEvidence] cloud sync error:', err));
     return newRecord;
   }
 };

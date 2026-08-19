@@ -146,9 +146,10 @@ export const institutionStore = {
   /** Update institution profile fields and mark profile as completed */
   updateInstitutionProfile: (instId, profileData) => {
     const insts = institutionStore.getInstitutions();
+    let updatedTarget = null;
     const updated = insts.map(i => {
-      if (i._id !== instId) return i;
-      return {
+      if (i._id !== instId && i.id !== instId) return i;
+      updatedTarget = {
         ...i,
         ...profileData,
         staffCount: parseInt(profileData.staffCount || profileData.totalTeachers || i.staffCount || 0),
@@ -157,8 +158,25 @@ export const institutionStore = {
         exitGateCount: parseInt(profileData.exitGateCount || i.exitGateCount || 2),
         nearestPoliceStation: profileData.nearestPoliceStation || i.nearestPoliceStation || `${i.district || 'Hazratganj'} Police Station`,
       };
+      return updatedTarget;
     });
     localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(updated));
+    if (updatedTarget) {
+      cloudSync.syncAction('UPDATE_INSTITUTION', updatedTarget).catch(err => console.warn('[updateInstProfile] sync failed:', err));
+    }
+    return updatedTarget;
+  },
+
+  /** Permanently delete an institution from local cache & MongoDB Atlas */
+  deleteInstitution: (instId) => {
+    const insts = institutionStore.getInstitutions();
+    const target = insts.find(i => i._id === instId || i.id === instId);
+    const updated = insts.filter(i => i._id !== instId && i.id !== instId);
+    localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(updated));
+    if (target) {
+      cloudSync.syncAction('DELETE_INSTITUTION', { _id: target._id || target.id, name: target.name }).catch(err => console.warn('[deleteInst] sync failed:', err));
+    }
+    return updated;
   },
 
   /**

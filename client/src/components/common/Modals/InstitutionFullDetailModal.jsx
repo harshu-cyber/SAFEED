@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { evidenceStore } from '../../../api/evidenceStore';
 import { complaintStore } from '../../../api/complaintStore';
@@ -14,14 +14,23 @@ import { MdVerified, MdLocalPolice, MdQrCode2, MdMeetingRoom, MdLayers, MdDoorSl
 export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspector }) => {
   const { user } = useAuth();
   const [zoomPhoto, setZoomPhoto] = useState(null);
-  const [localInst, setLocalInst] = useState(institution);
+  const [localInst, setLocalInst] = useState(institution || {});
   const [showLockModal, setShowLockModal] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [lockReason, setLockReason] = useState('');
   const [unlockNotes, setUnlockNotes] = useState('');
   const [actionErr, setActionErr] = useState('');
 
-  if (!institution) return null;
+  useEffect(() => {
+    if (institution) {
+      setLocalInst(institution);
+    }
+  }, [institution]);
+
+  if (!institution && !localInst?._id && !localInst?.id) return null;
+
+  const currentInst = localInst._id || localInst.id ? localInst : (institution || {});
+  const instId = currentInst._id || currentInst.id;
 
   const handleLockSubmit = (e) => {
     e.preventDefault();
@@ -34,7 +43,7 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
                        user?.role === 'INSPECTION_OFFICER' ? `Safety Inspector (${user.name || 'DCP Officer'})` :
                        user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Safety Inspection Officer';
     
-    const updated = institutionStore.lockInstitutionQR(localInst._id, {
+    const updated = institutionStore.lockInstitutionQR(instId, {
       reason: lockReason.trim(),
       issuedBy: issuerRole,
     });
@@ -49,7 +58,7 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
                        user?.role === 'INSPECTION_OFFICER' ? `Safety Inspector (${user.name || 'DCP Officer'})` :
                        user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Safety Inspection Officer';
 
-    const updated = institutionStore.unlockInstitutionQR(localInst._id, {
+    const updated = institutionStore.unlockInstitutionQR(instId, {
       notes: unlockNotes.trim() || 'Issues resolved and verified upon physical re-inspection.',
       issuedBy: issuerRole,
     });
@@ -64,16 +73,16 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
   let instComplaints = [];
   let docs = [];
 
-  try { isUnlocked = institutionStore.isCertificateUnlocked(localInst._id); } catch {}
-  try { instEvidence = evidenceStore.getEvidenceForInstitution(localInst._id) || []; } catch {}
-  try { instComplaints = complaintStore.getComplaintsForInstitution(localInst._id) || []; } catch {}
-  try { docs = institutionStore.getDocumentsForInstitution(localInst._id) || []; } catch {}
+  try { isUnlocked = instId ? institutionStore.isCertificateUnlocked(instId) : false; } catch {}
+  try { instEvidence = instId ? (evidenceStore.getEvidenceForInstitution(instId) || []) : []; } catch {}
+  try { instComplaints = instId ? (complaintStore.getComplaintsForInstitution(instId) || []) : []; } catch {}
+  try { docs = instId ? (institutionStore.getDocumentsForInstitution(instId) || []) : []; } catch {}
 
-  const staffCount = parseInt(localInst.staffCount || localInst.totalTeachers || 0) || 0;
-  const classroomCount = parseInt(localInst.classroomCount || localInst.totalClassrooms || 0) || 0;
-  const floorCount = parseInt(localInst.floorCount || localInst.buildingFloors || 1) || 1;
-  const exitGateCount = parseInt(localInst.exitGateCount || 2) || 2;
-  const totalStudents = parseInt(localInst.totalStudents || 0) || 0;
+  const staffCount = parseInt(currentInst.staffCount || currentInst.totalTeachers || 0) || 0;
+  const classroomCount = parseInt(currentInst.classroomCount || currentInst.totalClassrooms || 0) || 0;
+  const floorCount = parseInt(currentInst.floorCount || currentInst.buildingFloors || 1) || 1;
+  const exitGateCount = parseInt(currentInst.exitGateCount || 2) || 2;
+  const totalStudents = parseInt(currentInst.totalStudents || 0) || 0;
   const densityRatio = classroomCount > 0 ? Math.round(totalStudents / classroomCount) : 0;
 
   const requiredDocs = [

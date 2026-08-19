@@ -1,3 +1,5 @@
+import { cloudSync } from './cloudSync';
+
 /**
  * userStore.js — SafeED-UP User Management Store
  * Manages police officers, inspectors, and admin users in localStorage.
@@ -163,6 +165,7 @@ export const userStore = {
     store.users[idx] = { ...store.users[idx], ...updates, updatedAt: new Date().toISOString() };
     saveStore(store);
 
+    cloudSync.syncAction('UPDATE_USER', store.users[idx]).catch(err => console.warn('[updateUser] cloud sync error:', err));
     return store.users[idx];
   },
 
@@ -174,6 +177,7 @@ export const userStore = {
     user.isActive = !user.isActive;
     saveStore(store);
 
+    cloudSync.syncAction('TOGGLE_USER', { id: user._id, isActive: user.isActive }).catch(err => console.warn('[toggleUser] cloud sync error:', err));
     return user;
   },
 
@@ -192,6 +196,8 @@ export const userStore = {
 
     store.users = store.users.filter(u => u._id !== id && u.email?.toLowerCase() !== user.email?.toLowerCase());
     saveStore(store);
+
+    cloudSync.syncAction('DELETE_USER', { id: user._id, email: user.email }).catch(err => console.warn('[deleteUser] cloud sync error:', err));
   },
 
   getStats() {

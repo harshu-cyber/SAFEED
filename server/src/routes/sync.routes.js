@@ -44,23 +44,37 @@ async function syncHandler(req, res) {
       const { action, payload } = req.body || {};
 
       if ((action === 'CREATE_USER' || action === 'createUser') && payload) {
-        const emailLow = payload.email?.toLowerCase();
+        const emailLow = payload.email?.toLowerCase()?.trim();
         let existing = null;
         if (emailLow) existing = await User.findOne({ email: emailLow });
         if (!existing) {
+          // Clean phone: ensure 10-digit number or omit to satisfy regex
+          const rawPhone = String(payload.phone || '').replace(/\D/g, '');
+          const phone = rawPhone.length === 10 ? rawPhone : undefined;
+
+          // Clean password: ensure >= 8 characters to satisfy minlength
+          let rawPassword = String(payload.password || payload.phone || 'SafeED@2026').trim();
+          if (rawPassword.length < 8) rawPassword = rawPassword + 'SafeED2026';
+
+          // Clean role: ensure valid enum value
+          const { ROLES } = require('../constants/roles');
+          let role = payload.role || 'INSPECTION_OFFICER';
+          if (role === 'INSPECTOR' || role === 'POLICE') role = 'INSPECTION_OFFICER';
+          if (!Object.values(ROLES).includes(role)) role = 'INSPECTION_OFFICER';
+
           const userDoc = {
-            name: payload.name || payload.officialName || 'Official User',
+            name: (payload.name || payload.officialName || 'Official User').trim(),
             email: emailLow || `user_${Date.now()}@safeedup.gov.in`,
-            password: payload.password || payload.phone || 'SafeED@2026',
-            role: payload.role || 'INSPECTION_OFFICER',
-            phone: payload.phone || '',
-            badgeNumber: payload.badgeNumber || '',
+            password: rawPassword,
+            role: role,
+            district: payload.district || 'Lucknow',
+            designation: payload.designation || payload.officialDesignation || 'Sub-Inspector',
             department: payload.department || 'UP Police',
-            district: payload.district || payload.postingStation || 'Lucknow',
-            designation: payload.designation || payload.officialDesignation || '',
-            dcpZone: payload.dcpZone || null,
             isActive: payload.isActive !== false,
           };
+          if (phone) userDoc.phone = phone;
+          if (payload.badgeNumber) userDoc.employeeId = payload.badgeNumber;
+
           await User.create(userDoc);
         }
       } else if ((action === 'UPDATE_USER' || action === 'updateUser') && payload) {

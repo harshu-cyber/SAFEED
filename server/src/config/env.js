@@ -5,7 +5,8 @@
 const dotenv = require('dotenv');
 const path = require('path');
 
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+// Load .env from server directory (works with both `node server.js` and `nodemon server.js`)
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const required = [
   'MONGODB_URI',

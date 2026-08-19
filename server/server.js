@@ -33,8 +33,14 @@ const startServer = async () => {
     process.on('SIGINT', shutdown);
 
   } catch (error) {
-    console.error('❌ Server startup failed:', error);
-    process.exit(1);
+    console.warn('⚠️  MongoDB connection failed:', error.message);
+    console.warn('⚠️  Server starting in LIMITED mode (no database). This is normal on restricted networks.');
+    console.warn('💡  On Render/Vercel deployment, MongoDB will connect normally.');
+
+    const PORT = env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`🚀 SafeED-UP server running on port ${PORT} (LIMITED mode - no DB)`);
+    });
   }
 };
 

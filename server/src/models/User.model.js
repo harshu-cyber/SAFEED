@@ -120,7 +120,6 @@ const userSchema = new mongoose.Schema(
 );
 
 // ---- Indexes ----
-userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ state: 1, district: 1 });
 userSchema.index({ institutionId: 1 });

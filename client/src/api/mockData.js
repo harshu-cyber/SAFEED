@@ -4,9 +4,7 @@ export const mockData = {
   inspections: [],
   institutions: [],
   documents: [],
-  users: [
-    { _id: 'u-super-1', name: 'Super Admin (SafeED)', email: 'superadmin@safeed.ac.in', role: 'SUPER_ADMIN', isActive: true, createdAt: '2024-01-01' },
-  ],
+  users: [],
   notifications: [],
 
   stateAnalytics: {

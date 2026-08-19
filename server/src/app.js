@@ -35,11 +35,10 @@ app.use(helmet({
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
-// CORS Configuration — Restricted to trusted origin with credentials
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, server-to-server)
-    if (!origin || origin === env.CLIENT_URL || env.CLIENT_URL === '*' || origin.startsWith('http://localhost:') || origin.endsWith('.vercel.app')) {
+    const allowed = env.CLIENT_URL || '*';
+    if (!origin || allowed === '*' || origin === allowed || origin.startsWith('http://localhost:')) {
       return callback(null, true);
     }
     return callback(new Error('CORS Policy violation: Access denied from unauthorized origin.'));

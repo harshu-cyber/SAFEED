@@ -6,27 +6,7 @@
 
 const STORE_KEY = 'safeed_users_store_v6';
 
-const DEFAULT_USERS = [
-  {
-    _id: 'u-super-1',
-    name: 'Super Admin (SafeED)',
-    email: 'superadmin@safeed.ac.in',
-    username: 'superadmin@safeed.ac.in',
-    phone: '9412000001',
-    password: 'harshsafeed',
-    role: 'SUPER_ADMIN',
-    assignedPortal: 'SUPER_ADMIN',
-    designation: 'System Administrator',
-    badgeNumber: 'SA-001',
-    department: 'SafeED-UP HQ',
-    district: 'Lucknow',
-    state: 'Uttar Pradesh',
-    joiningDate: '2024-01-01',
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    createdBy: 'SYSTEM',
-  },
-];
+const DEFAULT_USERS = [];
 
 function loadStore() {
   try {

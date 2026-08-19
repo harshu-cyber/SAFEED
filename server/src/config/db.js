@@ -36,9 +36,8 @@ const connectDB = async () => {
     });
 
   } catch (error) {
-    console.warn(`⚠️  MongoDB connection failed (${error.message}).`);
-    console.warn(`💡 SafeED-UP Server running in Standalone/Demo Fallback mode.`);
     isConnected = false;
+    throw new Error(`MongoDB connection failed: ${error.message}`);
   }
 };
 

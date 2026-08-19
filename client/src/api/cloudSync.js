@@ -13,8 +13,8 @@
 import { userStore } from './userStore';
 import { institutionStore } from './institutionStore';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
-const SYNC_URL = API_BASE ? `${API_BASE.replace(/\/v1\/?$/, '')}/sync` : '/api/sync';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://safeed-1.onrender.com/api/v1';
+const SYNC_URL = `${API_BASE.replace(/\/v1\/?$/, '')}/sync`;
 
 let pollInterval = null;
 let isBusy = false;

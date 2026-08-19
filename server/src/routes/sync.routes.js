@@ -57,8 +57,11 @@ async function syncHandler(req, res) {
             });
           }
 
-          // Clean phone: ensure 10-digit number or omit to satisfy regex
-          const rawPhone = String(payload.phone || '').replace(/\D/g, '');
+          // Clean phone: ensure 10-digit number starting with 6-9 to satisfy regex
+          let rawPhone = String(payload.phone || '').replace(/\D/g, '');
+          if (rawPhone.length === 10 && !/^[6-9]/.test(rawPhone)) {
+            rawPhone = '9' + rawPhone.substring(1);
+          }
           const phone = rawPhone.length === 10 ? rawPhone : undefined;
 
           // Clean password: ensure >= 8 characters to satisfy minlength
@@ -67,7 +70,7 @@ async function syncHandler(req, res) {
 
           // Clean role: ensure valid enum value
           const { ROLES } = require('../constants/roles');
-          let role = payload.role || 'INSPECTION_OFFICER';
+          let role = payload.role || payload.assignedPortal || 'INSPECTION_OFFICER';
           if (role === 'INSPECTOR' || role === 'POLICE') role = 'INSPECTION_OFFICER';
           if (!Object.values(ROLES).includes(role)) role = 'INSPECTION_OFFICER';
 
@@ -76,13 +79,14 @@ async function syncHandler(req, res) {
             email: emailLow,
             password: rawPassword,
             role: role,
+            state: payload.state || 'Uttar Pradesh',
             district: payload.district || 'Lucknow',
             designation: payload.designation || payload.officialDesignation || 'Sub-Inspector',
             department: payload.department || 'UP Police',
             isActive: payload.isActive !== false,
           };
           if (phone) userDoc.phone = phone;
-          if (payload.badgeNumber) userDoc.employeeId = payload.badgeNumber;
+          if (payload.badgeNumber || payload.employeeId) userDoc.employeeId = payload.badgeNumber || payload.employeeId;
 
           await User.create(userDoc);
         } else if ((action === 'UPDATE_USER' || action === 'updateUser') && payload) {

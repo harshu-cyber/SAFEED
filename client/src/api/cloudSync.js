@@ -78,7 +78,10 @@ export async function syncAction(action, payload) {
       throw new Error(`Server error (${res.status}): ${cleanSnippet || 'Invalid response format'}`);
     }
 
-    if (!json.success) throw new Error(json.error || 'MongoDB Atlas action failed');
+    if (!json.success) {
+      const errMsg = json.error || json.message || (typeof json.data === 'string' ? json.data : '') || 'MongoDB Atlas action failed';
+      throw new Error(errMsg);
+    }
     // After any mutation, refresh local cache from Atlas
     if (json.data) {
       if (Array.isArray(json.data.users)) userStore.syncCloudUsers(json.data.users);

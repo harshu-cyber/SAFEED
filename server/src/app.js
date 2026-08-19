@@ -38,7 +38,13 @@ app.use(helmet({
 app.use(cors({
   origin: (origin, callback) => {
     const allowed = env.CLIENT_URL || '*';
-    if (!origin || allowed === '*' || origin === allowed || origin.startsWith('http://localhost:')) {
+    if (
+      !origin ||
+      allowed === '*' ||
+      origin === allowed ||
+      origin.startsWith('http://localhost:') ||
+      origin.endsWith('.vercel.app')
+    ) {
       return callback(null, true);
     }
     return callback(new Error('CORS Policy violation: Access denied from unauthorized origin.'));

@@ -140,7 +140,10 @@ async function syncHandler(req, res) {
 
         try {
           for (const u of DEFAULT_USERS) {
-            await User.create(u);
+            const existing = await User.findOne({ email: u.email.toLowerCase() });
+            if (!existing) {
+              await User.create(u);
+            }
           }
           users = await User.find({}).select('-password').lean();
         } catch (seedErr) {

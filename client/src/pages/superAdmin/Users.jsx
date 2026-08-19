@@ -6,7 +6,7 @@ import { ROLES, ROLE_LABELS } from '../../constants/roles';
 import {
   FiUserPlus, FiSearch, FiEye, FiTrash2, FiShield,
   FiPhone, FiMail, FiMapPin, FiKey, FiX, FiCheck, FiAlertTriangle,
-  FiUser, FiCalendar, FiLock, FiUnlock, FiCopy, FiEdit3, FiAward
+  FiUser, FiCalendar, FiLock, FiUnlock, FiCopy, FiEdit3, FiAward, FiRefreshCw
 } from 'react-icons/fi';
 import { MdLocalPolice } from 'react-icons/md';
 
@@ -446,9 +446,24 @@ export const UserManagementPage = () => {
     };
   }, []);
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 4000);
+  };
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await cloudSync.pull();
+      loadUsers();
+      showToast('🔄 MongoDB Atlas Synced & Refreshed!');
+    } catch {
+      showToast('⚠️ Sync error, loaded local cache.');
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
+    }
   };
 
   const resetForm = () => {
@@ -761,12 +776,23 @@ export const UserManagementPage = () => {
           <h1 className="text-2xl font-black text-[#0F2038] mt-1">User Management</h1>
           <p className="text-sm text-gray-500 mt-0.5">Police Officers, DCP Inspectors & District Authorities</p>
         </div>
-        <button
-          onClick={() => { resetForm(); setShowCreateModal(true); }}
-          className="flex items-center gap-2 text-sm font-black text-[#0F2038] bg-[#D4AF37] px-5 py-2.5 rounded-xl hover:bg-yellow-400 transition-all shadow-lg"
-        >
-          <FiUserPlus size={15} /> Create New Officer Account
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 text-xs font-black text-[#0F2038] bg-white border border-[#D4AF37] px-4 py-2.5 rounded-xl hover:bg-amber-50 transition-all shadow-md cursor-pointer disabled:opacity-60"
+            title="Sync & Refresh MongoDB Atlas Data"
+          >
+            <FiRefreshCw size={14} className={`text-[#D4AF37] ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'Syncing...' : 'Refresh Data'}</span>
+          </button>
+          <button
+            onClick={() => { resetForm(); setShowCreateModal(true); }}
+            className="flex items-center gap-2 text-sm font-black text-[#0F2038] bg-[#D4AF37] px-5 py-2.5 rounded-xl hover:bg-yellow-400 transition-all shadow-lg cursor-pointer"
+          >
+            <FiUserPlus size={15} /> Create New Officer Account
+          </button>
+        </div>
       </div>
 
       {/* ── Stat Cards ── */}

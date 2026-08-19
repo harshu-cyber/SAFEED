@@ -2,14 +2,28 @@ import React, { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from '../../../context/ThemeContext';
-import { FiUser, FiLogOut, FiSearch, FiMenu, FiShield, FiSun, FiMoon } from 'react-icons/fi';
+import { FiUser, FiLogOut, FiSearch, FiMenu, FiShield, FiSun, FiMoon, FiRefreshCw } from 'react-icons/fi';
 import { ROLE_LABELS } from '../../../constants/roles';
+import { cloudSync } from '../../../api/cloudSync';
 
 export const AppHeader = ({ onToggleSidebar, onOpenSearch }) => {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleGlobalSync = async () => {
+    setIsSyncing(true);
+    try {
+      await cloudSync.pull();
+      window.location.reload();
+    } catch (err) {
+      console.warn('Sync refresh warning:', err);
+    } finally {
+      setTimeout(() => setIsSyncing(false), 600);
+    }
+  };
 
   return (
     <header className="relative h-16 bg-[#0B223D] text-white flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30 shadow-xs border-b-2 border-[#D4AF37]">
@@ -65,6 +79,16 @@ export const AppHeader = ({ onToggleSidebar, onOpenSearch }) => {
 
       {/* Right User Actions */}
       <div className="flex items-center gap-2 sm:gap-3">
+        {/* Refresh / Sync Data Button */}
+        <button
+          onClick={handleGlobalSync}
+          disabled={isSyncing}
+          title="Refresh & Sync Data with MongoDB Atlas"
+          className="p-2 rounded-lg border border-[#1E3A5F] text-[#D4AF37] hover:bg-[#162B44] hover:border-[#D4AF37] transition cursor-pointer flex items-center justify-center disabled:opacity-60"
+        >
+          <FiRefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+        </button>
+
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}

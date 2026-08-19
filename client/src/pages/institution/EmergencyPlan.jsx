@@ -3,6 +3,7 @@ import { PageWrapper } from '../../components/layout/PageWrapper/PageWrapper';
 import { Card, Spinner } from '../../components/common/Card/Card';
 import { Button } from '../../components/common/Button/Button';
 import { useAuth } from '../../context/AuthContext';
+import axiosInstance from '../../api/axiosInstance';
 import { FiCheckSquare, FiAlertCircle } from 'react-icons/fi';
 
 export const EmergencyPlanPage = () => {
@@ -28,15 +29,13 @@ export const EmergencyPlanPage = () => {
 
   useEffect(() => {
     if (user?.institutionId) {
-      fetch(`/api/v1/compliance/institution/${user.institutionId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-      })
-        .then(r => r.json())
+      axiosInstance.get(`/compliance/institution/${user.institutionId}`)
         .then(res => {
-          if (res.data?.emergencyPlan) {
-            setFormData(prev => ({ ...prev, ...res.data.emergencyPlan }));
+          if (res.data?.data?.emergencyPlan) {
+            setFormData(prev => ({ ...prev, ...res.data.data.emergencyPlan }));
           }
         })
+        .catch(console.error)
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
@@ -48,15 +47,8 @@ export const EmergencyPlanPage = () => {
     setSaving(true);
     setMsg('');
     try {
-      const res = await fetch(`/api/v1/compliance/emergency-plan/${user.institutionId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: JSON.stringify(formData),
-      });
-      if (res.ok) setMsg('Emergency readiness checklist saved successfully!');
+      await axiosInstance.post(`/compliance/emergency-plan/${user.institutionId}`, formData);
+      setMsg('Emergency readiness checklist saved successfully!');
     } catch (err) {
       console.error(err);
     } finally {

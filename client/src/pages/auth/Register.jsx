@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { institutionStore } from '../../api/institutionStore';
+import axiosInstance from '../../api/axiosInstance';
 import {
   FiUser, FiMail, FiPhone, FiMapPin, FiFileText,
   FiShield, FiCheck, FiCopy, FiEye, FiEyeOff, FiAlertCircle
@@ -184,14 +185,10 @@ export const Register = () => {
     localStorage.setItem('registeredSchoolUser', JSON.stringify(generatedCredentials));
 
     // Try backend call asynchronously (non-blocking)
-    fetch('/api/v1/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...data,
-        password: data.phone,
-        role: data.institutionType === 'COACHING' ? 'COACHING_ADMIN' : 'SCHOOL_ADMIN',
-      }),
+    axiosInstance.post('/auth/register', {
+      ...data,
+      password: data.phone,
+      role: data.institutionType === 'COACHING' ? 'COACHING_ADMIN' : 'SCHOOL_ADMIN',
     }).catch(console.warn);
 
     // Show popup modal!

@@ -61,36 +61,15 @@ function initStore() {
     'adcp@safeedup.gov.in',
     'acp@safeedup.gov.in',
     'superadmin@safeedup.gov.in',
+    'superadmin@safeed.ac.in',
   ];
 
   existing.users = (existing.users || []).filter(u => !dummyEmails.includes(u.email?.toLowerCase()));
-
-  // Ensure superadmin@safeed.ac.in / harshsafeed exists and is updated
-  let sa = existing.users.find(u => u.role === 'SUPER_ADMIN' || u.email?.includes('superadmin'));
-  if (sa) {
-    sa.email = 'superadmin@safeed.ac.in';
-    sa.username = 'superadmin@safeed.ac.in';
-    sa.password = 'harshsafeed';
-    sa.isActive = true;
-  } else {
-    existing.users.unshift(DEFAULT_USERS[0]);
-  }
 
   let deletedList = [];
   try {
     deletedList = JSON.parse(localStorage.getItem('safeed_deleted_user_ids') || '[]');
   } catch (_) {}
-
-  // Ensure all DEFAULT_USERS (TARUN, Inspector Sharma, etc.) exist in the store EXCEPT deleted ones
-  for (const defUser of DEFAULT_USERS) {
-    const isDeleted = deletedList.includes(defUser._id) || deletedList.includes(defUser.email?.toLowerCase());
-    if (!isDeleted) {
-      const exists = existing.users.some(u => u.email?.toLowerCase() === defUser.email?.toLowerCase() || u._id === defUser._id);
-      if (!exists) {
-        existing.users.push(defUser);
-      }
-    }
-  }
 
   // Filter existing users to exclude any deleted user
   existing.users = (existing.users || []).filter(u => !deletedList.includes(u._id) && !deletedList.includes(u.email?.toLowerCase()));

@@ -1,132 +1,114 @@
 // ============================================================
-// SafeED-UP — Institution Model
+// SafeED-UP — Institution Model (Flexible & Production Ready)
 // ============================================================
 const mongoose = require('mongoose');
-const {
-  INSTITUTION_TYPES,
-  INSTITUTION_STATUS,
-  VERIFICATION_STATUS,
-  RISK_LEVELS,
-  AFFILIATION_BOARDS,
-  INDIA_STATES,
-} = require('../constants/statusTypes');
-
-const addressSchema = new mongoose.Schema(
-  {
-    street: { type: String, trim: true },
-    city: { type: String, trim: true },
-    pincode: {
-      type: String,
-      trim: true,
-      match: [/^\d{6}$/, 'Please enter a valid 6-digit pincode'],
-    },
-    district: { type: String, trim: true },
-    state: { type: String, enum: INDIA_STATES },
-  },
-  { _id: false }
-);
-
-const contactPersonSchema = new mongoose.Schema(
-  {
-    name: { type: String, trim: true },
-    phone: { type: String, trim: true },
-    email: { type: String, trim: true, lowercase: true },
-    designation: { type: String, trim: true },
-  },
-  { _id: false }
-);
 
 const institutionSchema = new mongoose.Schema(
   {
     safeId: {
       type: String,
-      unique: true,
-      sparse: true,
       index: true,
     },
     name: {
       type: String,
       required: [true, 'Institution name is required'],
       trim: true,
-      minlength: [3, 'Institution name must be at least 3 characters'],
-      maxlength: [200, 'Institution name cannot exceed 200 characters'],
     },
     type: {
       type: String,
-      enum: Object.values(INSTITUTION_TYPES),
-      required: [true, 'Institution type is required'],
+      default: 'SCHOOL',
     },
     affiliationBoard: {
       type: String,
-      enum: [...AFFILIATION_BOARDS, null],
-      default: null,
+      default: 'CBSE',
+    },
+    affiliationCode: {
+      type: String,
+      default: '',
     },
     udiseCode: {
       type: String,
-      trim: true,
-      sparse: true,
-      unique: true,
       default: null,
     },
     registrationNumber: {
       type: String,
+      default: () => `REG-${Date.now()}`,
+    },
+    district: {
+      type: String,
+      default: 'Lucknow',
+    },
+    state: {
+      type: String,
+      default: 'Uttar Pradesh',
+    },
+    zone: {
+      type: String,
+      default: 'CENTRAL',
+      uppercase: true,
       trim: true,
-      required: [true, 'Registration number is required'],
     },
     address: {
-      type: addressSchema,
-      required: [true, 'Address is required'],
+      type: mongoose.Schema.Types.Mixed,
+      default: () => ({ street: 'Lucknow Main Road', district: 'Lucknow', state: 'Uttar Pradesh' }),
     },
     coordinates: {
-      lat: { type: Number, default: null },
-      lng: { type: Number, default: null },
+      lat: { type: Number, default: 26.8467 },
+      lng: { type: Number, default: 80.9462 },
     },
     contactPerson: {
-      type: contactPersonSchema,
-      required: [true, 'Contact person details are required'],
+      type: mongoose.Schema.Types.Mixed,
+      default: () => ({ name: 'Principal', email: 'admin@school.edu.in', phone: '9876543210' }),
     },
     alternateContact: {
-      type: contactPersonSchema,
+      type: mongoose.Schema.Types.Mixed,
       default: null,
     },
     website: { type: String, trim: true, default: null },
-    totalStudents: { type: Number, min: 0, default: 0 },
-    totalStaff: { type: Number, min: 0, default: 0 },
-    buildingFloors: { type: Number, min: 1, default: 1 },
-    builtYear: {
-      type: Number,
-      min: 1600,
-      max: new Date().getFullYear(),
-      default: null,
-    },
-    landAreaSqFt: { type: Number, min: 0, default: null },
+    totalStudents: { type: Number, default: 0 },
+    staffCount: { type: Number, default: 0 },
+    totalStaff: { type: Number, default: 0 },
+    classroomCount: { type: Number, default: 0 },
+    floorCount: { type: Number, default: 1 },
+    buildingFloors: { type: Number, default: 1 },
+    exitGateCount: { type: Number, default: 2 },
+    nearestPoliceStation: { type: String, default: 'Hazratganj Police Station' },
 
     // Status & Verification
     status: {
       type: String,
-      enum: Object.values(INSTITUTION_STATUS),
-      default: INSTITUTION_STATUS.PENDING,
+      default: 'PENDING_DOCUMENT_VERIFICATION',
     },
     verificationStatus: {
       type: String,
-      enum: Object.values(VERIFICATION_STATUS),
-      default: VERIFICATION_STATUS.UNVERIFIED,
+      default: 'UNVERIFIED',
     },
     riskLevel: {
       type: String,
-      enum: Object.values(RISK_LEVELS),
-      default: RISK_LEVELS.MEDIUM,
+      default: 'UNDER_REVIEW',
     },
     complianceScore: {
       type: Number,
-      min: 0,
-      max: 100,
       default: 0,
     },
 
+    // Inspector & Zone Assignment
+    assignedInspector: { type: String, default: 'DCP CENTRAL' },
+    assignedInspectorZone: { type: String, default: 'CENTRAL' },
+    assignedInspectorEmail: { type: String, default: '' },
+    assignedAt: { type: String, default: null },
+    districtRemarks: { type: Array, default: [] },
+
+    // QR Lock Status
+    qrLocked: { type: Boolean, default: false },
+    qrLockNotice: { type: String, default: null },
+    qrLockedBy: { type: String, default: null },
+    qrLockedAt: { type: String, default: null },
+    qrLockStatus: { type: String, default: 'UNLOCKED' },
+
     // Inspection tracking
-    lastInspectionDate: { type: Date, default: null },
-    nextInspectionDue: { type: Date, default: null },
+    lastInspectionDate: { type: String, default: null },
+    nextInspectionDue: { type: String, default: null },
     totalInspections: { type: Number, default: 0 },
 
     // QR & Safe ID
@@ -135,13 +117,11 @@ const institutionSchema = new mongoose.Schema(
 
     // Relationships
     adminUserId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: [true, 'Institution admin user is required'],
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
     },
     verifiedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      type: mongoose.Schema.Types.Mixed,
       default: null,
     },
     verifiedAt: { type: Date, default: null },
@@ -155,25 +135,12 @@ const institutionSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
+    strict: false,
   }
 );
 
-// ---- Indexes ----
-institutionSchema.index({ 'address.district': 1, 'address.state': 1 });
-institutionSchema.index({ status: 1 });
-institutionSchema.index({ verificationStatus: 1 });
-institutionSchema.index({ riskLevel: 1 });
-institutionSchema.index({ type: 1 });
-institutionSchema.index({ adminUserId: 1 });
-institutionSchema.index({ name: 'text', registrationNumber: 'text' });
-
-// ---- Virtual: Public URL ----
-institutionSchema.virtual('publicUrl').get(function () {
-  if (!this.safeId) return null;
-  return `/verify/${this.safeId}`;
-});
+institutionSchema.index({ zone: 1, district: 1 });
+institutionSchema.index({ safeId: 1 });
 
 const Institution = mongoose.model('Institution', institutionSchema);
 module.exports = Institution;

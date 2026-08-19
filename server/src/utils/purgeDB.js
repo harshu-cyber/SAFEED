@@ -1,6 +1,7 @@
 const { MongoClient } = require('mongodb');
 
-const uri = 'mongodb+srv://SAFEED:Clekhak1701@cluster0.8vmsujy.mongodb.net/safeedup?retryWrites=true&w=majority&appName=Cluster0';
+const uri = process.env.MONGODB_URI;
+if (!uri) { console.error('Set MONGODB_URI env var before running this script.'); process.exit(1); }
 
 async function run() {
   const client = new MongoClient(uri, {

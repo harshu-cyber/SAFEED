@@ -44,15 +44,16 @@ class AuthService {
 
     // ✅ Auto-set password = mobile number (as per requirement)
     const autoPassword = phone;
+    const userFullName = (name || data.principalName || institutionName || 'School Admin').trim();
 
     const userData = {
-      name,
+      name: userFullName,
       email: email.toLowerCase(),
       phone,
       password: autoPassword,
       role: role || 'SCHOOL_ADMIN',
       state: state || 'Uttar Pradesh',
-      district,
+      district: district || 'Lucknow',
     };
 
     if (mongoose.connection.readyState !== 1) {
@@ -62,7 +63,7 @@ class AuthService {
       const fakeUser = {
         _id: 'new_school_' + Date.now(),
         id: 'new_school_' + Date.now(),
-        name,
+        name: userFullName,
         email: email.toLowerCase(),
         phone,
         role: role || 'SCHOOL_ADMIN',
@@ -90,11 +91,43 @@ class AuthService {
     // ✅ DB Registration Path
     const user = await User.create(userData);
 
+    // Auto-create Institution in Atlas if registering a School/Coaching
+    const Institution = require('../models/Institution.model');
+    if (institutionName) {
+      const instType = (institutionType || (role === 'COACHING_ADMIN' ? 'COACHING' : 'SCHOOL'));
+      const safeId = `SAFE-${district ? district.toUpperCase().slice(0, 3) : 'LKO'}-${Math.floor(100000 + Math.random() * 900000)}`;
+      try {
+        const inst = await Institution.create({
+          safeId,
+          name: institutionName,
+          type: instType,
+          registrationNumber: data.registrationNumber || `REG-${Date.now()}`,
+          affiliationBoard: data.board || data.affiliationBoard || 'CBSE',
+          address: {
+            street: address || 'Main Road',
+            district: district || 'Lucknow',
+            state: state || 'Uttar Pradesh',
+          },
+          contactPerson: {
+            name: userFullName,
+            email: email.toLowerCase(),
+            phone: phone,
+          },
+          adminUserId: user._id,
+          nearestPoliceStation: data.nearestPoliceStation || 'Hazratganj Police Station',
+          zone: data.zone || 'CENTRAL',
+        });
+        user.institutionId = inst._id;
+      } catch (instErr) {
+        console.warn('Auto institution creation notice:', instErr.message);
+      }
+    }
+
     await Notification.create({
       userId: user._id,
       type: 'SUCCESS',
       title: '🏫 Institution Account Registered Successfully',
-      message: `Welcome! Your institution account for "${institutionName}" has been created. Username: ${email} | Password: ${phone} (Your Mobile Number). Documents awaiting Inspector verification.`,
+      message: `Welcome! Your institution account for "${institutionName || userFullName}" has been created. Username: ${email} | Password: ${phone} (Your Mobile Number). Documents awaiting Inspector verification.`,
       module: 'SYSTEM',
     });
 

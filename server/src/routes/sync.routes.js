@@ -43,11 +43,20 @@ async function syncHandler(req, res) {
     if (req.method === 'POST') {
       const { action, payload } = req.body || {};
 
-      if ((action === 'CREATE_USER' || action === 'createUser') && payload) {
-        const emailLow = payload.email?.toLowerCase()?.trim();
-        let existing = null;
-        if (emailLow) existing = await User.findOne({ email: emailLow });
-        if (!existing) {
+      try {
+        if ((action === 'CREATE_USER' || action === 'createUser') && payload) {
+          const emailLow = payload.email?.toLowerCase()?.trim();
+          if (!emailLow) {
+            return res.status(400).json({ success: false, error: 'Email address is required.' });
+          }
+          const existing = await User.findOne({ email: emailLow });
+          if (existing) {
+            return res.status(400).json({
+              success: false,
+              error: `User with email '${emailLow}' already exists in MongoDB Atlas.`,
+            });
+          }
+
           // Clean phone: ensure 10-digit number or omit to satisfy regex
           const rawPhone = String(payload.phone || '').replace(/\D/g, '');
           const phone = rawPhone.length === 10 ? rawPhone : undefined;
@@ -64,7 +73,7 @@ async function syncHandler(req, res) {
 
           const userDoc = {
             name: (payload.name || payload.officialName || 'Official User').trim(),
-            email: emailLow || `user_${Date.now()}@safeedup.gov.in`,
+            email: emailLow,
             password: rawPassword,
             role: role,
             district: payload.district || 'Lucknow',
@@ -76,58 +85,71 @@ async function syncHandler(req, res) {
           if (payload.badgeNumber) userDoc.employeeId = payload.badgeNumber;
 
           await User.create(userDoc);
+        } else if ((action === 'UPDATE_USER' || action === 'updateUser') && payload) {
+          const targetId = payload._id || payload.id;
+          const query = targetId && mongoose.Types.ObjectId.isValid(targetId) 
+            ? { _id: targetId } 
+            : { email: payload.email?.toLowerCase() };
+          await User.findOneAndUpdate(query, { $set: payload }, { new: true });
+        } else if ((action === 'TOGGLE_USER' || action === 'toggleUserStatus') && payload) {
+          const targetId = payload.id || payload._id;
+          const query = targetId && mongoose.Types.ObjectId.isValid(targetId) 
+            ? { _id: targetId } 
+            : { email: payload.email?.toLowerCase() };
+          const u = await User.findOne(query);
+          if (u) {
+            u.isActive = !u.isActive;
+            await u.save();
+          }
+        } else if ((action === 'DELETE_USER' || action === 'deleteUser') && payload) {
+          const targetId = payload.id || payload._id;
+          const query = targetId && mongoose.Types.ObjectId.isValid(targetId) 
+            ? { _id: targetId } 
+            : { email: payload.email?.toLowerCase() };
+          await User.deleteOne(query);
+        } else if ((action === 'CREATE_INSTITUTION' || action === 'createInstitution') && payload) {
+          const existing = await Institution.findOne({ name: payload.name });
+          if (!existing) {
+            const instDoc = {
+              name: payload.name,
+              type: payload.type || 'SCHOOL',
+              registrationNumber: payload.registrationNumber || `REG-${Date.now()}`,
+              address: {
+                district: payload.district || 'Lucknow',
+                state: payload.state || 'Uttar Pradesh',
+              },
+              contactPerson: {
+                name: payload.contactName || 'Principal',
+                email: payload.email || 'admin@inst.edu.in',
+              },
+              adminUserId: payload.adminUserId || new mongoose.Types.ObjectId(),
+            };
+            await Institution.create(instDoc);
+          }
+        } else if ((action === 'UPDATE_INSTITUTION' || action === 'updateInstitution') && payload) {
+          const targetId = payload._id || payload.id;
+          if (targetId) {
+            await Institution.findByIdAndUpdate(targetId, { $set: payload });
+          }
+        } else if ((action === 'DELETE_INSTITUTION' || action === 'deleteInstitution') && payload) {
+          const targetId = payload.id || payload._id;
+          if (targetId) {
+            await Institution.deleteOne({ _id: targetId });
+          }
         }
-      } else if ((action === 'UPDATE_USER' || action === 'updateUser') && payload) {
-        const targetId = payload._id || payload.id;
-        const query = targetId && mongoose.Types.ObjectId.isValid(targetId) 
-          ? { _id: targetId } 
-          : { email: payload.email?.toLowerCase() };
-        await User.findOneAndUpdate(query, { $set: payload }, { new: true });
-      } else if ((action === 'TOGGLE_USER' || action === 'toggleUserStatus') && payload) {
-        const targetId = payload.id || payload._id;
-        const query = targetId && mongoose.Types.ObjectId.isValid(targetId) 
-          ? { _id: targetId } 
-          : { email: payload.email?.toLowerCase() };
-        const u = await User.findOne(query);
-        if (u) {
-          u.isActive = !u.isActive;
-          await u.save();
+      } catch (actionErr) {
+        console.error('Sync Action Error:', actionErr.message);
+        if (actionErr.code === 11000) {
+          const dupField = Object.keys(actionErr.keyPattern || {})[0] || 'record';
+          return res.status(400).json({
+            success: false,
+            error: `A ${dupField} with this value already exists in MongoDB Atlas.`,
+          });
         }
-      } else if ((action === 'DELETE_USER' || action === 'deleteUser') && payload) {
-        const targetId = payload.id || payload._id;
-        const query = targetId && mongoose.Types.ObjectId.isValid(targetId) 
-          ? { _id: targetId } 
-          : { email: payload.email?.toLowerCase() };
-        await User.deleteOne(query);
-      } else if ((action === 'CREATE_INSTITUTION' || action === 'createInstitution') && payload) {
-        const existing = await Institution.findOne({ name: payload.name });
-        if (!existing) {
-          const instDoc = {
-            name: payload.name,
-            type: payload.type || 'SCHOOL',
-            registrationNumber: payload.registrationNumber || `REG-${Date.now()}`,
-            address: {
-              district: payload.district || 'Lucknow',
-              state: payload.state || 'Uttar Pradesh',
-            },
-            contactPerson: {
-              name: payload.contactName || 'Principal',
-              email: payload.email || 'admin@inst.edu.in',
-            },
-            adminUserId: payload.adminUserId || new mongoose.Types.ObjectId(),
-          };
-          await Institution.create(instDoc);
-        }
-      } else if ((action === 'UPDATE_INSTITUTION' || action === 'updateInstitution') && payload) {
-        const targetId = payload._id || payload.id;
-        if (targetId) {
-          await Institution.findByIdAndUpdate(targetId, { $set: payload });
-        }
-      } else if ((action === 'DELETE_INSTITUTION' || action === 'deleteInstitution') && payload) {
-        const targetId = payload.id || payload._id;
-        if (targetId) {
-          await Institution.deleteOne({ _id: targetId });
-        }
+        return res.status(400).json({
+          success: false,
+          error: actionErr.message,
+        });
       }
 
       // Return latest fresh state after mutation

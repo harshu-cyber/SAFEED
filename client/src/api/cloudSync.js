@@ -13,7 +13,8 @@
 import { userStore } from './userStore';
 import { institutionStore } from './institutionStore';
 
-const SYNC_URL = '/api/sync';
+const API_BASE = import.meta.env.VITE_API_URL || '';
+const SYNC_URL = API_BASE ? `${API_BASE.replace(/\/v1\/?$/, '')}/sync` : '/api/sync';
 
 let pollInterval = null;
 let isBusy = false;

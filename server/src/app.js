@@ -87,7 +87,7 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
-app.all('/api/sync', require('../../api/sync'));
+app.all('/api/sync', require('./routes/sync.routes'));
 app.use('/api/v1', routes);
 
 // Serve Frontend (Client Build) in Single-Server Deployment

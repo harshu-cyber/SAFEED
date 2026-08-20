@@ -425,8 +425,21 @@ class DocumentService {
       if (type === 'AFFILIATION_CERT') type = 'ELECTRICAL_SAFETY';
       if (type === 'EMERGENCY_PLAN') type = 'EVACUATION_SAFETY';
 
-      const key = `${d.institutionId}_${type}`;
-      mergedMap.set(key, { ...d, documentType: type });
+      const rawInstId = d.institutionId?._id ? d.institutionId._id.toString() : (d.institutionId ? d.institutionId.toString() : '');
+      const instNameKey = (d.institutionName || '').toLowerCase().trim();
+      const instKey = rawInstId || instNameKey || 'inst';
+
+      const statusVal = (d.verificationStatus === 'APPROVED' || d.status === 'VERIFIED') ? 'VERIFIED' : (d.verificationStatus === 'REJECTED' || d.status === 'REJECTED') ? 'REJECTED' : 'PENDING_REVIEW';
+
+      const key = `${instKey}_${type}`;
+      mergedMap.set(key, {
+        ...d,
+        _id: d._id || d.id || ('doc_' + Date.now()),
+        documentType: type,
+        type: type,
+        status: statusVal,
+        verificationStatus: statusVal === 'VERIFIED' ? 'APPROVED' : statusVal,
+      });
     });
 
     return { documents: Array.from(mergedMap.values()) };

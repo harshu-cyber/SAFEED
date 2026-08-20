@@ -94,6 +94,15 @@ export const DocumentsPage = () => {
     try {
       const docName = name || DOC_TYPES.find(t => t.value === type)?.label.split(' (')[0];
 
+      let dataUrl = fileDataUrl;
+      if (!dataUrl && file) {
+        dataUrl = await new Promise((resolve) => {
+          const r = new FileReader();
+          r.onloadend = () => resolve(r.result);
+          r.readAsDataURL(file);
+        });
+      }
+
       // 1. Instant local store update for 0ms UI response
       institutionStore.uploadDocument({
         institutionId: instId,
@@ -103,7 +112,7 @@ export const DocumentsPage = () => {
         documentType: type,
         fileSize: file ? (file.size / (1024 * 1024)).toFixed(2) + ' MB' : '1.4 MB',
         uploadedBy: user?.name || 'Institution Admin',
-        fileDataUrl: fileDataUrl || null,
+        fileDataUrl: dataUrl || null,
         fileName: file?.name || `${docName}.pdf`,
       });
 

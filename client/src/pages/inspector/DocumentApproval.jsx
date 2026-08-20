@@ -36,8 +36,24 @@ export const DocumentApproval = () => {
       const mergedMap = new Map();
       [...localDocs, ...apiDocs].forEach(d => {
         if (d) {
-          const key = d._id || d.id || `${d.institutionName || 'inst'}_${d.type || d.documentType || d.name}`;
-          mergedMap.set(key, d);
+          const instKey = String(d.institutionId || d.email || d.institutionName || 'inst').toLowerCase().trim();
+          let type = (d.documentType || d.type || d.name || '').toUpperCase();
+          if (type === 'FIRE_NOC') type = 'FIRE_SAFETY';
+          if (type === 'BUILDING_PLAN') type = 'BUILDING_SAFETY';
+          if (type === 'AFFILIATION_CERT') type = 'ELECTRICAL_SAFETY';
+          if (type === 'EMERGENCY_PLAN') type = 'EVACUATION_SAFETY';
+
+          const key = `${instKey}_${type}`;
+          const statusVal = (d.status === 'VERIFIED' || d.verificationStatus === 'APPROVED' || d.verificationStatus === 'VERIFIED') ? 'VERIFIED' : (d.status === 'REJECTED' || d.verificationStatus === 'REJECTED') ? 'REJECTED' : 'PENDING_REVIEW';
+
+          mergedMap.set(key, {
+            ...d,
+            _id: d._id || d.id || ('doc_' + Date.now()),
+            type,
+            documentType: type,
+            status: statusVal,
+            verificationStatus: statusVal === 'VERIFIED' ? 'APPROVED' : statusVal,
+          });
         }
       });
       setDocs(Array.from(mergedMap.values()));

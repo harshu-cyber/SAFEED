@@ -45,7 +45,9 @@ axiosInstance.interceptors.response.use(
           return axiosInstance(originalRequest);
         }
       } catch (refreshError) {
-        console.warn('Refresh token failed:', refreshError);
+        if (refreshError.response?.status !== 401) {
+          console.warn('Refresh token failed:', refreshError);
+        }
         return Promise.reject(refreshError);
       }
     }

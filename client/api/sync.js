@@ -47,9 +47,25 @@ const complaintSchema = new mongoose.Schema({
   status: String,
 }, { strict: false, timestamps: true });
 
+const evidenceSchema = new mongoose.Schema({
+  inspectionId: String,
+  institutionId: String,
+  email: String,
+  safeId: String,
+  institutionName: String,
+  inspectorName: String,
+  dcpZone: String,
+  date: String,
+  score: Number,
+  status: String,
+  photos: [String],
+  remarks: String,
+}, { strict: false, timestamps: true });
+
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Institution = mongoose.models.Institution || mongoose.model('Institution', instSchema);
 const Complaint = mongoose.models.Complaint || mongoose.model('Complaint', complaintSchema);
+const Evidence = mongoose.models.Evidence || mongoose.model('Evidence', evidenceSchema);
 
 function getParsedBody(req) {
   if (!req.body) return {};
@@ -77,7 +93,8 @@ export default async function handler(req, res) {
       const users = await User.find({}).select('-password').lean();
       const institutions = await Institution.find({}).lean();
       const complaints = await Complaint.find({}).lean();
-      return res.status(200).json({ success: true, data: { users, institutions, complaints } });
+      const evidences = await Evidence.find({}).lean();
+      return res.status(200).json({ success: true, data: { users, institutions, complaints, evidences } });
     }
 
     if (req.method === 'POST') {
@@ -270,16 +287,47 @@ export default async function handler(req, res) {
           inst.status = score === 100 ? 'VERIFIED' : 'PENDING_DOCUMENT_VERIFICATION';
           await inst.save();
         }
+      } else if ((action === 'SUBMIT_EVIDENCE' || action === 'submitEvidence') && payload) {
+        const { institutionId, email, safeId, institutionName } = payload;
+        const emailLow = (email || '').toLowerCase().trim();
+        const nameLow = (institutionName || '').toLowerCase().trim();
+
+        let inst = null;
+        if (institutionId && mongoose.Types.ObjectId.isValid(institutionId)) {
+          inst = await Institution.findById(institutionId);
+        }
+        if (!inst && emailLow) inst = await Institution.findOne({ email: emailLow });
+        if (!inst && safeId) inst = await Institution.findOne({ safeId });
+        if (!inst && nameLow) inst = await Institution.findOne({ name: new RegExp(`^${nameLow.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') });
+
+        const targetInstId = inst ? inst._id.toString() : (institutionId || 'inst_unknown');
+        const recordId = payload._id || ('ev_' + Date.now());
+
+        await Evidence.findOneAndUpdate(
+          { _id: recordId },
+          {
+            $set: {
+              ...payload,
+              _id: recordId,
+              institutionId: targetInstId,
+              email: inst ? inst.email : email,
+              safeId: inst ? inst.safeId : safeId,
+              institutionName: inst ? inst.name : institutionName,
+            }
+          },
+          { upsert: true, new: true }
+        );
       }
 
       const users = await User.find({}).select('-password').lean();
       const institutions = await Institution.find({}).lean();
       const complaints = await Complaint.find({}).lean();
-      return res.status(200).json({ success: true, data: { users, institutions, complaints } });
+      const evidences = await Evidence.find({}).lean();
+      return res.status(200).json({ success: true, data: { users, institutions, complaints, evidences } });
     }
 
     return res.status(405).json({ success: false, error: 'Method Not Allowed' });
   } catch (err) {
     return res.status(200).json({ success: false, error: `Server error: ${err.stack || err.message}` });
   }
-}
+};

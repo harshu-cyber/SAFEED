@@ -69,5 +69,22 @@ export const evidenceStore = {
 
     cloudSync.syncAction('SUBMIT_EVIDENCE', newRecord).catch(err => console.warn('[submitEvidence] cloud sync error:', err));
     return newRecord;
+  },
+
+  /** Merge cloud evidence feed into local storage cache without dropping local items */
+  syncCloudEvidence: (cloudEvidences) => {
+    if (!Array.isArray(cloudEvidences)) return;
+    let existingLocal = evidenceStore.getEvidenceList();
+
+    const mergedMap = new Map();
+    [...existingLocal, ...cloudEvidences].forEach(e => {
+      if (e && (e._id || e.inspectionId)) {
+        const key = e._id || e.inspectionId;
+        mergedMap.set(key, e);
+      }
+    });
+
+    const merged = Array.from(mergedMap.values());
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
   }
 };

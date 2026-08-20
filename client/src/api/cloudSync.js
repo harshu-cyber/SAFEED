@@ -13,6 +13,7 @@
 import { userStore } from './userStore';
 import { institutionStore } from './institutionStore';
 import { complaintStore } from './complaintStore';
+import { evidenceStore } from './evidenceStore';
 
 const rawBase = import.meta.env.VITE_API_URL || '';
 const cleanDomain = rawBase ? rawBase.replace(/\/+$/, '').replace(/\/api(\/v1)?$/, '') : '';
@@ -38,7 +39,7 @@ export async function pull() {
     }
     if (!json || !json.success || !json.data) return;
 
-    const { users: cloudUsers, institutions: cloudInsts, complaints: cloudComplaints } = json.data;
+    const { users: cloudUsers, institutions: cloudInsts, complaints: cloudComplaints, evidences: cloudEvidences } = json.data;
 
     // Always overwrite localStorage from MongoDB Atlas — this IS the truth
     if (Array.isArray(cloudUsers)) {
@@ -49,6 +50,9 @@ export async function pull() {
     }
     if (Array.isArray(cloudComplaints)) {
       complaintStore.syncCloudComplaints(cloudComplaints);
+    }
+    if (Array.isArray(cloudEvidences)) {
+      evidenceStore.syncCloudEvidence(cloudEvidences);
     }
   } catch (err) {
     console.warn('[CloudSync] pull failed:', err.message);
@@ -68,10 +72,23 @@ export async function push() {
 // ── SYNC ACTION: React → MongoDB Atlas (explicit mutation) ───────────────────
 export async function syncAction(action, payload) {
   try {
+    // Sanitize payload to prevent Vercel 4.5MB Serverless Body limit (HTTP 413)
+    let sanitizedPayload = payload;
+    if (payload && typeof payload === 'object') {
+      sanitizedPayload = JSON.parse(JSON.stringify(payload));
+      if (sanitizedPayload.document && sanitizedPayload.document.fileDataUrl && sanitizedPayload.document.fileDataUrl.length > 500000) {
+        // Replace huge Base64 with placeholder for cloud sync payload (metadata is preserved)
+        sanitizedPayload.document.fileDataUrl = '[STORED_IN_FILESYSTEM]';
+      }
+      if (Array.isArray(sanitizedPayload.photos)) {
+        sanitizedPayload.photos = sanitizedPayload.photos.map(p => (typeof p === 'string' && p.length > 500000) ? '[PHOTO_STORED]' : p);
+      }
+    }
+
     const res = await fetch(SYNC_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, payload }),
+      body: JSON.stringify({ action, payload: sanitizedPayload }),
     });
 
     const text = await res.text();
@@ -92,7 +109,9 @@ export async function syncAction(action, payload) {
       if (Array.isArray(json.data.users)) userStore.syncCloudUsers(json.data.users);
       if (Array.isArray(json.data.institutions)) institutionStore.syncCloudInstitutions(json.data.institutions);
       if (Array.isArray(json.data.complaints)) complaintStore.syncCloudComplaints(json.data.complaints);
+      if (Array.isArray(json.data.evidences)) evidenceStore.syncCloudEvidence(json.data.evidences);
     }
+    return json.data;
     return json.data;
   } catch (err) {
     console.error(`[CloudSync] ${action} failed:`, err.message);

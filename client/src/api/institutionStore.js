@@ -129,9 +129,16 @@ export const institutionStore = {
 
       const localDocs = (localInst && Array.isArray(localInst.documents)) ? localInst.documents : [];
       const cloudDocs = Array.isArray(norm.documents) ? norm.documents : [];
+      const globalDocs = institutionStore.getDocuments().filter(
+        d => d.institutionId === norm._id ||
+             d.institutionId === norm.id ||
+             (norm.email && d.email?.toLowerCase() === norm.email.toLowerCase()) ||
+             (norm.safeId && d.safeId === norm.safeId) ||
+             (norm.name && d.institutionName?.toLowerCase() === norm.name.toLowerCase())
+      );
 
       const docMap = new Map();
-      [...localDocs, ...cloudDocs].forEach(d => {
+      [...localDocs, ...cloudDocs, ...globalDocs].forEach(d => {
         if (d && (d.type || d.name)) {
           const key = d.type || d.name;
           docMap.set(key, d);

@@ -29,10 +29,17 @@ export const DocumentsPage = () => {
   const [viewDoc, setViewDoc] = useState(null);
 
   const loadData = () => {
-    const inst = institutionStore.getInstitutionByIdOrEmail(user?.institutionId || user?.email || user?.name);
+    let inst = institutionStore.getInstitutionByIdOrEmail(user?.institutionId || user?.email || user?.name);
+    if (!inst) {
+      const allInsts = institutionStore.getInstitutions();
+      if (allInsts.length > 0) inst = allInsts[0];
+    }
     if (inst) {
       setInstitution(inst);
-      const docs = institutionStore.getDocumentsForInstitution(inst._id || inst.email || inst.safeId);
+      const docs = institutionStore.getDocumentsForInstitution(inst._id || inst.email || inst.safeId || inst.name);
+      setDocuments(docs);
+    } else {
+      const docs = institutionStore.getDocuments();
       setDocuments(docs);
     }
   };
@@ -57,13 +64,18 @@ export const DocumentsPage = () => {
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!institution) return;
+    let currentInst = institution || institutionStore.getInstitutionByIdOrEmail(user?.institutionId || user?.email || user?.name);
+    if (!currentInst) {
+      const allInsts = institutionStore.getInstitutions();
+      if (allInsts.length > 0) currentInst = allInsts[0];
+    }
+    const instName = currentInst?.name || user?.name || 'Registered Institution';
+    const instId = currentInst?._id || currentInst?.id || user?.institutionId || user?.email || 'inst_user';
 
     setUploading(true);
 
     try {
       const docName = name || DOC_TYPES.find(t => t.value === type)?.label.split(' (')[0];
-      const instId = institution._id || institution.id || user?.institutionId || user?.email;
 
       if (file) {
         try {
@@ -88,8 +100,8 @@ export const DocumentsPage = () => {
         name: docName,
         type,
         institutionId: instId,
-        institutionName: institution.name,
-        uploadedBy: user?.name || institution.principal,
+        institutionName: instName,
+        uploadedBy: user?.name || currentInst?.principal || 'School Administrator',
         fileSize: fileSizeMB,
         fileName: file?.name || `${docName}.pdf`,
         fileDataUrl: fileDataUrl || null,

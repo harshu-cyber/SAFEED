@@ -180,7 +180,7 @@ export const institutionStore = {
       return norm;
     });
 
-    localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(normalized));
+    safeSaveLocalStorage(STORAGE_KEYS.INSTITUTIONS, normalized);
   },
 
   /** Return ALL institutions from localStorage (with auto-assigned zone inspectors) */
@@ -291,7 +291,7 @@ export const institutionStore = {
     } else {
       all.unshift(newInst);
     }
-    localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(all));
+    safeSaveLocalStorage(STORAGE_KEYS.INSTITUTIONS, all);
     return newInst;
   },
 
@@ -312,7 +312,7 @@ export const institutionStore = {
       };
       return updatedTarget;
     });
-    localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(updated));
+    safeSaveLocalStorage(STORAGE_KEYS.INSTITUTIONS, updated);
     if (updatedTarget) {
       cloudSync.syncAction('UPDATE_INSTITUTION', updatedTarget).catch(err => console.warn('[updateInstProfile] sync failed:', err));
     }
@@ -324,7 +324,7 @@ export const institutionStore = {
     const insts = institutionStore.getInstitutions();
     const target = insts.find(i => i._id === instId || i.id === instId);
     const updated = insts.filter(i => i._id !== instId && i.id !== instId);
-    localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(updated));
+    safeSaveLocalStorage(STORAGE_KEYS.INSTITUTIONS, updated);
     if (target) {
       cloudSync.syncAction('DELETE_INSTITUTION', { _id: target._id || target.id, name: target.name }).catch(err => console.warn('[deleteInst] sync failed:', err));
     }
@@ -363,7 +363,7 @@ export const institutionStore = {
         inspectionScheduledStatus: 'INSPECTION_ASSIGNED',
       };
     });
-    localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(updated));
+    safeSaveLocalStorage(STORAGE_KEYS.INSTITUTIONS, updated);
     return updated;
   },
 
@@ -394,7 +394,7 @@ export const institutionStore = {
       return updatedTarget;
     });
 
-    localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(updatedInsts));
+    safeSaveLocalStorage(STORAGE_KEYS.INSTITUTIONS, updatedInsts);
     return updatedTarget;
   },
 
@@ -406,7 +406,7 @@ export const institutionStore = {
       const stored = localStorage.getItem(STORAGE_KEYS.DOCUMENTS);
       if (stored) return JSON.parse(stored);
     } catch {}
-    localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify([]));
+    safeSaveLocalStorage(STORAGE_KEYS.DOCUMENTS, []);
     return [];
   },
 
@@ -602,7 +602,7 @@ export const institutionStore = {
   verifyDocument: (docId, status, remarks = '') => {
     const docs = institutionStore.getDocuments();
     const updated = docs.map(d => (d._id === docId ? { ...d, status, remarks } : d));
-    localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(updated));
+    safeSaveLocalStorage(STORAGE_KEYS.DOCUMENTS, updated);
     const target = docs.find(d => d._id === docId);
 
     if (target) {
@@ -616,7 +616,7 @@ export const institutionStore = {
         targetInst.documents = targetInst.documents.map(
           d => (d._id === docId || d.type === target.type) ? { ...d, status, remarks } : d
         );
-        localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(insts));
+        safeSaveLocalStorage(STORAGE_KEYS.INSTITUTIONS, insts);
 
         cloudSync.syncAction('VERIFY_DOCUMENT', {
           institutionId: targetInst._id,

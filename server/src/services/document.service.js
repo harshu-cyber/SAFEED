@@ -309,23 +309,32 @@ class DocumentService {
       await institution.save();
     }
 
+    // Automatically calculate compliance & unlock QR Code in MongoDB if all 4 required documents are approved
+    try {
+      if (document.institutionId) {
+        await this.getCompliance(document.institutionId);
+      }
+    } catch (compErr) {
+      console.warn('[DocumentService] Auto-compliance check notice:', compErr.message);
+    }
+
     if (institution && institution.adminUserId) {
       await Notification.create({
         userId: institution.adminUserId,
-      type: action === 'APPROVE' ? 'SUCCESS' : 'WARNING',
-      title: action === 'APPROVE' ? 'Document Approved ✓' : 'Document Rejected',
-      message:
-        action === 'APPROVE'
-          ? `"${document.title}" has been approved.`
-          : `"${document.title}" was rejected. Reason: ${reason}`,
-      link: `/dashboard/institution/documents`,
-      module: 'DOCUMENT',
-      referenceId: document._id,
-    });
-  }
+        type: action === 'APPROVE' ? 'SUCCESS' : 'WARNING',
+        title: action === 'APPROVE' ? 'Document Approved ✓' : 'Document Rejected',
+        message:
+          action === 'APPROVE'
+            ? `"${document.title}" has been approved.`
+            : `"${document.title}" was rejected. Reason: ${reason}`,
+        link: `/dashboard/institution/documents`,
+        module: 'DOCUMENT',
+        referenceId: document._id,
+      });
+    }
 
-  return document;
-}
+    return document;
+  }
 
   /**
    * Delete a document (soft delete by marking non-latest)

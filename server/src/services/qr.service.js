@@ -23,8 +23,9 @@ class QRService {
     let safeIDRecord = await SafeID.findOne({ institutionId });
 
     // Generate Safe ID string
+    const stateStr = (typeof institution.address === 'object' && institution.address?.state) ? institution.address.state : 'Uttar Pradesh';
     const safeId = safeIDRecord?.safeId || await generateSafeId(
-      institution.address.state,
+      stateStr,
       institution.type
     );
 

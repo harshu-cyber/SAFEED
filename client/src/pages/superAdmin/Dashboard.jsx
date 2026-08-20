@@ -126,7 +126,11 @@ export const SuperAdminDashboard = () => {
   const pendingComplaints = complaints.filter(c => c.status !== 'RESOLVED').length;
 
   const recent = [...institutions]
-    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .sort((a, b) => {
+      const timeA = Date.parse(a.createdAt || '') || (typeof a._id === 'string' && a._id.startsWith('inst_') ? parseInt(a._id.split('_')[1]) || 0 : 0);
+      const timeB = Date.parse(b.createdAt || '') || (typeof b._id === 'string' && b._id.startsWith('inst_') ? parseInt(b._id.split('_')[1]) || 0 : 0);
+      return timeB - timeA;
+    })
     .slice(0, 5);
 
   const filtered = institutions.filter(i =>

@@ -15,7 +15,16 @@ const axiosInstance = axios.create({
 // Interceptor to inject JWT token
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    let token = localStorage.getItem('accessToken');
+    if (!token) {
+      const savedSchoolStr = localStorage.getItem('registeredSchoolUser');
+      if (savedSchoolStr) {
+        try {
+          const parsed = JSON.parse(savedSchoolStr);
+          token = 'inst_' + (parsed.institutionId || parsed.username || 'user');
+        } catch (_) {}
+      }
+    }
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

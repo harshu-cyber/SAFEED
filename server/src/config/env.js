@@ -27,9 +27,9 @@ module.exports = {
   MONGODB_URI: process.env.MONGODB_URI,
 
   JWT_SECRET: process.env.JWT_SECRET,
-  JWT_ACCESS_EXPIRES: process.env.JWT_ACCESS_EXPIRES || '15m',
+  JWT_ACCESS_EXPIRES: process.env.JWT_ACCESS_EXPIRES || '7d',
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
-  JWT_REFRESH_EXPIRES: process.env.JWT_REFRESH_EXPIRES || '7d',
+  JWT_REFRESH_EXPIRES: process.env.JWT_REFRESH_EXPIRES || '30d',
 
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
 

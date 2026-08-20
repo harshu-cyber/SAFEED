@@ -7,10 +7,7 @@ const mongoose = require('mongoose');
 let isConnected = false;
 async function connectDB() {
   if (isConnected && mongoose.connection.readyState === 1) return { ok: true };
-  const MONGODB_URI = process.env.MONGODB_URI;
-  if (!MONGODB_URI) {
-    return { ok: false, reason: 'MONGODB_URI is not set in Vercel Environment Variables. Please add it and Redeploy.' };
-  }
+  const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://safeedadmin:Safeed2026@safeed.mewsypb.mongodb.net/safeedup?retryWrites=true&w=majority&appName=safeed';
   try {
     await mongoose.connect(MONGODB_URI, {
       serverSelectionTimeoutMS: 5000,

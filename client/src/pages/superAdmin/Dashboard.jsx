@@ -13,6 +13,8 @@ import {
 import { MdVerified, MdLocalPolice, MdSchool, MdBusiness } from 'react-icons/md';
 import { InstitutionFullDetailModal } from '../../components/common/Modals/InstitutionFullDetailModal';
 
+import { cloudSync } from '../../api/cloudSync';
+
 const StatCard = ({ icon: Icon, label, value, sub, gradient, badge, link }) => {
   const content = (
     <div className={`rounded-2xl p-5 text-white shadow-xl relative overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl ${gradient}`}>
@@ -84,8 +86,12 @@ export const SuperAdminDashboard = () => {
       setComplaints(complaintStore.getAllComplaints?.() || []);
     };
     load();
-    const iv = setInterval(load, 5000);
-    return () => clearInterval(iv);
+    cloudSync.pull().then(load).catch(load);
+    cloudSync.startAutoSync();
+    const iv = setInterval(load, 4000);
+    return () => {
+      clearInterval(iv);
+    };
   }, []);
 
   const total = institutions.length;

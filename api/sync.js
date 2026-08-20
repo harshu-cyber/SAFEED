@@ -104,8 +104,33 @@ module.exports = async function handler(req, res) {
         const targetId = payload.id || payload._id;
         const query = targetId && mongoose.Types.ObjectId.isValid(targetId) ? { _id: targetId } : { email: payload.email?.toLowerCase() };
         await User.deleteOne(query);
-      } else if ((action === 'CREATE_INSTITUTION' || action === 'createInstitution') && payload) {
-        await Institution.create(payload);
+      } else if ((action === 'CREATE_INSTITUTION' || action === 'createInstitution' || action === 'registerInstitution') && payload) {
+        const instData = { ...payload };
+        if (instData._id && typeof instData._id === 'string' && instData._id.startsWith('inst_')) {
+          delete instData._id;
+        }
+        if (!instData.name && instData.institutionName) {
+          instData.name = instData.institutionName;
+        }
+        const districtStr = instData.district || 'Lucknow';
+        if (!instData.address) {
+          instData.address = `${districtStr}, Uttar Pradesh`;
+        } else if (typeof instData.address === 'object') {
+          instData.address = instData.address.street || `${districtStr}, Uttar Pradesh`;
+        }
+        if (!instData.principal) {
+          instData.principal = instData.principalName || instData.contactName || 'Principal';
+        }
+        if (!instData.contact) {
+          instData.contact = instData.phone || '';
+        }
+        if (!instData.email && instData.contactPerson?.email) {
+          instData.email = instData.contactPerson.email;
+        }
+        const existing = await Institution.findOne({ name: instData.name });
+        if (!existing) {
+          await Institution.create(instData);
+        }
       } else if ((action === 'UPDATE_INSTITUTION' || action === 'updateInstitution') && payload) {
         const targetId = payload._id || payload.id;
         if (targetId) await Institution.findByIdAndUpdate(targetId, { $set: payload });

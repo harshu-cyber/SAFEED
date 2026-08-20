@@ -208,12 +208,25 @@ export default async function handler(req, res) {
         const targetId = payload.id || payload._id;
         if (targetId) await Institution.deleteOne({ _id: targetId });
       } else if ((action === 'UPLOAD_DOCUMENT' || action === 'uploadDocument') && payload) {
-        const { institutionId, email, safeId, document: doc } = payload;
+        const { institutionId, email, safeId, institutionName, document: doc } = payload;
         if (doc) {
-          const filter = (institutionId && mongoose.Types.ObjectId.isValid(institutionId))
-            ? { _id: institutionId }
-            : email ? { email: email.toLowerCase() } : { safeId };
-          const inst = await Institution.findOne(filter);
+          const emailLow = (email || '').toLowerCase().trim();
+          const nameLow = (institutionName || '').toLowerCase().trim();
+
+          let inst = null;
+          if (institutionId && mongoose.Types.ObjectId.isValid(institutionId)) {
+            inst = await Institution.findById(institutionId);
+          }
+          if (!inst && emailLow) {
+            inst = await Institution.findOne({ email: emailLow });
+          }
+          if (!inst && safeId) {
+            inst = await Institution.findOne({ safeId });
+          }
+          if (!inst && nameLow) {
+            inst = await Institution.findOne({ name: new RegExp(`^${nameLow.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') });
+          }
+
           if (inst) {
             const currentDocs = Array.isArray(inst.documents) ? inst.documents : [];
             const existingIdx = currentDocs.findIndex(d => d.type === doc.type || (doc._id && d._id === doc._id));
@@ -228,11 +241,24 @@ export default async function handler(req, res) {
           }
         }
       } else if ((action === 'VERIFY_DOCUMENT' || action === 'verifyDocument') && payload) {
-        const { institutionId, email, safeId, docId, docType, status, remarks } = payload;
-        const filter = (institutionId && mongoose.Types.ObjectId.isValid(institutionId))
-          ? { _id: institutionId }
-          : email ? { email: email.toLowerCase() } : { safeId };
-        const inst = await Institution.findOne(filter);
+        const { institutionId, email, safeId, institutionName, docId, docType, status, remarks } = payload;
+        const emailLow = (email || '').toLowerCase().trim();
+        const nameLow = (institutionName || '').toLowerCase().trim();
+
+        let inst = null;
+        if (institutionId && mongoose.Types.ObjectId.isValid(institutionId)) {
+          inst = await Institution.findById(institutionId);
+        }
+        if (!inst && emailLow) {
+          inst = await Institution.findOne({ email: emailLow });
+        }
+        if (!inst && safeId) {
+          inst = await Institution.findOne({ safeId });
+        }
+        if (!inst && nameLow) {
+          inst = await Institution.findOne({ name: new RegExp(`^${nameLow.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') });
+        }
+
         if (inst && Array.isArray(inst.documents)) {
           inst.documents = inst.documents.map(d => (d._id === docId || d.type === docType) ? { ...d, status, remarks: remarks || d.remarks } : d);
           inst.markModified('documents');

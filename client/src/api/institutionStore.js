@@ -107,7 +107,41 @@ export const institutionStore = {
 
   syncCloudInstitutions: (cloudInsts) => {
     if (!Array.isArray(cloudInsts)) return;
-    const normalized = cloudInsts.map(normalizeInstitution);
+
+    let existingLocal = [];
+    try {
+      const s = localStorage.getItem(STORAGE_KEYS.INSTITUTIONS);
+      if (s) existingLocal = JSON.parse(s);
+    } catch {}
+
+    const normalized = cloudInsts.map(cloudInst => {
+      const norm = normalizeInstitution(cloudInst);
+      const emailLow = (norm.email || '').toLowerCase().trim();
+      const nameLow = (norm.name || '').toLowerCase().trim();
+
+      const localInst = existingLocal.find(
+        l => (l._id && l._id === norm._id) ||
+             (l.id && l.id === norm._id) ||
+             (emailLow && l.email?.toLowerCase() === emailLow) ||
+             (norm.safeId && l.safeId === norm.safeId) ||
+             (nameLow && l.name?.toLowerCase() === nameLow)
+      );
+
+      const localDocs = (localInst && Array.isArray(localInst.documents)) ? localInst.documents : [];
+      const cloudDocs = Array.isArray(norm.documents) ? norm.documents : [];
+
+      const docMap = new Map();
+      [...localDocs, ...cloudDocs].forEach(d => {
+        if (d && (d.type || d.name)) {
+          const key = d.type || d.name;
+          docMap.set(key, d);
+        }
+      });
+
+      norm.documents = Array.from(docMap.values());
+      return norm;
+    });
+
     localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(normalized));
   },
 
@@ -394,8 +428,14 @@ export const institutionStore = {
     // Update matching institution object's documents array & trigger CloudSync
     const insts = institutionStore.getInstitutions();
     const idLow = String(docData.institutionId).toLowerCase();
+    const nameLow = (docData.institutionName || '').toLowerCase().trim();
+
     const targetInst = insts.find(
-      i => i._id === docData.institutionId || i.id === docData.institutionId || i.email?.toLowerCase() === idLow || i.safeId === docData.institutionId
+      i => i._id === docData.institutionId ||
+           i.id === docData.institutionId ||
+           (idLow && i.email?.toLowerCase() === idLow) ||
+           i.safeId === docData.institutionId ||
+           (nameLow && i.name?.toLowerCase() === nameLow)
     );
 
     if (targetInst) {
@@ -413,6 +453,7 @@ export const institutionStore = {
         institutionId: targetInst._id,
         email: targetInst.email,
         safeId: targetInst.safeId,
+        institutionName: targetInst.name,
         document: newDoc,
       }).catch(err => console.warn('[uploadDocument] cloud sync failed:', err));
     }

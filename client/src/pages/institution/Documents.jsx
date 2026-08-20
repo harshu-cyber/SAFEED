@@ -279,9 +279,12 @@ export const DocumentsPage = () => {
 
             {/* Document Viewer Body */}
             <div className="p-6 overflow-y-auto space-y-4 flex-1 bg-[#F4F6F9]">
-              {viewDoc.fileDataUrl ? (
+              {viewDoc?.fileDataUrl &&
+               typeof viewDoc.fileDataUrl === 'string' &&
+               (viewDoc.fileDataUrl.startsWith('data:') || viewDoc.fileDataUrl.startsWith('blob:') || viewDoc.fileDataUrl.startsWith('http://') || viewDoc.fileDataUrl.startsWith('https://')) &&
+               !viewDoc.fileDataUrl.includes('[STORED_IN_FILESYSTEM]') ? (
                 <div className="border-2 border-slate-300 rounded-xl overflow-hidden bg-white shadow">
-                  {viewDoc.fileDataUrl.startsWith('data:image') ? (
+                  {viewDoc.fileDataUrl.startsWith('data:image') || viewDoc.fileDataUrl.match(/\.(jpg|jpeg|png|webp)$/i) ? (
                     <img src={viewDoc.fileDataUrl} alt={viewDoc.name} className="max-w-full h-auto mx-auto" />
                   ) : (
                     <iframe src={viewDoc.fileDataUrl} title={viewDoc.name} className="w-full h-[500px]" />

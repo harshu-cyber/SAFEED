@@ -249,9 +249,12 @@ export const DocumentApproval = () => {
 
             {/* Document Content View */}
             <div className="p-6 overflow-y-auto space-y-4 flex-1 bg-[#F4F6F9]">
-              {readingDoc.fileDataUrl ? (
+              {readingDoc?.fileDataUrl &&
+               typeof readingDoc.fileDataUrl === 'string' &&
+               (readingDoc.fileDataUrl.startsWith('data:') || readingDoc.fileDataUrl.startsWith('blob:') || readingDoc.fileDataUrl.startsWith('http://') || readingDoc.fileDataUrl.startsWith('https://')) &&
+               !readingDoc.fileDataUrl.includes('[STORED_IN_FILESYSTEM]') ? (
                 <div className="border-2 border-slate-300 rounded-xl overflow-hidden bg-white shadow">
-                  {readingDoc.fileDataUrl.startsWith('data:image') ? (
+                  {readingDoc.fileDataUrl.startsWith('data:image') || readingDoc.fileDataUrl.match(/\.(jpg|jpeg|png|webp)$/i) ? (
                     <img src={readingDoc.fileDataUrl} alt={readingDoc.name} className="max-w-full h-auto mx-auto" />
                   ) : (
                     <iframe src={readingDoc.fileDataUrl} title={readingDoc.name} className="w-full h-[550px]" />

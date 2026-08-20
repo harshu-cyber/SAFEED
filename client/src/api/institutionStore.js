@@ -11,13 +11,43 @@ const STORAGE_KEYS = {
   DISTRICT_LOGS: 'safeed_district_action_logs_v1',
 };
 
-// Auto-purge all legacy demo institution stores
-(function purgeLegacyInstitutions() {
+// Safe localStorage saver that strips huge base64 file payloads to prevent QuotaExceededError
+export const safeSaveLocalStorage = (key, data) => {
   try {
-    if (!localStorage.getItem('safeed_institutions_purged_v6')) {
-      ['safeed_institutions_store_v1', 'safeed_institutions_store_v2', 'safeed_institutions_store_v3', 'safeed_institutions_store_v4', 'safeed_institutions_store_v5', 'safeed_institutions_store_v6'].forEach(k => localStorage.removeItem(k));
-      localStorage.setItem('safeed_institutions_purged_v6', 'true');
+    let sanitized = data;
+    if (Array.isArray(data)) {
+      sanitized = data.map(item => {
+        if (!item || typeof item !== 'object') return item;
+        const copy = { ...item };
+        if (copy.fileDataUrl && copy.fileDataUrl.length > 50000) {
+          copy.fileDataUrl = '[STORED_IN_FILESYSTEM]';
+        }
+        if (Array.isArray(copy.documents)) {
+          copy.documents = copy.documents.map(d => {
+            if (d && d.fileDataUrl && d.fileDataUrl.length > 50000) {
+              return { ...d, fileDataUrl: '[STORED_IN_FILESYSTEM]' };
+            }
+            return d;
+          });
+        }
+        return copy;
+      });
     }
+    localStorage.setItem(key, JSON.stringify(sanitized));
+  } catch (err) {
+    console.warn(`[safeSaveLocalStorage] Quota safe guard active for ${key}:`, err);
+  }
+};
+
+// Auto-purge all legacy demo institution & bloated document stores
+(function purgeLegacyStores() {
+  try {
+    ['safeed_documents_store_v1', 'safeed_documents_store_v2'].forEach(k => {
+      const val = localStorage.getItem(k);
+      if (val && val.length > 50000) {
+        localStorage.removeItem(k);
+      }
+    });
   } catch {}
 })();
 
@@ -534,7 +564,7 @@ export const institutionStore = {
       remarks: 'Awaiting Inspector verification',
     };
     all.unshift(newDoc);
-    localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(all));
+    safeSaveLocalStorage(STORAGE_KEYS.DOCUMENTS, all);
 
     // Update matching institution object's documents array locally if present
     if (targetInst) {
@@ -546,7 +576,7 @@ export const institutionStore = {
         currentDocs.unshift(newDoc);
       }
       targetInst.documents = currentDocs;
-      localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(insts));
+      safeSaveLocalStorage(STORAGE_KEYS.INSTITUTIONS, insts);
     }
 
     // ALWAYS dispatch cloudSync to update MongoDB Atlas

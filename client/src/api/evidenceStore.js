@@ -65,7 +65,18 @@ export const evidenceStore = {
     };
 
     list.unshift(newRecord);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    try {
+      const sanitized = list.map(item => {
+        const copy = { ...item };
+        if (Array.isArray(copy.photos)) {
+          copy.photos = copy.photos.map(p => (typeof p === 'string' && p.length > 50000) ? '[PHOTO_STORED]' : p);
+        }
+        return copy;
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
+    } catch (err) {
+      console.warn('[evidenceStore] Quota safe guard active for evidence photos:', err);
+    }
 
     cloudSync.syncAction('SUBMIT_EVIDENCE', newRecord).catch(err => console.warn('[submitEvidence] cloud sync error:', err));
     return newRecord;

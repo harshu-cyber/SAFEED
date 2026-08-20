@@ -379,11 +379,67 @@ export const institutionStore = {
     return [];
   },
 
-  /** Return documents for a DCP zone or Police Station */
+  /** Return documents for a DCP zone or Police Station (checking both inst.documents and global store) */
   getDocumentsForZone: (dcpZone, postingStation) => {
     const zoneInsts = institutionStore.getInstitutionsForZone(dcpZone, postingStation);
-    const zoneInstIds = new Set(zoneInsts.map(i => i._id));
-    return institutionStore.getDocuments().filter(d => zoneInstIds.has(d.institutionId));
+    if (!Array.isArray(zoneInsts) || zoneInsts.length === 0) return [];
+
+    const idSet = new Set();
+    const emailSet = new Set();
+    const safeIdSet = new Set();
+    const nameSet = new Set();
+
+    zoneInsts.forEach(i => {
+      if (i._id) idSet.add(String(i._id));
+      if (i.id) idSet.add(String(i.id));
+      if (i.email) emailSet.add(String(i.email).toLowerCase().trim());
+      if (i.contactPerson?.email) emailSet.add(String(i.contactPerson.email).toLowerCase().trim());
+      if (i.safeId) safeIdSet.add(String(i.safeId));
+      if (i.name) nameSet.add(String(i.name).toLowerCase().trim());
+    });
+
+    // 1. Collect all embedded documents from zone institutions
+    const embeddedDocs = [];
+    zoneInsts.forEach(i => {
+      if (Array.isArray(i.documents)) {
+        i.documents.forEach(d => {
+          if (d && (d.type || d.name)) {
+            embeddedDocs.push({
+              ...d,
+              institutionId: d.institutionId || i._id || i.id,
+              institutionName: d.institutionName || i.name,
+              email: d.email || i.email,
+              safeId: d.safeId || i.safeId,
+            });
+          }
+        });
+      }
+    });
+
+    // 2. Collect all global store documents matching any zone institution identifier
+    const globalDocs = institutionStore.getDocuments().filter(d => {
+      if (!d) return false;
+      const instId = String(d.institutionId || '');
+      const docEmail = String(d.email || d.institutionId || '').toLowerCase().trim();
+      const docSafeId = String(d.safeId || '');
+      const docName = String(d.institutionName || '').toLowerCase().trim();
+
+      return idSet.has(instId) ||
+             (docEmail && emailSet.has(docEmail)) ||
+             (docSafeId && safeIdSet.has(docSafeId)) ||
+             (docName && nameSet.has(docName));
+    });
+
+    // 3. Merge all documents by _id or institutionName + type
+    const mergedMap = new Map();
+    [...embeddedDocs, ...globalDocs].forEach(d => {
+      if (d && (d.type || d.name)) {
+        const key = d._id || `${d.institutionName}_${d.type || d.name}`;
+        mergedMap.set(key, d);
+      }
+    });
+
+    return Array.from(mergedMap.values());
   },
 
   /** Return only documents for a specific institution (checking both inst.documents and global store) */

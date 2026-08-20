@@ -112,6 +112,12 @@ module.exports = async function handler(req, res) {
         if (!instData.name && instData.institutionName) {
           instData.name = instData.institutionName;
         }
+        if (!instData.type && instData.institutionType) {
+          instData.type = instData.institutionType;
+        }
+        if (!instData.affiliationBoard && instData.board) {
+          instData.affiliationBoard = instData.board;
+        }
         const districtStr = instData.district || 'Lucknow';
         if (!instData.address) {
           instData.address = `${districtStr}, Uttar Pradesh`;
@@ -127,10 +133,14 @@ module.exports = async function handler(req, res) {
         if (!instData.email && instData.contactPerson?.email) {
           instData.email = instData.contactPerson.email;
         }
-        const existing = await Institution.findOne({ name: instData.name });
-        if (!existing) {
-          await Institution.create(instData);
-        }
+        const zoneStr = (instData.zone || 'CENTRAL').toUpperCase();
+        instData.zone = zoneStr;
+        instData.assignedInspector = instData.assignedInspector || `DCP ${zoneStr}`;
+        instData.assignedInspectorZone = zoneStr;
+        instData.assignedInspectorEmail = `dcp${zoneStr.toLowerCase()}@safeedup.gov.in`;
+
+        const filter = instData.email ? { email: instData.email.toLowerCase() } : { name: instData.name };
+        await Institution.findOneAndUpdate(filter, { $set: instData }, { upsert: true, new: true });
       } else if ((action === 'UPDATE_INSTITUTION' || action === 'updateInstitution') && payload) {
         const targetId = payload._id || payload.id;
         if (targetId) await Institution.findByIdAndUpdate(targetId, { $set: payload });

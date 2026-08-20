@@ -136,34 +136,32 @@ export const institutionStore = {
   /** Register a brand-new institution and return it */
   registerInstitution: (data) => {
     const all = institutionStore.getInstitutions();
-    const emailLow = data.email?.toLowerCase();
+    const emailLow = data.email?.toLowerCase()?.trim();
 
-    const existing = all.find(i => i.email?.toLowerCase() === emailLow);
-    if (existing) return existing;
-
-    const districtCode = (data.district || 'LKO').substring(0, 3).toUpperCase();
-    const safeId = `SAFE-UP-${districtCode}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const districtStr = data.district || 'Lucknow';
+    const districtCode = districtStr.slice(0, 3).toUpperCase();
+    const safeId = data.safeId || `SAFE-UP-${districtCode}-${Math.floor(100000 + Math.random() * 900000)}`;
     const zoneKey = normalizeZone(data.zone) || 'CENTRAL';
 
     const newInst = {
       _id: 'inst_' + Date.now(),
       safeId,
-      name: data.institutionName || data.name,
-      type: data.institutionType || 'SCHOOL',
-      district: data.district || 'Lucknow',
+      name: data.institutionName || data.name || 'Institution',
+      type: data.institutionType || data.type || 'SCHOOL',
+      district: districtStr,
       state: data.state || 'Uttar Pradesh',
-      zone: zoneKey,  // stored normalized
-      totalStudents: parseInt(data.totalStudents || 0),
-      staffCount: parseInt(data.staffCount || data.totalTeachers || 0),
-      classroomCount: parseInt(data.classroomCount || data.totalClassrooms || 0),
-      floorCount: parseInt(data.floorCount || data.buildingFloors || 1),
-      exitGateCount: parseInt(data.exitGateCount || 2),
-      nearestPoliceStation: data.nearestPoliceStation || `${data.district || 'Hazratganj'} Police Station`,
+      zone: zoneKey,
+      totalStudents: parseInt(data.totalStudents || 0) || 0,
+      staffCount: parseInt(data.staffCount || data.totalTeachers || 0) || 0,
+      classroomCount: parseInt(data.classroomCount || data.totalClassrooms || 0) || 0,
+      floorCount: parseInt(data.floorCount || data.buildingFloors || 1) || 1,
+      exitGateCount: parseInt(data.exitGateCount || 2) || 2,
+      nearestPoliceStation: data.nearestPoliceStation || `${districtStr} Police Station`,
       lastInspectionDate: null,
       complianceScore: 0,
       status: 'PENDING_DOCUMENT_VERIFICATION',
       riskLevel: 'UNDER_REVIEW',
-      address: data.address || `${data.district || 'Lucknow'}, Uttar Pradesh`,
+      address: data.address || `${districtStr}, Uttar Pradesh`,
       contact: data.phone || data.contact || '',
       principal: data.principalName || data.principal || data.name || 'Principal',
       email: emailLow,
@@ -177,7 +175,12 @@ export const institutionStore = {
       createdAt: new Date().toISOString(),
     };
 
-    all.unshift(newInst);
+    const existingIndex = all.findIndex(i => (emailLow && i.email?.toLowerCase() === emailLow) || i.name === newInst.name);
+    if (existingIndex >= 0) {
+      all[existingIndex] = { ...all[existingIndex], ...newInst, _id: all[existingIndex]._id };
+    } else {
+      all.unshift(newInst);
+    }
     localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(all));
     return newInst;
   },

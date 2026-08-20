@@ -237,23 +237,7 @@ async function syncHandler(req, res) {
           if (!instName) {
             return res.status(400).json({ success: false, error: 'Institution name is required.' });
           }
-          const existing = await Institution.findOne({ name: instName });
-          if (!existing) {
-            const rawZone = String(payload.zone || payload.assignedInspectorZone || 'CENTRAL').toUpperCase();
-            let zoneStr = 'CENTRAL';
-            if (rawZone.includes('WEST')) zoneStr = 'WEST';
-            else if (rawZone.includes('NORTH')) zoneStr = 'NORTH';
-            else if (rawZone.includes('EAST')) zoneStr = 'EAST';
-            else if (rawZone.includes('SOUTH')) zoneStr = 'SOUTH';
-
-            const districtStr = payload.district || 'Lucknow';
-            const districtCode = districtStr.slice(0, 3).toUpperCase();
-            const safeId = payload.safeId || `SAFE-UP-${districtCode}-${Math.floor(100000 + Math.random() * 900000)}`;
-
-            const addressStr = typeof payload.address === 'string' 
-              ? payload.address 
-              : (payload.address?.street || `${districtStr}, Uttar Pradesh`);
-
+            const emailStr = payload.email?.toLowerCase() || payload.contactPerson?.email || '';
             const instDoc = {
               safeId,
               name: instName,
@@ -270,15 +254,15 @@ async function syncHandler(req, res) {
               status: payload.status || 'PENDING_DOCUMENT_VERIFICATION',
               riskLevel: payload.riskLevel || 'UNDER_REVIEW',
               address: addressStr,
-              principal: payload.principal || payload.name || payload.contactPerson?.name || 'Principal',
+              principal: payload.principal || payload.principalName || payload.name || 'Principal',
               contact: payload.contact || payload.phone || payload.contactPerson?.phone || '',
-              email: payload.email?.toLowerCase() || payload.contactPerson?.email || '',
+              email: emailStr,
               contactPerson: {
-                name: payload.principal || payload.contactName || payload.name || 'Principal',
-                email: payload.email || 'admin@inst.edu.in',
+                name: payload.principal || payload.principalName || payload.contactName || 'Principal',
+                email: emailStr || 'admin@inst.edu.in',
                 phone: payload.contact || payload.phone || '',
               },
-              affiliationBoard: payload.affiliationBoard || 'CBSE',
+              affiliationBoard: payload.affiliationBoard || payload.board || 'CBSE',
               affiliationCode: payload.affiliationCode || '',
               assignedInspector: payload.assignedInspector || `DCP ${zoneStr}`,
               assignedInspectorZone: zoneStr,
@@ -286,8 +270,8 @@ async function syncHandler(req, res) {
               districtRemarks: payload.districtRemarks || [],
               adminUserId: payload.adminUserId || new mongoose.Types.ObjectId(),
             };
-            await Institution.create(instDoc);
-          }
+            const filter = emailStr ? { email: emailStr } : { name: instName };
+            await Institution.findOneAndUpdate(filter, { $set: instDoc }, { upsert: true, new: true });
         } else if ((action === 'UPDATE_INSTITUTION' || action === 'updateInstitution') && payload) {
           const targetId = payload._id || payload.id;
           if (targetId && mongoose.Types.ObjectId.isValid(targetId)) {

@@ -174,7 +174,11 @@ export const Register = () => {
     const newInst = institutionStore.registerInstitution(data);
 
     // Direct MongoDB Atlas sync
-    cloudSync.syncAction('CREATE_INSTITUTION', newInst).catch(err => console.warn('[Register] Cloud sync failed:', err));
+    try {
+      await cloudSync.syncAction('CREATE_INSTITUTION', newInst);
+    } catch (err) {
+      console.warn('[Register] Cloud sync failed:', err);
+    }
 
     const generatedCredentials = {
       username: data.email.toLowerCase(),

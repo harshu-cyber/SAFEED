@@ -55,6 +55,7 @@ const documentSchema = new mongoose.Schema(
         return this.fileId ? `/api/v1/documents/${this._id}/file` : '/uploads/documents/document.pdf';
       },
     },
+    fileDataUrl: { type: String, default: '' },
     fileName: { type: String, default: 'document.pdf' },
     fileType: { type: String, default: 'application/pdf' },
     fileMimeType: { type: String, default: 'application/pdf' },

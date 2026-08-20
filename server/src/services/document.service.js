@@ -103,6 +103,7 @@ class DocumentService {
     const safeOriginalName = file?.originalname || 'document.pdf';
     const safeMimeType = file?.mimetype || 'application/pdf';
     const safeSize = file?.size || 1024;
+    const safeDataUrl = (file && file.buffer) ? `data:${safeMimeType};base64,${file.buffer.toString('base64')}` : '';
 
     const document = await Document.create({
       institutionId: targetInstId,
@@ -121,6 +122,7 @@ class DocumentService {
       fileStorageType: gridfsId ? 'GRIDFS' : 'LOCAL',
       fileId: gridfsId,
       fileUrl: fileUrlPath,
+      fileDataUrl: safeDataUrl,
       fileName: safeOriginalName,
       fileType: safeMimeType,
       fileMimeType: safeMimeType,

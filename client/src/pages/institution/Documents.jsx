@@ -205,40 +205,48 @@ export const DocumentsPage = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {documents.map((doc) => (
-                  <div key={doc._id} className="bg-[#F4F6F9] border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#D4AF37] transition-all">
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 bg-[#0F2038] text-[#D4AF37] rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <FiFileText size={16} />
-                      </div>
-                      <div>
-                        <p className="text-xs font-black text-[#0F2038]">{doc.name}</p>
-                        <p className="text-[10px] text-slate-500 font-semibold">{doc.type?.replace('_', ' ')} • Uploaded: {doc.uploadedAt} • Size: {doc.fileSize}</p>
-                        {doc.remarks && (
-                          <p className="text-[10px] text-slate-600 italic mt-0.5">"{doc.remarks}"</p>
-                        )}
-                      </div>
-                    </div>
+                {documents.map((doc) => {
+                  const docTitle = doc.title || doc.name || doc.documentType || 'Official Document';
+                  const docCategory = (doc.documentType || doc.type || '').replace(/_/g, ' ');
+                  const docStatus = doc.verificationStatus || doc.status || 'PENDING';
+                  const isVerified = docStatus === 'APPROVED' || docStatus === 'VERIFIED';
+                  const isRejected = docStatus === 'REJECTED';
 
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => setViewDoc(doc)}
-                        className="text-[11px] font-black px-3 py-1.5 bg-[#0F2038] text-[#D4AF37] border border-[#D4AF37] rounded-xl hover:bg-[#1E3A5F] transition-all flex items-center gap-1 cursor-pointer"
-                      >
-                        <FiEye size={12} /> Read PDF
-                      </button>
-                      <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${
-                        doc.status === 'VERIFIED'
-                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                          : doc.status === 'REJECTED'
-                          ? 'bg-rose-100 text-rose-800 border-rose-300'
-                          : 'bg-amber-100 text-amber-800 border-amber-300'
-                      }`}>
-                        {doc.status === 'VERIFIED' ? '✓ VERIFIED BY INSPECTOR' : doc.status === 'REJECTED' ? '✗ REJECTED' : '⏳ PENDING INSPECTOR APPROVAL'}
-                      </span>
+                  return (
+                    <div key={doc._id || doc.id || Math.random()} className="bg-[#F4F6F9] border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#D4AF37] transition-all">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 bg-[#0F2038] text-[#D4AF37] rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <FiFileText size={16} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-[#0F2038]">{docTitle}</p>
+                          <p className="text-[10px] text-slate-500 font-semibold">{docCategory} • Uploaded: {doc.uploadedAt || 'Recently'} • Size: {doc.fileSize || '1.4 MB'}</p>
+                          {doc.remarks && (
+                            <p className="text-[10px] text-slate-600 italic mt-0.5">"{doc.remarks}"</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => setViewDoc(doc)}
+                          className="text-[11px] font-black px-3 py-1.5 bg-[#0F2038] text-[#D4AF37] border border-[#D4AF37] rounded-xl hover:bg-[#1E3A5F] transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <FiEye size={12} /> Read PDF
+                        </button>
+                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${
+                          isVerified
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : isRejected
+                            ? 'bg-rose-100 text-rose-800 border-rose-300'
+                            : 'bg-amber-100 text-amber-800 border-amber-300'
+                        }`}>
+                          {isVerified ? '✓ VERIFIED BY INSPECTOR' : isRejected ? '✗ REJECTED' : '⏳ PENDING INSPECTOR APPROVAL'}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -253,8 +261,8 @@ export const DocumentsPage = () => {
               <div className="flex items-center gap-3">
                 <img src="/up-govt-seal.png" alt="UP Seal" className="w-8 h-8 object-contain" />
                 <div>
-                  <p className="text-xs font-black text-[#D4AF37] uppercase tracking-wider">Official Document Reader — {viewDoc.name}</p>
-                  <p className="text-[10px] text-slate-300">Institution: {viewDoc.institutionName} • Type: {viewDoc.type}</p>
+                  <p className="text-xs font-black text-[#D4AF37] uppercase tracking-wider">Official Document Reader — {viewDoc.title || viewDoc.name}</p>
+                  <p className="text-[10px] text-slate-300">Institution: {viewDoc.institutionName || 'SafeED Portal'} • Type: {viewDoc.documentType || viewDoc.type}</p>
                 </div>
               </div>
               <button onClick={() => setViewDoc(null)} className="text-white hover:text-[#D4AF37] font-black text-lg p-1">✕</button>
@@ -262,46 +270,19 @@ export const DocumentsPage = () => {
 
             {/* Document Viewer Body */}
             <div className="p-6 overflow-y-auto space-y-4 flex-1 bg-[#F4F6F9]">
-              {viewDoc?.fileDataUrl &&
-               typeof viewDoc.fileDataUrl === 'string' &&
-               (viewDoc.fileDataUrl.startsWith('data:') || viewDoc.fileDataUrl.startsWith('blob:') || viewDoc.fileDataUrl.startsWith('http://') || viewDoc.fileDataUrl.startsWith('https://')) &&
-               !viewDoc.fileDataUrl.includes('[STORED_IN_FILESYSTEM]') ? (
-                <div className="border-2 border-slate-300 rounded-xl overflow-hidden bg-white shadow">
-                  {viewDoc.fileDataUrl.startsWith('data:image') || viewDoc.fileDataUrl.match(/\.(jpg|jpeg|png|webp)$/i) ? (
-                    <img src={viewDoc.fileDataUrl} alt={viewDoc.name} className="max-w-full h-auto mx-auto" />
-                  ) : (
-                    <iframe src={viewDoc.fileDataUrl} title={viewDoc.name} className="w-full h-[500px]" />
-                  )}
-                </div>
-              ) : (
-                /* Authentic Official Government Certificate / NOC Reader Document View */
-                <div className="bg-white border-4 border-[#0F2038] p-6 rounded-xl shadow-lg font-serif space-y-4 text-xs">
-                  <div className="text-center border-b-2 border-[#D4AF37] pb-4">
-                    <div className="flex justify-center gap-4 mb-2">
-                      <img src="/up-govt-seal.png" alt="UP Seal" className="w-12 h-12 object-contain" />
-                      <img src="/up-police-logo.png" alt="UP Police" className="w-12 h-12 object-contain" />
-                    </div>
-                    <p className="text-xs font-black text-[#0F2038] uppercase">GOVERNMENT OF UTTAR PRADESH</p>
-                    <p className="text-[10px] font-bold text-slate-600">DEPARTMENT OF FIRE SAFETY & DISASTER PREPAREDNESS</p>
-                    <h2 className="text-sm font-black text-[#0F2038] mt-2 uppercase tracking-wider">{viewDoc.name}</h2>
-                    <p className="text-[9px] font-bold text-[#D4AF37] bg-[#0F2038] px-2 py-0.5 rounded inline-block mt-1">OFFICIAL SUBMITTED RECORD</p>
+              {(() => {
+                const targetUrl = viewDoc.fileUrl || viewDoc.fileDataUrl || `/api/v1/documents/${viewDoc._id}/file`;
+                const isImage = typeof targetUrl === 'string' && (targetUrl.startsWith('data:image') || targetUrl.match(/\.(jpg|jpeg|png|webp)$/i));
+                return (
+                  <div className="border-2 border-slate-300 rounded-xl overflow-hidden bg-white shadow p-2">
+                    {isImage ? (
+                      <img src={targetUrl} alt={viewDoc.title || viewDoc.name} className="max-w-full h-auto mx-auto" />
+                    ) : (
+                      <iframe src={targetUrl} title={viewDoc.title || viewDoc.name} className="w-full h-[500px]" />
+                    )}
                   </div>
-
-                  <div className="grid grid-cols-2 gap-3 text-slate-700">
-                    <p><strong>Institution:</strong> {viewDoc.institutionName}</p>
-                    <p><strong>Uploaded By:</strong> {viewDoc.uploadedBy}</p>
-                    <p><strong>Uploaded Date:</strong> {viewDoc.uploadedAt}</p>
-                    <p><strong>Expiry Date:</strong> {viewDoc.expiryDate}</p>
-                    <p><strong>File Name:</strong> {viewDoc.fileName}</p>
-                    <p><strong>Status:</strong> {viewDoc.status}</p>
-                  </div>
-
-                  <div className="border-t border-slate-200 pt-3 text-[11px] leading-relaxed text-slate-800">
-                    <p className="font-bold mb-1">CERTIFICATE AUDIT STATEMENT:</p>
-                    <p>This official compliance document has been submitted by the institution administrator for District Inspector audit. It contains valid safety clearances, structural certification, and emergency evacuation protocols as mandated by the Government of Uttar Pradesh.</p>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
 
             <div className="p-4 bg-white border-t border-slate-200 flex justify-end">

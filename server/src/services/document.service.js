@@ -236,7 +236,25 @@ class DocumentService {
       }
     });
 
-    return { documents: Array.from(mergedMap.values()), meta: buildPaginationMeta(total, page, limit) };
+    const normalizedDocs = Array.from(mergedMap.values()).map(d => {
+      const docObj = d.toObject ? d.toObject() : { ...d };
+      const docId = docObj._id || docObj.id;
+      return {
+        ...docObj,
+        _id: docId,
+        id: docId,
+        title: docObj.title || docObj.name || docObj.documentType || 'Official Document',
+        name: docObj.name || docObj.title || docObj.documentType || 'Official Document',
+        documentType: docObj.documentType || docObj.type,
+        type: docObj.type || docObj.documentType,
+        verificationStatus: docObj.verificationStatus || docObj.status || 'PENDING',
+        status: docObj.status || docObj.verificationStatus || 'PENDING',
+        fileUrl: docObj.fileUrl || `/api/v1/documents/${docId}/file`,
+        fileDataUrl: docObj.fileDataUrl || docObj.fileUrl || `/api/v1/documents/${docId}/file`,
+      };
+    });
+
+    return { documents: normalizedDocs, meta: buildPaginationMeta(total, page, limit) };
   }
 
   /**

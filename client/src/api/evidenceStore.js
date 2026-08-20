@@ -1,4 +1,5 @@
 import { cloudSync } from './cloudSync';
+import { institutionStore } from './institutionStore';
 
 // ============================================================
 // SafeED-UP — Inspection Evidence Store
@@ -18,19 +19,44 @@ export const evidenceStore = {
   },
 
   getEvidenceForInstitution: (instId) => {
+    if (!instId) return [];
     const list = evidenceStore.getEvidenceList();
-    return list.filter(e => e.institutionId === instId);
+    const inst = institutionStore.getInstitutionByIdOrEmail(instId);
+    const idLow = String(instId).toLowerCase().trim();
+
+    return list.filter(e =>
+      e.institutionId === instId ||
+      e.institutionId?.toLowerCase().trim() === idLow ||
+      (inst && (
+        e.institutionId === inst._id ||
+        e.institutionId === inst.id ||
+        (inst.email && e.institutionId?.toLowerCase() === inst.email.toLowerCase()) ||
+        (inst.email && e.email?.toLowerCase() === inst.email.toLowerCase()) ||
+        e.institutionId === inst.safeId ||
+        e.safeId === inst.safeId ||
+        (inst.name && e.institutionName?.toLowerCase() === inst.name.toLowerCase())
+      ))
+    );
   },
 
   submitInspectionEvidence: (data) => {
     const list = evidenceStore.getEvidenceList();
+    const inst = institutionStore.getInstitutionByIdOrEmail(data.institutionId || data.institutionName);
+
+    const canonicalInstId = inst ? (inst._id || inst.id) : data.institutionId;
+    const canonicalEmail = inst ? (inst.email || inst.contactPerson?.email) : null;
+    const canonicalSafeId = inst ? inst.safeId : null;
+    const canonicalName = inst ? inst.name : data.institutionName;
+
     const newRecord = {
       _id: 'ev_' + Date.now(),
       inspectionId: data.inspectionId || `INS-UP-${Math.floor(1000 + Math.random() * 9000)}`,
-      institutionId: data.institutionId,
-      institutionName: data.institutionName,
+      institutionId: canonicalInstId,
+      email: canonicalEmail,
+      safeId: canonicalSafeId,
+      institutionName: canonicalName,
       inspectorName: data.inspectorName || 'DCP Inspection Officer',
-      dcpZone: data.dcpZone || 'DCP Central',
+      dcpZone: data.dcpZone || (inst ? inst.zone : 'DCP Central'),
       date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
       score: data.score || 90,
       status: 'SUBMITTED_FOR_HIGHER_AUDIT',

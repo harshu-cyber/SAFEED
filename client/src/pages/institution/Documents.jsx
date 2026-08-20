@@ -29,16 +29,18 @@ export const DocumentsPage = () => {
   const [viewDoc, setViewDoc] = useState(null);
 
   const loadData = () => {
-    const inst = institutionStore.getInstitutionByIdOrEmail(user?.institutionId || user?.email);
+    const inst = institutionStore.getInstitutionByIdOrEmail(user?.institutionId || user?.email || user?.name);
     if (inst) {
       setInstitution(inst);
-      const docs = institutionStore.getDocumentsForInstitution(inst._id);
+      const docs = institutionStore.getDocumentsForInstitution(inst._id || inst.email || inst.safeId);
       setDocuments(docs);
     }
   };
 
   useEffect(() => {
     loadData();
+    const interval = setInterval(loadData, 2000);
+    return () => clearInterval(interval);
   }, [user]);
 
   const handleFileChange = (e) => {

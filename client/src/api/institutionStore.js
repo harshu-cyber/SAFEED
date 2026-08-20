@@ -186,17 +186,20 @@ export const institutionStore = {
     });
   },
 
-  /** Lookup by _id, email, or safeId — STRICT, no fallback */
+  /** Lookup by _id, email, safeId, or name — Robust multi-attribute search */
   getInstitutionByIdOrEmail: (identifier) => {
     if (!identifier) return null;
     const all = institutionStore.getInstitutions();
-    const idLow = String(identifier).toLowerCase();
+    const idLow = String(identifier).toLowerCase().trim();
     return (
       all.find(
         i =>
           i._id === identifier ||
-          i.email?.toLowerCase() === idLow ||
-          i.safeId === identifier
+          i.id === identifier ||
+          (i.email && i.email.toLowerCase().trim() === idLow) ||
+          (i.contactPerson?.email && i.contactPerson.email.toLowerCase().trim() === idLow) ||
+          i.safeId === identifier ||
+          (i.name && i.name.toLowerCase().trim() === idLow)
       ) || null
     );
   },
@@ -380,14 +383,27 @@ export const institutionStore = {
   getDocumentsForInstitution: (instId) => {
     if (!instId) return [];
     const allInsts = institutionStore.getInstitutions();
-    const idLow = String(instId).toLowerCase();
+    const idLow = String(instId).toLowerCase().trim();
     const inst = allInsts.find(
-      i => i._id === instId || i.id === instId || i.email?.toLowerCase() === idLow || i.safeId === instId
+      i => i._id === instId ||
+           i.id === instId ||
+           (i.email && i.email.toLowerCase().trim() === idLow) ||
+           (i.contactPerson?.email && i.contactPerson.email.toLowerCase().trim() === idLow) ||
+           i.safeId === instId ||
+           (i.name && i.name.toLowerCase().trim() === idLow)
     );
 
     const instDocs = (inst && Array.isArray(inst.documents)) ? inst.documents : [];
     const globalDocs = institutionStore.getDocuments().filter(
-      d => d.institutionId === instId || (inst && (d.institutionId === inst._id || d.institutionId === inst.id || d.institutionId?.toLowerCase() === idLow || d.institutionId === inst.safeId))
+      d => d.institutionId === instId ||
+           (inst && (
+             d.institutionId === inst._id ||
+             d.institutionId === inst.id ||
+             d.institutionId?.toLowerCase() === idLow ||
+             (inst.email && d.institutionId?.toLowerCase() === inst.email.toLowerCase()) ||
+             d.institutionId === inst.safeId ||
+             (inst.name && d.institutionName?.toLowerCase() === inst.name.toLowerCase())
+           ))
     );
 
     const mergedMap = new Map();
@@ -402,13 +418,33 @@ export const institutionStore = {
 
   /** Upload a document & sync to institution object + MongoDB Atlas */
   uploadDocument: (docData) => {
+    const insts = institutionStore.getInstitutions();
+    const idLow = String(docData.institutionId || '').toLowerCase().trim();
+    const nameLow = (docData.institutionName || '').toLowerCase().trim();
+
+    const targetInst = insts.find(
+      i => i._id === docData.institutionId ||
+           i.id === docData.institutionId ||
+           (idLow && i.email?.toLowerCase().trim() === idLow) ||
+           (idLow && i.contactPerson?.email?.toLowerCase().trim() === idLow) ||
+           i.safeId === docData.institutionId ||
+           (nameLow && i.name?.toLowerCase().trim() === nameLow)
+    );
+
+    const canonicalInstId = targetInst ? (targetInst._id || targetInst.id) : docData.institutionId;
+    const canonicalEmail = targetInst ? (targetInst.email || targetInst.contactPerson?.email) : docData.institutionId;
+    const canonicalSafeId = targetInst ? targetInst.safeId : null;
+    const canonicalName = targetInst ? targetInst.name : docData.institutionName;
+
     const all = institutionStore.getDocuments();
     const newDoc = {
       _id: 'doc_' + Date.now(),
       name: docData.name,
       type: docData.type,
-      institutionId: docData.institutionId,
-      institutionName: docData.institutionName,
+      institutionId: canonicalInstId,
+      email: canonicalEmail,
+      safeId: canonicalSafeId,
+      institutionName: canonicalName,
       status: 'PENDING_REVIEW',
       uploadedAt: new Date().toLocaleDateString('en-IN', {
         day: '2-digit', month: 'short', year: 'numeric',
@@ -426,18 +462,6 @@ export const institutionStore = {
     localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(all));
 
     // Update matching institution object's documents array & trigger CloudSync
-    const insts = institutionStore.getInstitutions();
-    const idLow = String(docData.institutionId).toLowerCase();
-    const nameLow = (docData.institutionName || '').toLowerCase().trim();
-
-    const targetInst = insts.find(
-      i => i._id === docData.institutionId ||
-           i.id === docData.institutionId ||
-           (idLow && i.email?.toLowerCase() === idLow) ||
-           i.safeId === docData.institutionId ||
-           (nameLow && i.name?.toLowerCase() === nameLow)
-    );
-
     if (targetInst) {
       const currentDocs = Array.isArray(targetInst.documents) ? [...targetInst.documents] : [];
       const existingIdx = currentDocs.findIndex(d => d.type === newDoc.type);
@@ -451,9 +475,9 @@ export const institutionStore = {
 
       cloudSync.syncAction('UPLOAD_DOCUMENT', {
         institutionId: targetInst._id,
-        email: targetInst.email,
-        safeId: targetInst.safeId,
-        institutionName: targetInst.name,
+        email: canonicalEmail,
+        safeId: canonicalSafeId,
+        institutionName: canonicalName,
         document: newDoc,
       }).catch(err => console.warn('[uploadDocument] cloud sync failed:', err));
     }

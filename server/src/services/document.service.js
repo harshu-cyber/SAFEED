@@ -325,11 +325,7 @@ class DocumentService {
       .populate('verifiedBy', 'name email')
       .lean();
 
-    const instQuery = {};
-    if (zone) instQuery.zone = new RegExp(zone, 'i');
-    if (district) instQuery.district = new RegExp(district, 'i');
-
-    const insts = await Institution.find(instQuery).lean();
+    const insts = await Institution.find({}).lean();
     const instDocs = [];
 
     insts.forEach((i) => {

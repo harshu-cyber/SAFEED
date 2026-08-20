@@ -77,11 +77,8 @@ export async function syncAction(action, payload) {
     if (payload && typeof payload === 'object') {
       sanitizedPayload = JSON.parse(JSON.stringify(payload));
       if (sanitizedPayload.document && sanitizedPayload.document.fileDataUrl && sanitizedPayload.document.fileDataUrl.length > 500000) {
-        // Replace huge Base64 with placeholder for cloud sync payload (metadata is preserved)
-        sanitizedPayload.document.fileDataUrl = '[STORED_IN_FILESYSTEM]';
-      }
-      if (Array.isArray(sanitizedPayload.photos)) {
-        sanitizedPayload.photos = sanitizedPayload.photos.map(p => (typeof p === 'string' && p.length > 500000) ? '[PHOTO_STORED]' : p);
+        // Keep fileDataUrl intact in local store, only strip for network payload if too large
+        sanitizedPayload.document.fileDataUrl = sanitizedPayload.document.fileDataUrl.slice(0, 100);
       }
     }
 

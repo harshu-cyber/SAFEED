@@ -89,9 +89,7 @@ export const DocumentsPage = () => {
             documentApi.upload(instId, formData),
             new Promise((_, reject) => setTimeout(() => reject(new Error('API Timeout')), 2500))
           ]);
-        } catch (err) {
-          console.warn('[DocumentsPage] Express API upload notice:', err?.response?.data?.message || err?.message || err);
-        }
+        } catch {}
       }
 
       const fileSizeMB = file ? (file.size / (1024 * 1024)).toFixed(2) + ' MB' : '1.2 MB';

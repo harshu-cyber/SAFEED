@@ -524,7 +524,7 @@ export const institutionStore = {
     all.unshift(newDoc);
     localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(all));
 
-    // Update matching institution object's documents array & trigger CloudSync
+    // Update matching institution object's documents array locally if present
     if (targetInst) {
       const currentDocs = Array.isArray(targetInst.documents) ? [...targetInst.documents] : [];
       const existingIdx = currentDocs.findIndex(d => d.type === newDoc.type);
@@ -535,15 +535,16 @@ export const institutionStore = {
       }
       targetInst.documents = currentDocs;
       localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(insts));
-
-      cloudSync.syncAction('UPLOAD_DOCUMENT', {
-        institutionId: targetInst._id,
-        email: canonicalEmail,
-        safeId: canonicalSafeId,
-        institutionName: canonicalName,
-        document: newDoc,
-      }).catch(err => console.warn('[uploadDocument] cloud sync failed:', err));
     }
+
+    // ALWAYS dispatch cloudSync to update MongoDB Atlas
+    cloudSync.syncAction('UPLOAD_DOCUMENT', {
+      institutionId: canonicalInstId,
+      email: canonicalEmail,
+      safeId: canonicalSafeId,
+      institutionName: canonicalName,
+      document: newDoc,
+    }).catch(err => console.warn('[uploadDocument] cloud sync failed:', err));
 
     return newDoc;
   },

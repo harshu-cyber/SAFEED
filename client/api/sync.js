@@ -234,6 +234,9 @@ export default async function handler(req, res) {
           if (institutionId && mongoose.Types.ObjectId.isValid(institutionId)) {
             inst = await Institution.findById(institutionId);
           }
+          if (!inst && institutionId) {
+            inst = await Institution.findOne({ $or: [{ _id: institutionId }, { id: institutionId }, { safeId: institutionId }] });
+          }
           if (!inst && emailLow) {
             inst = await Institution.findOne({ email: emailLow });
           }
@@ -242,6 +245,11 @@ export default async function handler(req, res) {
           }
           if (!inst && nameLow) {
             inst = await Institution.findOne({ name: new RegExp(`^${nameLow.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') });
+          }
+          // Fallback: if only one institution exists in the system, use it
+          if (!inst) {
+            const allInsts = await Institution.find({}).limit(2);
+            if (allInsts.length === 1) inst = allInsts[0];
           }
 
           if (inst) {

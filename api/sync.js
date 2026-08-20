@@ -128,6 +128,7 @@ export default async function handler(req, res) {
       } else if ((action === 'CREATE_INSTITUTION' || action === 'createInstitution' || action === 'registerInstitution') && payload) {
         try {
           await Institution.collection.dropIndex('safeId_1').catch(() => {});
+          await Institution.collection.dropIndex('udiseCode_1').catch(() => {});
         } catch (e) {}
 
         const rawInst = { ...payload };
@@ -137,6 +138,7 @@ export default async function handler(req, res) {
 
         const districtStr = rawInst.district || 'Lucknow';
         const districtCode = districtStr.slice(0, 3).toUpperCase();
+        const udiseCodeStr = rawInst.udiseCode || `09${Math.floor(1000000000 + Math.random() * 8999999999)}`;
         const rawZ = String(rawInst.zone || rawInst.assignedInspectorZone || 'CENTRAL').toLowerCase();
         let zoneStr = 'CENTRAL';
         if (rawZ.includes('west')) zoneStr = 'WEST';
@@ -156,7 +158,7 @@ export default async function handler(req, res) {
           type: (rawInst.type || rawInst.institutionType || 'SCHOOL').toUpperCase(),
           affiliationBoard: rawInst.board || rawInst.affiliationBoard || 'CBSE',
           affiliationCode: rawInst.affiliationCode || '',
-          udiseCode: rawInst.udiseCode || null,
+          udiseCode: udiseCodeStr,
           district: districtStr,
           state: rawInst.state || 'Uttar Pradesh',
           zone: zoneStr,

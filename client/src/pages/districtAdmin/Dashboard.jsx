@@ -417,14 +417,21 @@ export const DistrictAdminDashboard = ({ defaultTab }) => {
               <select
                 value={zoneFilter}
                 onChange={e => setZoneFilter(e.target.value)}
-                className="text-xs font-bold p-2 border border-slate-300 rounded-xl outline-none bg-white"
+                disabled={isZonalOfficer}
+                className="text-xs font-bold p-2 border border-slate-300 rounded-xl outline-none bg-white disabled:bg-slate-100 disabled:text-slate-600"
               >
-                <option value="ALL">All Zones</option>
-                <option value="WEST">West Zone</option>
-                <option value="CENTRAL">Central Zone</option>
-                <option value="NORTH">North Zone</option>
-                <option value="EAST">East Zone</option>
-                <option value="SOUTH">South Zone</option>
+                {isZonalOfficer ? (
+                  <option value={userZone}>DCP {userZone} Zone</option>
+                ) : (
+                  <>
+                    <option value="ALL">All Zones</option>
+                    <option value="WEST">West Zone</option>
+                    <option value="CENTRAL">Central Zone</option>
+                    <option value="NORTH">North Zone</option>
+                    <option value="EAST">East Zone</option>
+                    <option value="SOUTH">South Zone</option>
+                  </>
+                )}
               </select>
             </div>
           )}
@@ -550,91 +557,101 @@ export const DistrictAdminDashboard = ({ defaultTab }) => {
               </div>
               <div>
                 <h3 className="text-xs font-black text-[#D4AF37] uppercase tracking-widest">
-                  Zone-Wise Safety &amp; QR Certificate Real-Time Breakdown
+                  {isZonalOfficer ? `DCP ${userZone} Zone Safety & QR Certificate Analytics` : 'Zone-Wise Safety & QR Certificate Real-Time Breakdown'}
                 </h3>
                 <p className="text-xs text-slate-300">
-                  Touch / click any DCP Zone card below to view all registered schools, total student strength, and QR Code generation status for that zone.
+                  {isZonalOfficer
+                    ? `Touch / click your DCP ${userZone} Zone card below to view all registered schools, total student strength, and QR Code generation status for your zone.`
+                    : 'Touch / click any DCP Zone card below to view all registered schools, total student strength, and QR Code generation status for that zone.'}
                 </p>
               </div>
             </div>
           </div>
 
           {/* DYNAMIC INTERACTIVE ZONE BREAKDOWN CARDS */}
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
-            {['WEST', 'CENTRAL', 'NORTH', 'EAST', 'SOUTH'].map(zone => {
-              const zoneInsts = zoneBreakdown[zone] || [];
-              const zoneStudents = zoneInsts.reduce((a, i) => a + (parseInt(i.totalStudents) || 0), 0);
-              const zoneQrUnlocked = zoneInsts.filter(i => institutionStore.isCertificateUnlocked(i._id)).length;
-              const zoneQrLocked = zoneInsts.length - zoneQrUnlocked;
-              const dcpOfficer = INSPECTION_OFFICERS.find(o => o.zone === zone);
+          {(() => {
+            const visibleZones = isZonalOfficer
+              ? ['WEST', 'CENTRAL', 'NORTH', 'EAST', 'SOUTH'].filter(z => z === userZone)
+              : ['WEST', 'CENTRAL', 'NORTH', 'EAST', 'SOUTH'];
 
-              return (
-                <div
-                  key={zone}
-                  onClick={() => setSelectedZoneModal({ zone, zoneInsts, zoneStudents, zoneQrUnlocked, zoneQrLocked, dcpOfficer })}
-                  className="bg-white border-2 border-slate-200 hover:border-[#D4AF37] rounded-3xl p-5 space-y-3 shadow-sm hover:shadow-2xl transition-all duration-300 cursor-pointer group flex flex-col justify-between relative overflow-hidden"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${ZONE_COLORS[zone]}`}>
-                        DCP {zone}
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-bold bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
-                        {zoneInsts.length} Registered
-                      </span>
-                    </div>
+            return (
+              <div className={`grid grid-cols-1 ${visibleZones.length === 1 ? 'max-w-md' : 'sm:grid-cols-5'} gap-4`}>
+                {visibleZones.map(zone => {
+                  const zoneInsts = zoneBreakdown[zone] || [];
+                  const zoneStudents = zoneInsts.reduce((a, i) => a + (parseInt(i.totalStudents) || 0), 0);
+                  const zoneQrUnlocked = zoneInsts.filter(i => institutionStore.isCertificateUnlocked(i._id)).length;
+                  const zoneQrLocked = zoneInsts.length - zoneQrUnlocked;
+                  const dcpOfficer = INSPECTION_OFFICERS.find(o => o.zone === zone);
 
-                    <p className="text-base font-black text-[#0F2038] group-hover:text-amber-600 transition-colors font-serif">
-                      DCP {zone}
-                    </p>
-                    <p className="text-[10px] font-mono text-slate-500 truncate">{dcpOfficer?.email}</p>
+                  return (
+                    <div
+                      key={zone}
+                      onClick={() => setSelectedZoneModal({ zone, zoneInsts, zoneStudents, zoneQrUnlocked, zoneQrLocked, dcpOfficer })}
+                      className="bg-white border-2 border-slate-200 hover:border-[#D4AF37] rounded-3xl p-5 space-y-3 shadow-sm hover:shadow-2xl transition-all duration-300 cursor-pointer group flex flex-col justify-between relative overflow-hidden"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                          <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${ZONE_COLORS[zone]}`}>
+                            DCP {zone}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-bold bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                            {zoneInsts.length} Registered
+                          </span>
+                        </div>
 
-                    <div className="pt-2 border-t border-slate-100 text-xs space-y-1.5">
-                      <div className="flex justify-between items-center text-slate-600">
-                        <span className="font-semibold text-[10px]">Enrolled Students:</span>
-                        <strong className="text-[#0F2038] font-black">{zoneStudents.toLocaleString('en-IN')}</strong>
+                        <p className="text-base font-black text-[#0F2038] group-hover:text-amber-600 transition-colors font-serif">
+                          DCP {zone}
+                        </p>
+                        <p className="text-[10px] font-mono text-slate-500 truncate">{dcpOfficer?.email}</p>
+
+                        <div className="pt-2 border-t border-slate-100 text-xs space-y-1.5">
+                          <div className="flex justify-between items-center text-slate-600">
+                            <span className="font-semibold text-[10px]">Enrolled Students:</span>
+                            <strong className="text-[#0F2038] font-black">{zoneStudents.toLocaleString('en-IN')}</strong>
+                          </div>
+
+                          {/* QR Status Breakdown */}
+                          <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 space-y-1">
+                            <div className="flex justify-between items-center text-[10px]">
+                              <span className="text-emerald-800 font-bold flex items-center gap-1">
+                                <MdQrCode2 size={12} className="text-emerald-600" /> QR Generated:
+                              </span>
+                              <strong className="text-emerald-700 font-black">{zoneQrUnlocked}</strong>
+                            </div>
+                            <div className="flex justify-between items-center text-[10px]">
+                              <span className="text-amber-800 font-bold flex items-center gap-1">
+                                <FiLock size={10} className="text-amber-600" /> QR Pending:
+                              </span>
+                              <strong className="text-amber-700 font-black">{zoneQrLocked}</strong>
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
-                      {/* QR Status Breakdown */}
-                      <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 space-y-1">
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-emerald-800 font-bold flex items-center gap-1">
-                            <MdQrCode2 size={12} className="text-emerald-600" /> QR Generated:
-                          </span>
-                          <strong className="text-emerald-700 font-black">{zoneQrUnlocked}</strong>
-                        </div>
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-amber-800 font-bold flex items-center gap-1">
-                            <FiLock size={10} className="text-amber-600" /> QR Pending:
-                          </span>
-                          <strong className="text-amber-700 font-black">{zoneQrLocked}</strong>
-                        </div>
+                      <div className="pt-2">
+                        <span className="w-full bg-[#0F2038] group-hover:bg-amber-600 text-[#D4AF37] group-hover:text-white font-black text-[10px] py-2 rounded-xl transition-all flex items-center justify-center gap-1 shadow-sm">
+                          Touch to View Zone Directory →
+                        </span>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <span className="w-full bg-[#0F2038] group-hover:bg-amber-600 text-[#D4AF37] group-hover:text-white font-black text-[10px] py-2 rounded-xl transition-all flex items-center justify-center gap-1 shadow-sm">
-                      Touch to View Zone Directory →
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* District Analytics: Pie Charts + Compliance Bars + Directives */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Institution Type Pie Chart */}
             <InstitutionTypePieChart
-              institutions={institutions}
-              title={`${districtName} District — All Zones Type Breakdown`}
+              institutions={visibleInstitutions}
+              title={isZonalOfficer ? `${districtName} — DCP ${userZone} Zone Breakdown` : `${districtName} District — All Zones Type Breakdown`}
             />
 
             {/* QR Certificate Status Pie Chart */}
             <InstitutionTypePieChart
-              institutions={institutions}
-              title={`QR Safe ID Status — ${districtName}`}
+              institutions={visibleInstitutions}
+              title={isZonalOfficer ? `QR Safe ID Status — DCP ${userZone} Zone` : `QR Safe ID Status — ${districtName}`}
               overrideSections={[
                 { name: 'QR Code Generated (🔓 Unlocked)', count: verifiedCount, color: '#065F46', strokeColor: '#34D399' },
                 { name: 'QR Code Locked (🔒 Pending)', count: pendingCount, color: '#92400E', strokeColor: '#FBBF24' },
@@ -646,7 +663,7 @@ export const DistrictAdminDashboard = ({ defaultTab }) => {
             <div className="space-y-4">
               <div className="bg-white border-2 border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
                 <h3 className="text-xs font-black text-[#0F2038] uppercase tracking-wider flex items-center gap-2">
-                  <FiBarChart2 className="text-[#D4AF37]" /> Compliance Status ({districtName})
+                  <FiBarChart2 className="text-[#D4AF37]" /> Compliance Status ({isZonalOfficer ? `DCP ${userZone} Zone` : districtName})
                 </h3>
                 <div className="space-y-2.5">
                   {[
@@ -670,9 +687,9 @@ export const DistrictAdminDashboard = ({ defaultTab }) => {
                 </div>
               </div>
 
-              <div className="bg-[#0F2038] text-white border-2 border-[#D4AF37] rounded-2xl p-4 shadow-lg space-y-2">
+              <div className="bg-[#0F2038] text-[#ffffff] border-2 border-[#D4AF37] rounded-2xl p-4 shadow-lg space-y-2">
                 <h3 className="text-xs font-black text-[#D4AF37] uppercase tracking-wider flex items-center gap-2">
-                  <FiShield /> District Safety Directives
+                  <FiShield /> {isZonalOfficer ? `DCP ${userZone} Zone Safety Directives` : 'District Safety Directives'}
                 </h3>
                 <div className="text-xs space-y-1.5 text-slate-300 leading-relaxed font-semibold">
                   <p>1. <strong>4 Mandatory NOC Clearances</strong> required before QR unlock.</p>

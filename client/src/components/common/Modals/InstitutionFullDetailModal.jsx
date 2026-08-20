@@ -87,13 +87,21 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
   let instEvidence = [];
   let instComplaints = [];
   let localDocs = [];
-  try { localDocs = (instId || currentInst.email || currentInst.safeId) ? (institutionStore.getDocumentsForInstitution(instId || currentInst.email || currentInst.safeId) || []) : []; } catch {}
+  try {
+    const idsToTry = [instId, currentInst._id, currentInst.id, currentInst.email, currentInst.safeId, currentInst.name].filter(Boolean);
+    idsToTry.forEach(id => {
+      const found = institutionStore.getDocumentsForInstitution(id);
+      if (Array.isArray(found) && found.length > 0) {
+        localDocs.push(...found);
+      }
+    });
+  } catch {}
   const embeddedDocs = Array.isArray(currentInst.documents) ? currentInst.documents : [];
 
   const mergedDocMap = new Map();
   [...embeddedDocs, ...localDocs, ...apiDocs].forEach(d => {
     if (d) {
-      const typeKey = d.documentType || d.type || d.name;
+      const typeKey = (d.documentType || d.type || d.name || '').toUpperCase();
       if (typeKey) mergedDocMap.set(typeKey, d);
     }
   });
@@ -107,11 +115,11 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
   const densityRatio = classroomCount > 0 ? Math.round(totalStudents / classroomCount) : 0;
 
   const requiredDocs = [
-    { type: 'FIRE_NOC', label: 'Fire Safety NOC Certificate', icon: '🔥' },
-    { type: 'STRUCTURAL_SAFETY', label: 'Building Structural Safety', icon: '🏢' },
-    { type: 'ELECTRICAL_SAFETY', label: 'Electrical Audit Clearance', icon: '⚡' },
-    { type: 'EMERGENCY_PLAN', label: 'Emergency Evacuation Plan', icon: '🚨' },
-    { type: 'SCHOOL_PHOTO', label: 'School / Institution Front Photo', icon: '🏫' },
+    { type: 'FIRE_NOC', label: 'Fire Safety NOC Certificate', icon: '🔥', matches: ['FIRE_SAFETY', 'FIRE_NOC', 'FIRE'] },
+    { type: 'STRUCTURAL_SAFETY', label: 'Building Structural Safety', icon: '🏢', matches: ['BUILDING_SAFETY', 'BUILDING_PLAN', 'STRUCTURAL_SAFETY', 'STRUCTURAL', 'BUILDING'] },
+    { type: 'ELECTRICAL_SAFETY', label: 'Electrical Audit Clearance', icon: '⚡', matches: ['ELECTRICAL_SAFETY', 'AFFILIATION_CERT', 'ELECTRICAL'] },
+    { type: 'EMERGENCY_PLAN', label: 'Emergency Evacuation Plan', icon: '🚨', matches: ['EVACUATION_SAFETY', 'EMERGENCY_PLAN', 'EVACUATION', 'EMERGENCY'] },
+    { type: 'SCHOOL_PHOTO', label: 'School / Institution Front Photo', icon: '🏫', matches: ['SCHOOL_PHOTO', 'PHOTO', 'FRONT'] },
   ];
 
   return (
@@ -347,16 +355,15 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {requiredDocs.map(req => {
-                const doc = docs.find(d => 
-                  d.type === req.type || 
-                  d.documentType === req.type || 
-                  (d.name && d.name.toLowerCase().includes(req.label.toLowerCase()))
-                );
-                const isVerified = doc?.status === 'VERIFIED';
+                const doc = docs.find(d => {
+                  const dt = (d.documentType || d.type || d.name || '').toUpperCase();
+                  return req.matches ? req.matches.some(m => dt.includes(m) || m.includes(dt)) : (dt === req.type);
+                });
+                const isVerified = doc && (doc.status === 'VERIFIED' || doc.verificationStatus === 'VERIFIED' || doc.status === 'APPROVED' || doc.verificationStatus === 'APPROVED');
 
                 return (
                   <div key={req.type} className={`p-3 rounded-xl border-2 flex items-center justify-between ${
-                    isVerified ? 'bg-emerald-50/70 border-emerald-300 text-emerald-900' : 'bg-amber-50/70 border-amber-300 text-amber-900'
+                    isVerified ? 'bg-emerald-50/70 border-emerald-300 text-emerald-900' : doc ? 'bg-blue-50/70 border-blue-300 text-blue-900' : 'bg-amber-50/70 border-amber-300 text-amber-900'
                   }`}>
                     <div className="flex items-center gap-2">
                       <span className="text-base">{req.icon}</span>
@@ -367,7 +374,7 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
                     </div>
 
                     <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase ${
-                      isVerified ? 'bg-emerald-600 text-white' : doc ? 'bg-blue-600 text-white' : 'bg-amber-500 text-slate-950'
+                      isVerified ? 'bg-emerald-600 text-white' : doc ? 'bg-blue-600 text-white animate-pulse' : 'bg-amber-500 text-slate-950'
                     }`}>
                       {isVerified ? '✓ VERIFIED' : doc ? '⏳ UPLOADED (PENDING AUDIT)' : '🔒 PENDING'}
                     </span>

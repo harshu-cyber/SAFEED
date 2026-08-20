@@ -313,14 +313,32 @@ export const DocumentsPage = () => {
             {/* Document Viewer Body */}
             <div className="p-6 overflow-y-auto space-y-4 flex-1 bg-[#F4F6F9]">
               {(() => {
-                const targetUrl = viewDoc.fileUrl || viewDoc.fileDataUrl || `/api/v1/documents/${viewDoc._id}/file`;
-                const isImage = typeof targetUrl === 'string' && (targetUrl.startsWith('data:image') || targetUrl.match(/\.(jpg|jpeg|png|webp)$/i));
+                const dataUrl = viewDoc.fileDataUrl;
+                const fileUrl = viewDoc.fileUrl;
+                let targetUrl = dataUrl || fileUrl;
+
+                if (!targetUrl || (!targetUrl.startsWith('data:') && !targetUrl.startsWith('http'))) {
+                  const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+                  const path = targetUrl || `/api/v1/documents/${viewDoc._id}/file`;
+                  targetUrl = apiBase ? `${apiBase}${path.startsWith('/') ? '' : '/'}${path}` : path;
+                }
+
+                const isImage = typeof targetUrl === 'string' && (targetUrl.startsWith('data:image') || targetUrl.match(/\.(jpg|jpeg|png|webp)$/i) || viewDoc.fileMimeType?.startsWith('image/'));
+
                 return (
-                  <div className="border-2 border-slate-300 rounded-xl overflow-hidden bg-white shadow p-2">
+                  <div className="border-2 border-slate-300 rounded-xl overflow-hidden bg-white shadow p-2 flex items-center justify-center min-h-[400px]">
                     {isImage ? (
-                      <img src={targetUrl} alt={viewDoc.title || viewDoc.name} className="max-w-full h-auto mx-auto" />
+                      <img src={targetUrl} alt={viewDoc.title || viewDoc.name} className="max-w-full h-auto max-h-[600px] mx-auto object-contain" />
                     ) : (
-                      <iframe src={targetUrl} title={viewDoc.title || viewDoc.name} className="w-full h-[500px]" />
+                      <object data={targetUrl} type={viewDoc.fileMimeType || 'application/pdf'} className="w-full h-[550px]">
+                        <embed src={targetUrl} type={viewDoc.fileMimeType || 'application/pdf'} className="w-full h-[550px]" />
+                        <div className="p-4 text-center">
+                          <p className="text-xs font-bold text-slate-700 mb-2">PDF Document Preview Ready</p>
+                          <a href={targetUrl} download={viewDoc.fileName || `${viewDoc.title || 'document'}.pdf`} className="bg-[#0F2038] text-[#D4AF37] text-xs font-black px-4 py-2 rounded-lg inline-block">
+                            Download / Open PDF Document 📥
+                          </a>
+                        </div>
+                      </object>
                     )}
                   </div>
                 );

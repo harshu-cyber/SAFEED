@@ -297,7 +297,12 @@ export const DocumentApproval = () => {
             {/* Document Content View */}
             <div className="p-6 overflow-y-auto space-y-4 flex-1 bg-[#F4F6F9]">
               {(() => {
-                const targetUrl = readingDoc.fileDataUrl || (readingDoc.fileUrl?.startsWith('http') ? readingDoc.fileUrl : `/api/v1/documents/${readingDoc._id}/file`);
+                let targetUrl = readingDoc.fileDataUrl || readingDoc.fileUrl;
+                if (!targetUrl || (!targetUrl.startsWith('data:') && !targetUrl.startsWith('http'))) {
+                  const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+                  const path = targetUrl || `/api/v1/documents/${readingDoc._id}/file`;
+                  targetUrl = apiBase ? `${apiBase}${path.startsWith('/') ? '' : '/'}${path}` : path;
+                }
                 const isImage = (typeof targetUrl === 'string' && targetUrl.startsWith('data:image')) || readingDoc.fileMimeType?.startsWith('image/') || readingDoc.fileUrl?.match(/\.(jpg|jpeg|png|webp)$/i);
                 return (
                   <div className="border-2 border-slate-300 rounded-xl overflow-hidden bg-[#0F2038] shadow">

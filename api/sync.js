@@ -10,8 +10,7 @@ async function connectDB() {
   const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://safeedadmin:Safeed2026@safeed.mewsypb.mongodb.net/safeedup?retryWrites=true&w=majority&appName=safeed';
   try {
     await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
     });
     isConnected = true;
     return { ok: true };
@@ -41,8 +40,16 @@ const instSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
 }, { strict: false, timestamps: true });
 
+const complaintSchema = new mongoose.Schema({
+  complaintTicket: String,
+  institutionName: String,
+  category: String,
+  status: String,
+}, { strict: false, timestamps: true });
+
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Institution = mongoose.models.Institution || mongoose.model('Institution', instSchema);
+const Complaint = mongoose.models.Complaint || mongoose.model('Complaint', complaintSchema);
 
 function getParsedBody(req) {
   if (!req.body) return {};
@@ -67,7 +74,8 @@ module.exports = async function handler(req, res) {
     if (req.method === 'GET') {
       const users = await User.find({}).select('-password').lean();
       const institutions = await Institution.find({}).lean();
-      return res.status(200).json({ success: true, data: { users, institutions } });
+      const complaints = await Complaint.find({}).lean();
+      return res.status(200).json({ success: true, data: { users, institutions, complaints } });
     }
 
     if (req.method === 'POST') {
@@ -166,7 +174,8 @@ module.exports = async function handler(req, res) {
 
       const users = await User.find({}).select('-password').lean();
       const institutions = await Institution.find({}).lean();
-      return res.status(200).json({ success: true, data: { users, institutions } });
+      const complaints = await Complaint.find({}).lean();
+      return res.status(200).json({ success: true, data: { users, institutions, complaints } });
     }
 
     return res.status(405).json({ success: false, error: 'Method Not Allowed' });

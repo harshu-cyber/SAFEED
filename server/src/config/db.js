@@ -11,10 +11,7 @@ const connectDB = async () => {
     return;
   }
 
-  const mongoUri = process.env.MONGODB_URI;
-  if (!mongoUri) {
-    throw new Error('MONGODB_URI is not defined in environment variables');
-  }
+  const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://safeedadmin:Safeed2026@safeed.mewsypb.mongodb.net/safeedup?retryWrites=true&w=majority&appName=safeed';
 
   try {
     const conn = await mongoose.connect(mongoUri, {

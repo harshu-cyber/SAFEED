@@ -57,6 +57,9 @@ const ROLE_BADGE_COLOR = {
   DISTRICT_ADMIN: 'bg-indigo-100 text-indigo-800 border-indigo-200',
   POLICE_OFFICER: 'bg-sky-100 text-sky-800 border-sky-200',
   FIRE_OFFICER: 'bg-orange-100 text-orange-700 border-orange-200',
+  SCHOOL_ADMIN: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  COACHING_ADMIN: 'bg-amber-100 text-amber-800 border-amber-200',
+  INSTITUTION: 'bg-emerald-100 text-emerald-800 border-emerald-200',
 };
 
 const DEFAULT_FORM = {
@@ -192,6 +195,7 @@ const UserDetailModal = ({ user, onClose, onToggle, onDelete, onEdit }) => {
   const portalBadge =
     (user.assignedPortal || user.role) === 'DISTRICT_ADMIN' ? '🏛️ District Authority Admin Portal' :
     (user.assignedPortal || user.role) === 'SUPER_ADMIN' ? '⚡ Super Admin Control Portal' :
+    ['SCHOOL_ADMIN', 'COACHING_ADMIN', 'INSTITUTION'].includes(user.assignedPortal || user.role) ? '🏫 School & Institution Admin Portal' :
     '🛡️ Inspector Dashboard Admin Portal';
 
   return (
@@ -554,8 +558,14 @@ export const UserManagementPage = () => {
     }
   };
 
-  // Filtered list
+  // Filtered list — User Management is strictly for Police & Government Authority officers
+  const OFFICIAL_ROLES = ['INSPECTION_OFFICER', 'DISTRICT_ADMIN', 'POLICE_OFFICER', 'FIRE_OFFICER', 'SUPER_ADMIN'];
+
   const filtered = users.filter(u => {
+    // Exclude institution accounts from User Management (they belong in All Institutions / Inspection Records)
+    const isOfficial = OFFICIAL_ROLES.includes(u.role) || (!u.role && u.badgeNumber);
+    if (!isOfficial) return false;
+
     const matchRole = roleFilter === 'ALL' || u.role === roleFilter;
     const q = search.toLowerCase();
     const matchSearch = !q ||
@@ -568,13 +578,15 @@ export const UserManagementPage = () => {
     return matchRole && matchSearch;
   });
 
+  const officialUsers = users.filter(u => OFFICIAL_ROLES.includes(u.role) || (!u.role && u.badgeNumber));
+
   const stats = {
-    total: users.length,
-    active: users.filter(u => u.isActive).length,
-    inspectors: users.filter(u => u.role === 'INSPECTION_OFFICER').length,
-    districtAdmins: users.filter(u => u.role === 'DISTRICT_ADMIN').length,
-    superAdmins: users.filter(u => u.role === 'SUPER_ADMIN').length,
-    police: users.filter(u => u.role === 'POLICE_OFFICER').length,
+    total: officialUsers.length,
+    active: officialUsers.filter(u => u.isActive).length,
+    inspectors: officialUsers.filter(u => u.role === 'INSPECTION_OFFICER').length,
+    districtAdmins: officialUsers.filter(u => u.role === 'DISTRICT_ADMIN').length,
+    superAdmins: officialUsers.filter(u => u.role === 'SUPER_ADMIN').length,
+    police: officialUsers.filter(u => u.role === 'POLICE_OFFICER').length,
   };
 
   return (
@@ -846,7 +858,7 @@ export const UserManagementPage = () => {
           ))}
         </div>
         <span className="text-xs text-gray-400 font-semibold ml-auto whitespace-nowrap">
-          {filtered.length} / {users.length} users
+          {filtered.length} / {officialUsers.length} officers
         </span>
       </div>
 
@@ -867,6 +879,7 @@ export const UserManagementPage = () => {
                 const portalBadge =
                   portalKey === 'DISTRICT_ADMIN' ? { label: '🏛️ District Admin', color: 'bg-indigo-100 text-indigo-900 border-indigo-200' } :
                   portalKey === 'SUPER_ADMIN' ? { label: '⚡ Super Admin', color: 'bg-purple-100 text-purple-900 border-purple-200' } :
+                  (portalKey === 'SCHOOL_ADMIN' || portalKey === 'COACHING_ADMIN' || portalKey === 'INSTITUTION') ? { label: '🏫 School / Institution Admin', color: 'bg-emerald-100 text-emerald-900 border-emerald-200' } :
                   { label: '🛡️ Inspector Admin', color: 'bg-blue-100 text-blue-900 border-blue-200' };
 
                 return (

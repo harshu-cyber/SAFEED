@@ -98,12 +98,16 @@ export default async function handler(req, res) {
           email: emailLow,
           password: payload.password || payload.phone || 'SafeED@2026',
           role: payload.role || 'INSPECTION_OFFICER',
+          assignedPortal: payload.assignedPortal || payload.role || 'INSPECTION_OFFICER',
           district: payload.district || 'Lucknow',
           designation: payload.designation || 'Sub-Inspector',
           department: payload.department || 'UP Police',
           isActive: payload.isActive !== false,
           phone: payload.phone || undefined,
-          employeeId: payload.badgeNumber || undefined,
+          employeeId: payload.badgeNumber || payload.employeeId || undefined,
+          badgeNumber: payload.badgeNumber || payload.employeeId || undefined,
+          dcpZone: payload.dcpZone || undefined,
+          postingStation: payload.postingStation || payload.nearestPoliceStation || undefined,
         });
       } else if ((action === 'UPDATE_USER' || action === 'updateUser') && payload) {
         const targetId = payload._id || payload.id;

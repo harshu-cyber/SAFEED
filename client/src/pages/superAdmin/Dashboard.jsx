@@ -80,15 +80,18 @@ export const SuperAdminDashboard = () => {
   const [selectedInst, setSelectedInst] = useState(null);
 
   useEffect(() => {
-    const load = () => {
+    const loadRealTime = async () => {
+      try {
+        await cloudSync.pull();
+      } catch (e) {}
       setInstitutions(institutionStore.getInstitutions());
       setUserStats(userStore.getStats());
       setComplaints(complaintStore.getAllComplaints?.() || []);
     };
-    load();
-    cloudSync.pull().then(load).catch(load);
+
+    loadRealTime();
     cloudSync.startAutoSync();
-    const iv = setInterval(load, 4000);
+    const iv = setInterval(loadRealTime, 3000);
     return () => {
       clearInterval(iv);
     };

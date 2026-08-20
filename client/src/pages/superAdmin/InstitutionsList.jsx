@@ -19,11 +19,16 @@ export const SuperInstitutionsList = () => {
   const [selectedInst, setSelectedInst] = useState(null);
 
   useEffect(() => {
-    const load = () => setInstitutions(institutionStore.getInstitutions());
-    // Pull directly from MongoDB Atlas first
-    cloudSync.pull().then(load).catch(load);
+    const loadRealTime = async () => {
+      try {
+        await cloudSync.pull();
+      } catch (e) {}
+      setInstitutions(institutionStore.getInstitutions());
+    };
+
+    loadRealTime();
     cloudSync.startAutoSync();
-    const iv = setInterval(load, 5000);
+    const iv = setInterval(loadRealTime, 3000);
     return () => {
       clearInterval(iv);
       cloudSync.stopAutoSync();

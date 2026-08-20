@@ -34,6 +34,51 @@ const normalizeZone = (val = '') => {
 
 export { normalizeZone };
 
+export const normalizeInstitution = (inst) => {
+  if (!inst || typeof inst !== 'object') return inst;
+  const districtStr = inst.district || 'Lucknow';
+  const rawAddr = inst.address;
+  let formattedAddr = '';
+  if (typeof rawAddr === 'string') {
+    formattedAddr = rawAddr;
+  } else if (rawAddr && typeof rawAddr === 'object') {
+    formattedAddr = rawAddr.street || rawAddr.district || `${districtStr}, Uttar Pradesh`;
+  } else {
+    formattedAddr = `${districtStr}, Uttar Pradesh`;
+  }
+
+  const cp = inst.contactPerson;
+  const principalStr = inst.principal || (typeof cp === 'object' ? cp?.name : '') || 'Principal';
+  const contactStr = inst.contact || (typeof cp === 'object' ? cp?.phone : '') || inst.phone || '';
+  const emailStr = inst.email || (typeof cp === 'object' ? cp?.email : '') || '';
+  const zoneKey = normalizeZone(inst.zone || inst.assignedInspectorZone) || 'CENTRAL';
+
+  return {
+    ...inst,
+    _id: inst._id || inst.id || ('inst_' + Date.now()),
+    safeId: inst.safeId || `SAFE-UP-${districtStr.slice(0, 3).toUpperCase()}-${Math.floor(100000 + Math.random() * 900000)}`,
+    name: inst.name || inst.institutionName || 'Institution',
+    type: inst.type || inst.institutionType || 'SCHOOL',
+    district: districtStr,
+    state: inst.state || 'Uttar Pradesh',
+    zone: zoneKey,
+    address: formattedAddr,
+    principal: principalStr,
+    contact: contactStr,
+    email: emailStr,
+    assignedInspector: inst.assignedInspector || `DCP ${zoneKey}`,
+    assignedInspectorZone: inst.assignedInspectorZone || zoneKey,
+    assignedInspectorEmail: inst.assignedInspectorEmail || `dcp${zoneKey.toLowerCase()}@safeedup.gov.in`,
+    complianceScore: typeof inst.complianceScore === 'number' ? inst.complianceScore : 0,
+    totalStudents: parseInt(inst.totalStudents || 0) || 0,
+    staffCount: parseInt(inst.staffCount || inst.totalTeachers || 0) || 0,
+    classroomCount: parseInt(inst.classroomCount || inst.totalClassrooms || 0) || 0,
+    floorCount: parseInt(inst.floorCount || inst.buildingFloors || 1) || 1,
+    exitGateCount: parseInt(inst.exitGateCount || 2) || 2,
+    nearestPoliceStation: inst.nearestPoliceStation || `${districtStr} Police Station`,
+  };
+};
+
 const DEFAULT_INSTITUTIONS = [];
 
 export const institutionStore = {
@@ -42,7 +87,8 @@ export const institutionStore = {
 
   syncCloudInstitutions: (cloudInsts) => {
     if (!Array.isArray(cloudInsts)) return;
-    localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(cloudInsts));
+    const normalized = cloudInsts.map(normalizeInstitution);
+    localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(normalized));
   },
 
   /** Return ALL institutions from localStorage (with auto-assigned zone inspectors) */
@@ -52,14 +98,7 @@ export const institutionStore = {
       if (stored) {
         const list = JSON.parse(stored);
         if (Array.isArray(list)) {
-          return list.map(inst => {
-            const zoneKey = inst.zone || 'CENTRAL';
-            return {
-              ...inst,
-              assignedInspector: inst.assignedInspector || `DCP ${zoneKey}`,
-              assignedInspectorZone: inst.assignedInspectorZone || zoneKey,
-            };
-          });
+          return list.map(normalizeInstitution);
         }
       }
     } catch {}

@@ -216,7 +216,7 @@ export const InspectorInspections = () => {
                           {inst.name}
                         </p>
                         <p className="text-[10px] text-slate-500">{inst.affiliationBoard || 'CBSE'} ({inst.affiliationCode || 'Code Pending'})</p>
-                        <p className="text-[10px] text-slate-500 font-semibold truncate max-w-xs">{inst.address}</p>
+                        <p className="text-[10px] text-slate-500 font-semibold truncate max-w-xs">{typeof inst.address === 'string' ? inst.address : (inst.address?.street || `${inst.district || 'Lucknow'}, Uttar Pradesh`)}</p>
                       </td>
                       <td className="p-3.5">
                         <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-[10px]">

@@ -250,11 +250,16 @@ async function syncHandler(req, res) {
             const districtCode = districtStr.slice(0, 3).toUpperCase();
             const safeId = payload.safeId || `SAFE-UP-${districtCode}-${Math.floor(100000 + Math.random() * 900000)}`;
 
+            const addressStr = typeof payload.address === 'string' 
+              ? payload.address 
+              : (payload.address?.street || `${districtStr}, Uttar Pradesh`);
+
             const instDoc = {
               safeId,
               name: instName,
               type: payload.type || payload.institutionType || 'SCHOOL',
               district: districtStr,
+              state: payload.state || 'Uttar Pradesh',
               zone: zoneStr,
               totalStudents: parseInt(payload.totalStudents || 0),
               staffCount: parseInt(payload.staffCount || payload.totalTeachers || 0),
@@ -264,13 +269,12 @@ async function syncHandler(req, res) {
               nearestPoliceStation: payload.nearestPoliceStation || `${districtStr} Police Station`,
               status: payload.status || 'PENDING_DOCUMENT_VERIFICATION',
               riskLevel: payload.riskLevel || 'UNDER_REVIEW',
-              address: typeof payload.address === 'object' ? payload.address : {
-                street: payload.address || `${districtStr}, Uttar Pradesh`,
-                district: districtStr,
-                state: payload.state || 'Uttar Pradesh',
-              },
+              address: addressStr,
+              principal: payload.principal || payload.name || payload.contactPerson?.name || 'Principal',
+              contact: payload.contact || payload.phone || payload.contactPerson?.phone || '',
+              email: payload.email?.toLowerCase() || payload.contactPerson?.email || '',
               contactPerson: {
-                name: payload.principal || payload.contactName || 'Principal',
+                name: payload.principal || payload.contactName || payload.name || 'Principal',
                 email: payload.email || 'admin@inst.edu.in',
                 phone: payload.contact || payload.phone || '',
               },
@@ -278,6 +282,7 @@ async function syncHandler(req, res) {
               affiliationCode: payload.affiliationCode || '',
               assignedInspector: payload.assignedInspector || `DCP ${zoneStr}`,
               assignedInspectorZone: zoneStr,
+              assignedInspectorEmail: `dcp${zoneStr.toLowerCase()}@safeedup.gov.in`,
               districtRemarks: payload.districtRemarks || [],
               adminUserId: payload.adminUserId || new mongoose.Types.ObjectId(),
             };

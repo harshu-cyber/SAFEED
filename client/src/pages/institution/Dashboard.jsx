@@ -304,7 +304,7 @@ export const InstitutionDashboard = () => {
             REAL-TIME INSTITUTION PROFILE • जनपद: {institution.district}
           </p>
           <h2 className="text-xl font-black font-serif">{institution.name}</h2>
-          <p className="text-xs text-slate-300">{institution.address} • Contact: <span className="font-mono font-bold text-[#D4AF37]">{institution.contact}</span></p>
+          <p className="text-xs text-slate-300">{typeof institution.address === 'string' ? institution.address : (institution.address?.street || `${institution.district || 'Lucknow'}, Uttar Pradesh`)} • Contact: <span className="font-mono font-bold text-[#D4AF37]">{institution.contact}</span></p>
 
           <div className="flex items-center gap-2 pt-1 flex-wrap">
             <span className="text-[10px] font-black bg-white/10 px-2.5 py-1 rounded-lg border border-white/20">

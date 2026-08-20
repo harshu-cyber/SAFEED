@@ -177,7 +177,7 @@ export const SuperInstitutionsList = () => {
                       <p className="text-[10px] text-gray-400">{inst.contact}</p>
                     </td>
                     <td className="px-3 py-3">
-                      <p className="text-[10px] text-gray-600 max-w-[180px]">{inst.address}</p>
+                      <p className="text-[10px] text-gray-600 max-w-[180px]">{typeof inst.address === 'string' ? inst.address : (inst.address?.street || `${inst.district || 'Lucknow'}, Uttar Pradesh`)}</p>
                       <p className="text-[9px] font-black text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 inline-flex items-center gap-1 mt-0.5">
                         <MdLocalPolice size={9} /> {inst.nearestPoliceStation || 'N/A'}
                       </p>

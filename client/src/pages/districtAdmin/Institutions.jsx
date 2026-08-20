@@ -170,7 +170,7 @@ export const DistrictInstitutionsPage = () => {
                           <span>{row.name}</span>
                           <FiEye size={11} className="text-[#D4AF37]" />
                         </p>
-                        <p className="text-[10px] text-slate-500 font-semibold">{row.address}</p>
+                        <p className="text-[10px] text-slate-500 font-semibold">{typeof row.address === 'string' ? row.address : (row.address?.street || `${row.district || 'Lucknow'}, Uttar Pradesh`)}</p>
                         <p className="text-[9px] font-black text-blue-900 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 inline-flex items-center gap-1 mt-0.5">
                           <MdLocalPolice size={10} className="text-blue-800" />
                           {row.nearestPoliceStation || `${row.district || 'Hazratganj'} Police Station`}

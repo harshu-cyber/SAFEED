@@ -206,7 +206,7 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
                   </span>
                 </div>
                 <h3 className="text-base font-black text-white font-serif">
-                  👮 {institution.nearestPoliceStation || `${institution.district || 'Hazratganj'} Police Station`}
+                  👮 {currentInst.nearestPoliceStation || `${currentInst.district || 'Hazratganj'} Police Station`}
                 </h3>
               </div>
               <span className="bg-blue-800/80 text-blue-200 border border-blue-400 px-3 py-1 rounded-xl text-[10px] font-bold">
@@ -217,11 +217,11 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
             <div className="pt-2 border-t border-blue-700/60 grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-200">
               <div className="flex items-center gap-2">
                 <FiMapPin className="text-[#D4AF37] flex-shrink-0" />
-                <span><strong>Building Address:</strong> {institution.address || `${institution.district}, Uttar Pradesh`}</span>
+                <span><strong>Building Address:</strong> {typeof currentInst.address === 'string' ? currentInst.address : (currentInst.address?.street || `${currentInst.district || 'Lucknow'}, Uttar Pradesh`)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <FiPhone className="text-emerald-400 flex-shrink-0" />
-                <span><strong>Registered Contact:</strong> {institution.contact || 'N/A'} ({institution.principal || 'Principal'})</span>
+                <span><strong>Registered Contact:</strong> {currentInst.contact || 'N/A'} ({currentInst.principal || 'Principal'})</span>
               </div>
             </div>
           </div>
@@ -290,11 +290,11 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
                 🏛️ Governance &amp; Registration Profile
               </h4>
               <div className="space-y-1.5 text-slate-700">
-                <p><strong>Institution Type:</strong> {institution.type || 'SCHOOL'}</p>
-                <p><strong>Affiliation Board:</strong> {institution.affiliationBoard || 'CBSE'} {institution.affiliationCode ? `(${institution.affiliationCode})` : ''}</p>
-                <p><strong>District &amp; State:</strong> {institution.district}, {institution.state || 'Uttar Pradesh'}</p>
-                <p><strong>Principal / Director:</strong> {institution.principal || 'N/A'}</p>
-                <p><strong>Official Email:</strong> {institution.email || 'N/A'}</p>
+                <p><strong>Institution Type:</strong> {currentInst.type || 'SCHOOL'}</p>
+                <p><strong>Affiliation Board:</strong> {currentInst.affiliationBoard || 'CBSE'} {currentInst.affiliationCode ? `(${currentInst.affiliationCode})` : ''}</p>
+                <p><strong>District &amp; State:</strong> {currentInst.district}, {currentInst.state || 'Uttar Pradesh'}</p>
+                <p><strong>Principal / Director:</strong> {currentInst.principal || 'N/A'}</p>
+                <p><strong>Official Email:</strong> {currentInst.email || 'N/A'}</p>
               </div>
             </div>
 
@@ -303,16 +303,16 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
               <h4 className="text-xs font-black text-[#0F2038] uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center justify-between">
                 <span>👮 Assigned DCP Inspector</span>
                 <span className="text-[9px] font-black text-[#D4AF37] bg-[#0F2038] px-2 py-0.5 rounded uppercase">
-                  DCP {institution.zone || 'CENTRAL'}
+                  DCP {currentInst.zone || 'CENTRAL'}
                 </span>
               </h4>
               <div className="space-y-1.5 text-slate-700">
-                <p><strong>Inspector Name:</strong> {institution.assignedInspector || `DCP ${institution.zone || 'CENTRAL'}`}</p>
-                <p><strong>Inspector Email:</strong> {institution.assignedInspectorEmail || `dcp${(institution.zone || 'central').toLowerCase()}@safeedup.gov.in`}</p>
-                <p><strong>Last Inspection Audit:</strong> {institution.lastInspectionDate || 'Awaiting Physical Audit'}</p>
+                <p><strong>Inspector Name:</strong> {currentInst.assignedInspector || `DCP ${currentInst.zone || 'CENTRAL'}`}</p>
+                <p><strong>Inspector Email:</strong> {currentInst.assignedInspectorEmail || `dcp${(currentInst.zone || 'central').toLowerCase()}@safeedup.gov.in`}</p>
+                <p><strong>Last Inspection Audit:</strong> {currentInst.lastInspectionDate || 'Awaiting Physical Audit'}</p>
                 <p><strong>District Risk Level:</strong> <span className={`font-black uppercase px-2 py-0.5 rounded text-[10px] ${
-                  institution.riskLevel === 'LOW' ? 'bg-emerald-100 text-emerald-800' : institution.riskLevel === 'MEDIUM' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
-                }`}>{institution.riskLevel || 'UNDER_REVIEW'}</span></p>
+                  currentInst.riskLevel === 'LOW' ? 'bg-emerald-100 text-emerald-800' : currentInst.riskLevel === 'MEDIUM' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
+                }`}>{currentInst.riskLevel || 'UNDER_REVIEW'}</span></p>
               </div>
             </div>
           </div>
@@ -321,7 +321,7 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
           <div className="bg-white border-2 border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs">
             <h4 className="text-xs font-black text-[#0F2038] uppercase tracking-wider flex items-center justify-between">
               <span>📜 Safety Clearance Certificates &amp; NOC Audit (4 Required)</span>
-              <span className="text-[10px] font-bold text-slate-500">Compliance Score: {institution.complianceScore || 0}%</span>
+              <span className="text-[10px] font-bold text-slate-500">Compliance Score: {currentInst.complianceScore || 0}%</span>
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

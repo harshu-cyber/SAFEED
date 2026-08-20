@@ -5,12 +5,15 @@ const rateLimit = require('express-rate-limit');
 const env = require('../config/env');
 const { sendError } = require('../utils/apiResponse');
 
+const isDev = env.NODE_ENV === 'development';
+
 // Global API rate limiter
 const globalLimiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MS,
   max: env.RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => isDev,
   handler: (req, res) => {
     return sendError(res, {
       statusCode: 429,
@@ -19,16 +22,18 @@ const globalLimiter = rateLimit({
   },
 });
 
-// Strict limiter for auth routes (5 per 15 min)
+// Limiter for auth routes (50 per 15 min, successful attempts skipped, completely skipped in dev mode)
 const authLimiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MS,
   max: env.AUTH_RATE_LIMIT_MAX,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => isDev,
   handler: (req, res) => {
     return sendError(res, {
       statusCode: 429,
-      message: 'Too many login attempts. Please try again after 15 minutes.',
+      message: 'Too many failed login attempts. Please try again after 15 minutes.',
     });
   },
 });
@@ -39,6 +44,7 @@ const publicLimiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => isDev,
   handler: (req, res) => {
     return sendError(res, {
       statusCode: 429,
@@ -53,6 +59,7 @@ const uploadLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => isDev,
   handler: (req, res) => {
     return sendError(res, {
       statusCode: 429,

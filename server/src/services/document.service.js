@@ -67,12 +67,22 @@ class DocumentService {
 
     const document = await Document.create({
       institutionId: targetInstId,
+      institutionName: institution.name,
+      institutionType: institution.type || 'SCHOOL',
+      district: institution.district || 'Lucknow',
+      zone: institution.zone || 'CENTRAL',
+      assignedInspectorId: institution.assignedInspectorId || null,
+      assignedInspectorName: institution.assignedInspectorName || '',
+
       documentType: docType,
       title: docTitle,
       description: data.description || '',
+      originalFileName: file.originalname,
+      storedFileName: file.filename,
       fileUrl: fileUrlPath,
       fileName: file.originalname,
       fileType: file.mimetype,
+      fileMimeType: file.mimetype,
       fileSize: file.size,
       issueDate: data.issueDate || null,
       expiryDate: data.expiryDate || null,
@@ -355,6 +365,53 @@ class DocumentService {
     }
 
     return { filePath, mimeType, document };
+  }
+
+  /**
+   * Calculate 4-document QR code unlock compliance status
+   */
+  async getCompliance(institutionId) {
+    const MANDATORY_TYPES = ['FIRE_SAFETY', 'BUILDING_SAFETY', 'ELECTRICAL_SAFETY', 'EVACUATION_SAFETY'];
+    const docs = await Document.find({ institutionId, isLatestVersion: true }).lean();
+
+    const statusMap = {};
+    MANDATORY_TYPES.forEach((t) => {
+      statusMap[t] = { status: 'MISSING', document: null };
+    });
+
+    docs.forEach((d) => {
+      const typeKey = Object.keys(statusMap).find(
+        (k) => k === d.documentType || (k === 'FIRE_SAFETY' && d.documentType === 'FIRE_NOC') || (k === 'BUILDING_SAFETY' && d.documentType === 'BUILDING_PLAN')
+      );
+      if (typeKey) {
+        statusMap[typeKey] = {
+          status: d.verificationStatus || 'PENDING',
+          document: d,
+        };
+      }
+    });
+
+    const allApproved = MANDATORY_TYPES.every(
+      (t) => statusMap[t].status === 'APPROVED' || statusMap[t].status === 'VERIFIED'
+    );
+
+    let inst = await Institution.findById(institutionId);
+    if (inst) {
+      if (allApproved && !inst.isQrUnlocked) {
+        inst.isQrUnlocked = true;
+        if (!inst.safeId) {
+          inst.safeId = `SAFE-UP-${(inst.district || 'LUC').slice(0, 3).toUpperCase()}-${Math.floor(100000 + Math.random() * 900000)}`;
+        }
+        await inst.save();
+      }
+    }
+
+    return {
+      documents: statusMap,
+      allDocumentsApproved: allApproved,
+      qrUnlocked: allApproved || (inst ? inst.isQrUnlocked : false),
+      safeId: inst ? inst.safeId : null,
+    };
   }
 }
 

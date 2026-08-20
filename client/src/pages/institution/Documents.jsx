@@ -9,11 +9,10 @@ import {
 import { MdVerified } from 'react-icons/md';
 
 const DOC_TYPES = [
-  { value: 'FIRE_NOC', label: 'Fire Safety NOC Certificate (अग्नि शमन एनओसी)' },
-  { value: 'STRUCTURAL_SAFETY', label: 'Building Structural Safety Certificate (भवन सुरक्षा)' },
+  { value: 'FIRE_SAFETY', label: 'Fire Safety Certificate (अग्नि शमन प्रमाणपत्र)' },
+  { value: 'BUILDING_SAFETY', label: 'Building Structural Safety Certificate (भवन सुरक्षा प्रमाणपत्र)' },
   { value: 'ELECTRICAL_SAFETY', label: 'Electrical Safety Audit Report (विद्युत सुरक्षा ऑडिट)' },
-  { value: 'EMERGENCY_PLAN', label: 'Emergency Evacuation Plan (आपातकालीन निकासी योजना)' },
-  { value: 'SCHOOL_PHOTO', label: 'School / Institution Front Photo (संस्था फ्रंट फोटो)' },
+  { value: 'EVACUATION_SAFETY', label: 'Emergency Evacuation Plan (आपातकालीन निकासी योजना)' },
 ];
 
 export const DocumentsPage = () => {
@@ -21,14 +20,29 @@ export const DocumentsPage = () => {
   const [institution, setInstitution] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [name, setName] = useState('');
-  const [type, setType] = useState('FIRE_NOC');
+  const [type, setType] = useState('FIRE_SAFETY');
   const [file, setFile] = useState(null);
   const [fileDataUrl, setFileDataUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
   const [viewDoc, setViewDoc] = useState(null);
 
-  const loadData = () => {
+  const loadData = async () => {
+    let instId = user?.institutionId || user?._id || user?.id;
+    if (instId) {
+      try {
+        const res = await documentApi.getForInstitution(instId);
+        const docs = res.data?.data?.documents || res.data?.documents || [];
+        if (Array.isArray(docs) && docs.length > 0) {
+          setDocuments(docs);
+          return;
+        }
+      } catch (e) {
+        console.warn('[DocumentsPage] MongoDB fetch notice:', e?.message);
+      }
+    }
+
     let inst = institutionStore.getInstitutionByIdOrEmail(user?.institutionId || user?.email || user?.name);
     if (!inst) {
       const allInsts = institutionStore.getInstitutions();
@@ -46,7 +60,7 @@ export const DocumentsPage = () => {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 2000);
+    const interval = setInterval(loadData, 3000);
     return () => clearInterval(interval);
   }, [user]);
 
@@ -64,6 +78,7 @@ export const DocumentsPage = () => {
 
   const handleUpload = async (e) => {
     e.preventDefault();
+    setErrorMsg('');
     let currentInst = institution || institutionStore.getInstitutionByIdOrEmail(user?.institutionId || user?.email || user?.name);
     if (!currentInst) {
       const allInsts = institutionStore.getInstitutions();
@@ -78,18 +93,20 @@ export const DocumentsPage = () => {
       const docName = name || DOC_TYPES.find(t => t.value === type)?.label.split(' (')[0];
 
       if (file) {
-        try {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('documentType', type);
-          formData.append('title', docName);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('documentType', type);
+        formData.append('title', docName);
 
-          // 2.5s timeout wrapper so Vercel frontend never hangs UI if backend route is unreachable
-          await Promise.race([
-            documentApi.upload(instId, formData),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('API Timeout')), 2500))
-          ]);
-        } catch {}
+        const response = await documentApi.upload(instId, formData);
+        if (response.data?.success || response.data?.document) {
+          setToast('✅ Document uploaded successfully! Sent to assigned Inspector for verification.');
+          setTimeout(() => setToast(''), 5000);
+        }
+      } else {
+        setErrorMsg('Please select a PDF or image file to upload.');
+        setUploading(false);
+        return;
       }
 
       const fileSizeMB = file ? (file.size / (1024 * 1024)).toFixed(2) + ' MB' : '1.2 MB';

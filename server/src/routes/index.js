@@ -16,6 +16,7 @@ const analyticsRoutes = require('./analytics.routes');
 const publicRoutes = require('./public.routes');
 const searchRoutes = require('./search.routes');
 const reportRoutes = require('./report.routes');
+const qrRoutes = require('./qr.routes');
 
 router.use('/auth', authRoutes);
 router.use('/institutions', institutionRoutes);
@@ -29,5 +30,6 @@ router.use('/analytics', analyticsRoutes);
 router.use('/public', publicRoutes);
 router.use('/search', searchRoutes);
 router.use('/reports', reportRoutes);
+router.use('/qr', qrRoutes);
 
 module.exports = router;

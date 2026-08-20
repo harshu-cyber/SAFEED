@@ -31,11 +31,19 @@ export const inspectionApi = {
 export const documentApi = {
   getForInstitution: (institutionId, params) => axiosInstance.get(`/documents/institution/${institutionId}`, { params }),
   getPending: (params) => axiosInstance.get('/documents/inspector/pending', { params }),
+  getAssigned: (params) => axiosInstance.get('/documents/inspector/assigned', { params }),
+  getCompliance: (institutionId) => axiosInstance.get(`/documents/institution/${institutionId}/compliance`),
   upload: (institutionId, formData) => axiosInstance.post(`/documents/institution/${institutionId}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
+  approve: (id) => axiosInstance.patch(`/documents/${id}/approve`),
+  reject: (id, data) => axiosInstance.patch(`/documents/${id}/reject`, data),
   verify: (id, data) => axiosInstance.patch(`/documents/${id}/verify`, data),
   delete: (id) => axiosInstance.delete(`/documents/${id}`),
+};
+
+export const qrApi = {
+  getQrStatus: (institutionId) => axiosInstance.get(`/qr/institution/${institutionId}/status`),
 };
 
 export const analyticsApi = {

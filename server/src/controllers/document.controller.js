@@ -37,6 +37,47 @@ const getForInstitution = asyncHandler(async (req, res) => {
   });
 });
 
+// PATCH /api/v1/documents/:id/approve
+const approveDocument = asyncHandler(async (req, res) => {
+  const document = await documentService.verifyDocument(
+    req.params.id,
+    'APPROVE',
+    req.user._id,
+    'Approved by Inspector'
+  );
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Document approved successfully.',
+    data: { document },
+  });
+});
+
+// PATCH /api/v1/documents/:id/reject
+const rejectDocument = asyncHandler(async (req, res) => {
+  const { reason } = req.body;
+  const document = await documentService.verifyDocument(
+    req.params.id,
+    'REJECT',
+    req.user._id,
+    reason || 'Rejected by Inspector'
+  );
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Document rejected successfully.',
+    data: { document },
+  });
+});
+
+// GET /api/v1/documents/institution/:id/compliance
+const getCompliance = asyncHandler(async (req, res) => {
+  const compliance = await documentService.getCompliance(req.params.id);
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Document compliance retrieved successfully.',
+    data: compliance,
+  });
+});
+
 // PATCH /api/v1/documents/:id/verify
 const verifyDocument = asyncHandler(async (req, res) => {
   const { action, reason } = req.body;
@@ -98,4 +139,14 @@ const deleteDocument = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { upload, getForInstitution, getForInspector, serveFile, verifyDocument, deleteDocument };
+module.exports = {
+  upload,
+  getForInstitution,
+  getForInspector,
+  serveFile,
+  approveDocument,
+  rejectDocument,
+  getCompliance,
+  verifyDocument,
+  deleteDocument,
+};

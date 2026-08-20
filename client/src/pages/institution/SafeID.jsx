@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { institutionStore } from '../../api/institutionStore';
+import { qrApi } from '../../api/apiServices';
 import { FiPrinter, FiDownload, FiShield, FiCheck, FiLock, FiAlertCircle } from 'react-icons/fi';
 import { MdVerified } from 'react-icons/md';
 
@@ -12,13 +13,33 @@ export const SafeIDPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const inst = institutionStore.getInstitutionByIdOrEmail(user?.institutionId || user?.email);
+    const fetchStatus = async () => {
+      let instId = user?.institutionId || user?._id || user?.id;
+      if (instId) {
+        try {
+          const res = await qrApi.getQrStatus(instId);
+          if (res.data?.data) {
+            setIsUnlocked(res.data.data.unlocked);
+            if (res.data.data.safeId) {
+              setInstitution(prev => ({ ...(prev || {}), safeId: res.data.data.safeId }));
+            }
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.warn('[SafeIDPage] API fetch notice:', e?.message);
+        }
+      }
 
-    if (inst) {
-      setInstitution(inst);
-      setIsUnlocked(institutionStore.isCertificateUnlocked(inst._id));
-    }
-    setLoading(false);
+      const inst = institutionStore.getInstitutionByIdOrEmail(user?.institutionId || user?.email);
+      if (inst) {
+        setInstitution(inst);
+        setIsUnlocked(institutionStore.isCertificateUnlocked(inst._id));
+      }
+      setLoading(false);
+    };
+
+    fetchStatus();
   }, [user]);
 
   const handlePrint = () => {

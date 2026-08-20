@@ -15,6 +15,19 @@ const documentSchema = new mongoose.Schema(
       required: [true, 'Institution is required'],
       index: true,
     },
+    institutionName: { type: String, trim: true, default: '' },
+    institutionType: { type: String, trim: true, default: 'SCHOOL' },
+    district: { type: String, trim: true, default: '' },
+    zone: { type: String, trim: true, default: '' },
+
+    assignedInspectorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true,
+      default: null,
+    },
+    assignedInspectorName: { type: String, trim: true, default: '' },
+
     documentType: {
       type: String,
       enum: Object.values(DOCUMENT_TYPES),
@@ -27,6 +40,9 @@ const documentSchema = new mongoose.Schema(
       maxlength: [200, 'Title cannot exceed 200 characters'],
     },
     description: { type: String, trim: true, default: '' },
+
+    originalFileName: { type: String, default: '' },
+    storedFileName: { type: String, default: '' },
     fileUrl: {
       type: String,
       required: [true, 'File URL is required'],
@@ -34,9 +50,9 @@ const documentSchema = new mongoose.Schema(
     fileName: { type: String, required: true },
     fileType: {
       type: String,
-      enum: ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'],
       required: true,
     },
+    fileMimeType: { type: String, default: 'application/pdf' },
     fileSize: { type: Number, required: true }, // in bytes
     issueDate: { type: Date, default: null },
     expiryDate: { type: Date, default: null },
@@ -54,9 +70,17 @@ const documentSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    reviewedByName: { type: String, default: null },
+    reviewedAt: { type: Date, default: null },
     verifiedAt: { type: Date, default: null },
     rejectionReason: { type: String, default: null },
     verificationRemarks: { type: String, default: null },
+    remarks: { type: String, default: null },
 
     // Upload metadata
     uploadedBy: {
@@ -64,6 +88,7 @@ const documentSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    uploadedAt: { type: Date, default: Date.now },
 
     // Versioning
     version: { type: Number, default: 1 },
@@ -90,6 +115,8 @@ documentSchema.index({ verificationStatus: 1 });
 documentSchema.index({ documentType: 1 });
 documentSchema.index({ expiryDate: 1 });
 documentSchema.index({ isLatestVersion: 1, institutionId: 1 });
+documentSchema.index({ assignedInspectorId: 1, verificationStatus: 1 });
+documentSchema.index({ institutionId: 1, documentType: 1 });
 
 // ---- Virtual: isExpiringSoon (within 30 days) ----
 documentSchema.virtual('isExpiringSoon').get(function () {

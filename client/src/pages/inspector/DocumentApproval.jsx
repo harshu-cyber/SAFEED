@@ -271,60 +271,27 @@ export const DocumentApproval = () => {
 
             {/* Document Content View */}
             <div className="p-6 overflow-y-auto space-y-4 flex-1 bg-[#F4F6F9]">
-              {readingDoc?._id || readingDoc?.fileUrl ? (
-                <div className="border-2 border-slate-300 rounded-xl overflow-hidden bg-white shadow">
-                  {readingDoc.fileMimeType?.startsWith('image/') || readingDoc.fileUrl?.match(/\.(jpg|jpeg|png|webp)$/i) ? (
-                    <img
-                      src={readingDoc.fileUrl?.startsWith('http') ? readingDoc.fileUrl : `/api/v1/documents/${readingDoc._id}/file`}
-                      alt={readingDoc.name || readingDoc.title}
-                      className="max-w-full h-auto mx-auto"
-                    />
-                  ) : (
-                    <iframe
-                      src={readingDoc.fileUrl?.startsWith('http') ? readingDoc.fileUrl : `/api/v1/documents/${readingDoc._id}/file`}
-                      title={readingDoc.name || readingDoc.title}
-                      className="w-full h-[550px]"
-                    />
-                  )}
-                </div>
-              ) : (
-                /* Authentic Official Government PDF Certificate Reader View */
-                <div className="bg-white border-4 border-[#0F2038] p-8 rounded-xl shadow-lg font-serif space-y-5 text-xs">
-                  <div className="text-center border-b-2 border-[#D4AF37] pb-4">
-                    <div className="flex justify-center gap-4 mb-2">
-                      <img src="/up-govt-seal.png" alt="UP Seal" className="w-14 h-14 object-contain" />
-                      <img src="/up-police-logo.png" alt="UP Police" className="w-14 h-14 object-contain" />
-                    </div>
-                    <p className="text-xs font-black text-[#0F2038] uppercase">GOVERNMENT OF UTTAR PRADESH</p>
-                    <p className="text-[10px] font-bold text-slate-600">DEPARTMENT OF SAFETY & DISASTER PREPAREDNESS</p>
-                    <h2 className="text-base font-black text-[#0F2038] mt-2 uppercase tracking-wider">{readingDoc.name}</h2>
-                    <p className="text-[9px] font-bold text-[#D4AF37] bg-[#0F2038] px-3 py-0.5 rounded inline-block mt-1">
-                      OFFICIAL SUBMITTED COMPLIANCE DOCUMENT
-                    </p>
+              {(() => {
+                const targetUrl = readingDoc.fileDataUrl || (readingDoc.fileUrl?.startsWith('http') ? readingDoc.fileUrl : `/api/v1/documents/${readingDoc._id}/file`);
+                const isImage = (typeof targetUrl === 'string' && targetUrl.startsWith('data:image')) || readingDoc.fileMimeType?.startsWith('image/') || readingDoc.fileUrl?.match(/\.(jpg|jpeg|png|webp)$/i);
+                return (
+                  <div className="border-2 border-slate-300 rounded-xl overflow-hidden bg-[#0F2038] shadow">
+                    {isImage ? (
+                      <img
+                        src={targetUrl}
+                        alt={readingDoc.name || readingDoc.title}
+                        className="max-w-full h-auto mx-auto"
+                      />
+                    ) : (
+                      <iframe
+                        src={targetUrl}
+                        title={readingDoc.name || readingDoc.title}
+                        className="w-full h-[550px]"
+                      />
+                    )}
                   </div>
-
-                  <div className="grid grid-cols-2 gap-3 text-slate-800 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <p><strong>Institution Name:</strong> {readingDoc.institutionName}</p>
-                    <p><strong>Document Category:</strong> {readingDoc.type?.replace(/_/g, ' ')}</p>
-                    <p><strong>Uploaded By:</strong> {readingDoc.uploadedBy}</p>
-                    <p><strong>Uploaded Date:</strong> {readingDoc.uploadedAt}</p>
-                    <p><strong>Expiry Date:</strong> {readingDoc.expiryDate}</p>
-                    <p><strong>Current Status:</strong> <span className="font-black text-[#0F2038]">{readingDoc.status}</span></p>
-                  </div>
-
-                  <div className="border-t border-b border-slate-200 py-4 text-xs leading-relaxed text-slate-800 space-y-2">
-                    <p className="font-black text-[#0F2038] uppercase">DOCUMENT CONTENT VERIFICATION SUMMARY:</p>
-                    <p>1. <strong>Fire & Emergency Systems:</strong> Fire extinguishers, hydrants, and evacuation staircases verified functional as per UP Fire Prevention Rules.</p>
-                    <p>2. <strong>Structural & Electrical Safety:</strong> Building load-bearing inspection and electrical circuit breakers verified compliant.</p>
-                    <p>3. <strong>Validity Period:</strong> Certificate valid through {readingDoc.expiryDate}.</p>
-                  </div>
-
-                  <div className="flex justify-between items-center text-[10px] text-slate-500 italic pt-2">
-                    <p>Document ID: {readingDoc._id}</p>
-                    <p>SafeED-UP Verification Portal • Digital Seal Verified</p>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
 
             {/* Modal Inspector Action Bar */}

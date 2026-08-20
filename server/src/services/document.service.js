@@ -22,6 +22,12 @@ class DocumentService {
     if (institutionId && mongoose.Types.ObjectId.isValid(institutionId)) {
       institution = await Institution.findById(institutionId);
     }
+    if (!institution && uploadedByUser && uploadedByUser._id) {
+      institution = await Institution.findOne({ adminUserId: uploadedByUser._id });
+    }
+    if (!institution && uploadedByUser && uploadedByUser.email) {
+      institution = await Institution.findOne({ email: uploadedByUser.email.toLowerCase() });
+    }
     if (!institution) {
       const idStr = String(institutionId || '').toLowerCase().trim();
       institution = await Institution.findOne({
@@ -30,6 +36,18 @@ class DocumentService {
           { safeId: institutionId },
           { name: new RegExp(`^${String(institutionId).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') }
         ]
+      });
+    }
+
+    if (!institution && uploadedByUser) {
+      institution = await Institution.create({
+        name: uploadedByUser.name || 'Registered Institution',
+        email: uploadedByUser.email || 'admin@school.edu.in',
+        adminUserId: uploadedByUser._id,
+        district: uploadedByUser.district || 'Lucknow',
+        zone: uploadedByUser.zone || 'CENTRAL',
+        status: 'PENDING_DOCUMENT_VERIFICATION',
+        verificationStatus: 'UNVERIFIED',
       });
     }
 

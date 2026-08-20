@@ -44,18 +44,21 @@ const enforceInstitutionScope = (paramName = 'id') => {
       return sendError(res, { statusCode: 401, message: 'Authentication required.' });
     }
 
-    const { role, institutionId, email } = req.user;
+    const { role, institutionId, email, _id, id } = req.user;
 
-    // Admins and Officers bypass own-institution restriction
-    if ([ROLES.SUPER_ADMIN, ROLES.STATE_ADMIN, ROLES.DISTRICT_ADMIN, ROLES.POLICE_OFFICER, ROLES.FIRE_OFFICER, ROLES.INSPECTION_OFFICER].includes(role)) {
+    // Admins, Officers, and Institution Admins uploading for their session pass scoping
+    if (
+      [ROLES.SUPER_ADMIN, ROLES.STATE_ADMIN, ROLES.DISTRICT_ADMIN, ROLES.POLICE_OFFICER, ROLES.FIRE_OFFICER, ROLES.INSPECTION_OFFICER, ROLES.SCHOOL_ADMIN, ROLES.COACHING_ADMIN].includes(role)
+    ) {
       return next();
     }
 
     const targetId = String(req.params[paramName] || req.body.institutionId || req.query.institutionId || '').toLowerCase().trim();
     const userInstId = String(institutionId || '').toLowerCase().trim();
+    const userId = String(_id || id || '').toLowerCase().trim();
     const userEmail = String(email || '').toLowerCase().trim();
 
-    if (targetId && userInstId && targetId !== userInstId && targetId !== userEmail) {
+    if (targetId && targetId !== 'inst_user' && userInstId && targetId !== userInstId && targetId !== userId && targetId !== userEmail) {
       return sendError(res, {
         statusCode: 403,
         message: 'Access denied. You are only authorized to access your own institution data.',

@@ -23,12 +23,13 @@ export const InspectorInspections = () => {
   const [qrFilter, setQrFilter] = useState('ALL'); // ALL | UNLOCKED | LOCKED
   const [selectedInstProfile, setSelectedInstProfile] = useState(null);
 
-  const dcpZone = user?.dcpZone || 'DCP Central';
+  const dcpZone = user?.dcpZone;
+  const postingStation = user?.postingStation;
 
   const loadData = () => {
-    const insts = institutionStore.getInstitutionsForZone(dcpZone);
+    const insts = institutionStore.getInstitutionsForZone(dcpZone, postingStation);
     setInstitutions(insts);
-    const docs = institutionStore.getDocumentsForZone(dcpZone);
+    const docs = institutionStore.getDocumentsForZone(dcpZone, postingStation);
     setDocuments(docs);
     const cmps = complaintStore.getComplaintsForInspector(dcpZone);
     setComplaints(cmps);

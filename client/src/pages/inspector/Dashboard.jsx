@@ -41,13 +41,14 @@ export const InspectorDashboard = () => {
   const [resolutionRemarks, setResolutionRemarks] = useState('');
   const [toast, setToast] = useState('');
 
-  const dcpZone = user?.dcpZone || 'DCP Central';
+  const dcpZone = user?.dcpZone;
+  const postingStation = user?.postingStation;
 
   const loadData = () => {
-    // ✅ ZONE-FILTERED: Load institutions & docs for this DCP's zone
-    const insts = institutionStore.getInstitutionsForZone(dcpZone);
+    // ✅ ZONE & STATION FILTERED: Load institutions & docs for this officer's jurisdiction
+    const insts = institutionStore.getInstitutionsForZone(dcpZone, postingStation);
     setInstitutions(insts);
-    const docs = institutionStore.getDocumentsForZone(dcpZone);
+    const docs = institutionStore.getDocumentsForZone(dcpZone, postingStation);
     setDocuments(docs);
     const evs = evidenceStore.getEvidenceList();
     setEvidenceList(evs);

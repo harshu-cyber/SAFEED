@@ -175,6 +175,7 @@ export const Register = () => {
 
     try {
       await cloudSync.syncAction('CREATE_INSTITUTION', newInst);
+      await cloudSync.pull();
     } catch (err) {
       console.warn('[Register] Institution cloud sync failed:', err);
     }

@@ -12,7 +12,8 @@ import { MdVerified, MdLocalPolice } from 'react-icons/md';
 
 export const EvidenceUpload = () => {
   const { user } = useAuth();
-  const dcpZone = user?.dcpZone || 'DCP Central';
+  const dcpZone = user?.dcpZone;
+  const postingStation = user?.postingStation;
   const [institutions, setInstitutions] = useState([]);
   const [selectedInstId, setSelectedInstId] = useState('');
   const [evidenceList, setEvidenceList] = useState([]);
@@ -31,8 +32,8 @@ export const EvidenceUpload = () => {
   const streamRef = useRef(null);
 
   const loadData = () => {
-    // ✅ ZONE-FILTERED: Only show institutions from this DCP's zone
-    const insts = institutionStore.getInstitutionsForZone(dcpZone);
+    // ✅ ZONE & STATION FILTERED: Only show institutions from this officer's jurisdiction
+    const insts = institutionStore.getInstitutionsForZone(dcpZone, postingStation);
     setInstitutions(insts);
     if (insts.length > 0 && !selectedInstId) {
       setSelectedInstId(insts[0]._id);

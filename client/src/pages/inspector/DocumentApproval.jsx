@@ -15,7 +15,8 @@ const STATUS_CONFIG = {
 
 export const DocumentApproval = () => {
   const { user } = useAuth();
-  const dcpZone = user?.dcpZone || 'DCP Central';
+  const dcpZone = user?.dcpZone;
+  const postingStation = user?.postingStation;
   const [docs, setDocs] = useState([]);
   const [filter, setFilter] = useState('ALL');
   const [search, setSearch] = useState('');
@@ -26,8 +27,8 @@ export const DocumentApproval = () => {
   const [toast, setToast] = useState('');
 
   const loadDocs = () => {
-    // ✅ ZONE-FILTERED: Only show docs from this DCP's zone institutions
-    const all = institutionStore.getDocumentsForZone(dcpZone);
+    // ✅ ZONE & STATION FILTERED: Only show docs from this officer's jurisdiction institutions
+    const all = institutionStore.getDocumentsForZone(dcpZone, postingStation);
     setDocs(all);
   };
 

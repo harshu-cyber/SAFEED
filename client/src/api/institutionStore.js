@@ -107,15 +107,29 @@ export const institutionStore = {
   },
 
   /**
-   * Return institutions whose zone matches the DCP zone string.
-   * Pass the user's dcpZone value (e.g. "DCP West" or "WEST").
-   * If zone cannot be resolved, returns ALL (super-admin / district admin).
+   * Return institutions whose zone matches the DCP zone string and/or police station.
+   * Pass the user's dcpZone value (e.g. "DCP West" or "WEST") and optional postingStation.
+   * If zone cannot be resolved and no station is provided, returns ALL (super-admin / district admin).
    */
-  getInstitutionsForZone: (dcpZone) => {
+  getInstitutionsForZone: (dcpZone, postingStation) => {
     const zone = normalizeZone(dcpZone);
+    const stationLow = postingStation ? String(postingStation).toLowerCase().trim() : '';
     const all = institutionStore.getInstitutions();
-    if (!zone) return all;
-    return all.filter(i => normalizeZone(i.zone) === zone);
+
+    if (!zone && !stationLow) return all;
+
+    return all.filter(i => {
+      const instZone = normalizeZone(i.zone);
+      const instStation = (i.nearestPoliceStation || i.postingStation || '').toLowerCase();
+
+      const matchZone = zone ? instZone === zone : false;
+      const matchStation = stationLow ? instStation.includes(stationLow) : false;
+
+      if (zone && stationLow) {
+        return matchZone || matchStation;
+      }
+      return zone ? matchZone : matchStation;
+    });
   },
 
   /** Lookup by _id, email, or safeId — STRICT, no fallback */
@@ -300,13 +314,10 @@ export const institutionStore = {
     return [];
   },
 
-  /** Return documents for a DCP zone */
-  getDocumentsForZone: (dcpZone) => {
-    const zone = normalizeZone(dcpZone);
-    if (!zone) return institutionStore.getDocuments();
-    const zoneInstIds = new Set(
-      institutionStore.getInstitutionsForZone(dcpZone).map(i => i._id)
-    );
+  /** Return documents for a DCP zone or Police Station */
+  getDocumentsForZone: (dcpZone, postingStation) => {
+    const zoneInsts = institutionStore.getInstitutionsForZone(dcpZone, postingStation);
+    const zoneInstIds = new Set(zoneInsts.map(i => i._id));
     return institutionStore.getDocuments().filter(d => zoneInstIds.has(d.institutionId));
   },
 

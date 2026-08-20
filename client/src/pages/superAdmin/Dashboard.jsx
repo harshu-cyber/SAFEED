@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { institutionStore } from '../../api/institutionStore';
+import { institutionStore, normalizeZone } from '../../api/institutionStore';
 import { userStore } from '../../api/userStore';
 import { complaintStore } from '../../api/complaintStore';
 import {
@@ -100,7 +100,7 @@ export const SuperAdminDashboard = () => {
   const pending = institutions.filter(i => !institutionStore.isCertificateUnlocked(i._id)).length;
 
   const byZone = ZONES.map(zone => {
-    const zoneInsts = institutions.filter(i => (i.zone || 'CENTRAL') === zone);
+    const zoneInsts = institutions.filter(i => normalizeZone(i.zone) === zone);
     const zoneUnlocked = zoneInsts.filter(i => institutionStore.isCertificateUnlocked(i._id)).length;
     return { zone, count: zoneInsts.length, unlocked: zoneUnlocked };
   });

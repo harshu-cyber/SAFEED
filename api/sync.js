@@ -162,9 +162,16 @@ export default async function handler(req, res) {
         if (!instData.email && instData.contactPerson?.email) {
           instData.email = instData.contactPerson.email;
         }
-        const zoneStr = (instData.zone || 'CENTRAL').toUpperCase();
+        const rawZ = String(instData.zone || instData.assignedInspectorZone || 'CENTRAL').toLowerCase();
+        let zoneStr = 'CENTRAL';
+        if (rawZ.includes('west')) zoneStr = 'WEST';
+        else if (rawZ.includes('north')) zoneStr = 'NORTH';
+        else if (rawZ.includes('east')) zoneStr = 'EAST';
+        else if (rawZ.includes('south')) zoneStr = 'SOUTH';
+        else zoneStr = 'CENTRAL';
+
         instData.zone = zoneStr;
-        instData.assignedInspector = instData.assignedInspector || `DCP ${zoneStr}`;
+        instData.assignedInspector = `DCP ${zoneStr}`;
         instData.assignedInspectorZone = zoneStr;
         instData.assignedInspectorEmail = `dcp${zoneStr.toLowerCase()}@safeedup.gov.in`;
 

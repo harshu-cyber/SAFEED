@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { institutionStore } from '../../api/institutionStore';
+import { institutionStore, normalizeZone } from '../../api/institutionStore';
 import { cloudSync } from '../../api/cloudSync';
 import { InstitutionFullDetailModal } from '../../components/common/Modals/InstitutionFullDetailModal';
 import {
@@ -33,7 +33,7 @@ export const SuperInspectionMonitoring = () => {
   }, []);
 
   const filtered = institutions.filter(i => {
-    const matchZone = zone === 'ALL' || (i.zone || 'CENTRAL') === zone;
+    const matchZone = zone === 'ALL' || normalizeZone(i.zone) === zone;
     const matchSearch = i.name?.toLowerCase().includes(search.toLowerCase()) ||
       i.safeId?.toLowerCase().includes(search.toLowerCase()) ||
       i.assignedInspector?.toLowerCase().includes(search.toLowerCase());
@@ -88,7 +88,7 @@ export const SuperInspectionMonitoring = () => {
         <h2 className="text-sm font-black text-[#0F2038] mb-4">Zone-wise Inspector Assignment</h2>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {['WEST', 'CENTRAL', 'NORTH', 'EAST', 'SOUTH'].map(z => {
-            const zoneInsts = institutions.filter(i => (i.zone || 'CENTRAL') === z);
+            const zoneInsts = institutions.filter(i => normalizeZone(i.zone) === z);
             const assignedCount = zoneInsts.filter(i => i.assignedInspector).length;
             const pct = zoneInsts.length ? Math.round((assignedCount / zoneInsts.length) * 100) : 0;
             return (

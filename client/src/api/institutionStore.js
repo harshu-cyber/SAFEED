@@ -23,13 +23,13 @@ const STORAGE_KEYS = {
 
 // Normalize any zone string → one of: WEST | CENTRAL | NORTH | EAST | SOUTH | null
 const normalizeZone = (val = '') => {
-  const v = String(val).toLowerCase();
+  const v = String(val || '').toLowerCase();
   if (v.includes('west'))    return 'WEST';
-  if (v.includes('central')) return 'CENTRAL';
   if (v.includes('north'))   return 'NORTH';
   if (v.includes('east'))    return 'EAST';
   if (v.includes('south'))   return 'SOUTH';
-  return null; // null = no zone restriction (super admin / district admin)
+  if (v.includes('central')) return 'CENTRAL';
+  return 'CENTRAL';
 };
 
 export { normalizeZone };

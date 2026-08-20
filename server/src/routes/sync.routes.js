@@ -237,14 +237,33 @@ async function syncHandler(req, res) {
             : { email: payload.email?.toLowerCase() };
           await User.deleteOne(query);
         } else if ((action === 'CREATE_INSTITUTION' || action === 'createInstitution' || action === 'registerInstitution') && payload) {
+          try {
+            await Institution.collection.dropIndex('safeId_1').catch(() => {});
+          } catch (e) {}
+
           const instName = payload.name || payload.institutionName;
           if (!instName) {
             return res.status(400).json({ success: false, error: 'Institution name is required.' });
           }
-            const emailStr = payload.email?.toLowerCase() || payload.contactPerson?.email || '';
-            const instDoc = {
-              safeId,
-              name: instName,
+          const rawZone = String(payload.zone || payload.assignedInspectorZone || 'CENTRAL').toUpperCase();
+          let zoneStr = 'CENTRAL';
+          if (rawZone.includes('WEST')) zoneStr = 'WEST';
+          else if (rawZone.includes('NORTH')) zoneStr = 'NORTH';
+          else if (rawZone.includes('EAST')) zoneStr = 'EAST';
+          else if (rawZone.includes('SOUTH')) zoneStr = 'SOUTH';
+
+          const districtStr = payload.district || 'Lucknow';
+          const districtCode = districtStr.slice(0, 3).toUpperCase();
+          const safeId = payload.safeId || `SAFE-UP-${districtCode}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+          const addressStr = typeof payload.address === 'string' 
+            ? payload.address 
+            : (payload.address?.street || `${districtStr}, Uttar Pradesh`);
+
+          const emailStr = payload.email?.toLowerCase() || payload.contactPerson?.email || '';
+          const instDoc = {
+            safeId,
+            name: instName,
               type: payload.type || payload.institutionType || 'SCHOOL',
               district: districtStr,
               state: payload.state || 'Uttar Pradesh',

@@ -122,6 +122,10 @@ module.exports = async function handler(req, res) {
         const query = targetId && mongoose.Types.ObjectId.isValid(targetId) ? { _id: targetId } : { email: payload.email?.toLowerCase() };
         await User.deleteOne(query);
       } else if ((action === 'CREATE_INSTITUTION' || action === 'createInstitution' || action === 'registerInstitution') && payload) {
+        try {
+          await Institution.collection.dropIndex('safeId_1').catch(() => {});
+        } catch (e) {}
+
         const instData = { ...payload };
         if (instData._id && typeof instData._id === 'string' && instData._id.startsWith('inst_')) {
           delete instData._id;
@@ -136,6 +140,10 @@ module.exports = async function handler(req, res) {
           instData.affiliationBoard = instData.board;
         }
         const districtStr = instData.district || 'Lucknow';
+        const districtCode = districtStr.slice(0, 3).toUpperCase();
+        if (!instData.safeId || instData.safeId === 'null' || instData.safeId === 'undefined') {
+          instData.safeId = `SAFE-UP-${districtCode}-${Math.floor(100000 + Math.random() * 900000)}`;
+        }
         if (!instData.address) {
           instData.address = `${districtStr}, Uttar Pradesh`;
         } else if (typeof instData.address === 'object') {

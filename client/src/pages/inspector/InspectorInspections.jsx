@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { cloudSync } from '../../api/cloudSync';
 import { institutionStore } from '../../api/institutionStore';
 import { evidenceStore } from '../../api/evidenceStore';
 import { complaintStore } from '../../api/complaintStore';
@@ -34,8 +35,10 @@ export const InspectorInspections = () => {
   };
 
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 4000);
+    cloudSync.pull().then(loadData).catch(loadData);
+    const interval = setInterval(() => {
+      cloudSync.pull().then(loadData).catch(loadData);
+    }, 4000);
     return () => clearInterval(interval);
   }, [user, dcpZone]);
 

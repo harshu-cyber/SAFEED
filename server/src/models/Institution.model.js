@@ -140,7 +140,6 @@ const institutionSchema = new mongoose.Schema(
 );
 
 institutionSchema.index({ zone: 1, district: 1 });
-institutionSchema.index({ safeId: 1 });
 
 const Institution = mongoose.model('Institution', institutionSchema);
 module.exports = Institution;

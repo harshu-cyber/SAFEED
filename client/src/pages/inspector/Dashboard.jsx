@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { cloudSync } from '../../api/cloudSync';
 import { institutionStore } from '../../api/institutionStore';
 import { evidenceStore } from '../../api/evidenceStore';
 import { complaintStore } from '../../api/complaintStore';
@@ -57,9 +58,11 @@ export const InspectorDashboard = () => {
   };
 
   useEffect(() => {
-    loadData();
+    cloudSync.pull().then(loadData).catch(loadData);
     // Poll every 4 seconds for real-time updates
-    const interval = setInterval(loadData, 4000);
+    const interval = setInterval(() => {
+      cloudSync.pull().then(loadData).catch(loadData);
+    }, 4000);
     return () => clearInterval(interval);
   }, [user, dcpZone]);
 

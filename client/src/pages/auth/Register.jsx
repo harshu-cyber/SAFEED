@@ -170,8 +170,15 @@ export const Register = () => {
   const onSubmit = async (data) => {
     setError('');
 
+    const formattedData = {
+      ...data,
+      phone: String(data.phone || '').replace(/\D/g, '').slice(-10) || data.phone,
+      email: (data.email || '').toLowerCase().trim(),
+      institutionName: (data.institutionName || '').trim(),
+    };
+
     // 1️⃣ Save institution locally and push to MongoDB Atlas
-    const newInst = institutionStore.registerInstitution(data);
+    const newInst = institutionStore.registerInstitution(formattedData);
 
     try {
       await cloudSync.syncAction('CREATE_INSTITUTION', newInst);
@@ -182,9 +189,9 @@ export const Register = () => {
 
     // 2️⃣ Generate institution login credentials session
     const generatedCredentials = {
-      username: data.email.toLowerCase(),
-      password: data.phone,
-      institutionName: data.institutionName || data.name,
+      username: formattedData.email,
+      password: formattedData.phone,
+      institutionName: newInst.name,
       institutionId: newInst._id,
       safeId: newInst.safeId,
       zone: newInst.zone,

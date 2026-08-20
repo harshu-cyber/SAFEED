@@ -175,7 +175,9 @@ export default async function handler(req, res) {
         instData.assignedInspectorZone = zoneStr;
         instData.assignedInspectorEmail = `dcp${zoneStr.toLowerCase()}@safeedup.gov.in`;
 
-        const filter = instData.email ? { email: instData.email.toLowerCase() } : { name: instData.name };
+        const filter = (instData.email && typeof instData.email === 'string' && instData.email.trim())
+          ? { email: instData.email.toLowerCase().trim() }
+          : { safeId: instData.safeId || `SAFE-${Date.now()}` };
         await Institution.findOneAndUpdate(filter, { $set: instData }, { upsert: true, new: true });
       } else if ((action === 'UPDATE_INSTITUTION' || action === 'updateInstitution') && payload) {
         const targetId = payload._id || payload.id;

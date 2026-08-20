@@ -150,7 +150,8 @@ export const institutionStore = {
   /** Register a brand-new institution and return it */
   registerInstitution: (data) => {
     const all = institutionStore.getInstitutions();
-    const emailLow = data.email?.toLowerCase()?.trim();
+    const emailLow = (data.email || '').toLowerCase().trim();
+    const instName = (data.institutionName || data.name || 'Institution').trim();
 
     const districtStr = data.district || 'Lucknow';
     const districtCode = districtStr.slice(0, 3).toUpperCase();
@@ -158,10 +159,10 @@ export const institutionStore = {
     const zoneKey = normalizeZone(data.zone) || 'CENTRAL';
 
     const newInst = {
-      _id: 'inst_' + Date.now(),
+      _id: 'inst_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
       safeId,
-      name: data.institutionName || data.name || 'Institution',
-      type: data.institutionType || data.type || 'SCHOOL',
+      name: instName,
+      type: (data.institutionType || data.type || 'SCHOOL').toUpperCase(),
       district: districtStr,
       state: data.state || 'Uttar Pradesh',
       zone: zoneKey,
@@ -177,7 +178,7 @@ export const institutionStore = {
       riskLevel: 'UNDER_REVIEW',
       address: data.address || `${districtStr}, Uttar Pradesh`,
       contact: data.phone || data.contact || '',
-      principal: data.principalName || data.principal || data.name || 'Principal',
+      principal: data.principalName || data.principal || 'Principal',
       email: emailLow,
       affiliationBoard: data.board || data.affiliationBoard || 'CBSE',
       affiliationCode: data.affiliationCode || '',
@@ -189,7 +190,7 @@ export const institutionStore = {
       createdAt: new Date().toISOString(),
     };
 
-    const existingIndex = all.findIndex(i => (emailLow && i.email?.toLowerCase() === emailLow) || i.name === newInst.name);
+    const existingIndex = emailLow ? all.findIndex(i => i.email?.toLowerCase() === emailLow) : -1;
     if (existingIndex >= 0) {
       all[existingIndex] = { ...all[existingIndex], ...newInst, _id: all[existingIndex]._id };
     } else {

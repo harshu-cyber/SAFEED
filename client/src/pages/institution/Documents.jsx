@@ -28,8 +28,12 @@ export const DocumentsPage = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [viewDoc, setViewDoc] = useState(null);
 
+  const getTargetInstId = () => {
+    return user?.institutionId || user?._id || user?.id || user?.email || user?.name || 'inst_user';
+  };
+
   const loadData = async () => {
-    let instId = user?.institutionId || user?._id || user?.id;
+    const instId = getTargetInstId();
     if (instId) {
       try {
         const res = await documentApi.getForInstitution(instId);
@@ -64,7 +68,7 @@ export const DocumentsPage = () => {
   const handleUpload = async (e) => {
     e.preventDefault();
     setErrorMsg('');
-    const instId = user?.institutionId || user?._id || user?.id;
+    const instId = getTargetInstId();
     if (!instId) {
       setErrorMsg('Unable to determine institution ID. Please re-login.');
       return;

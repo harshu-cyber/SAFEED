@@ -47,11 +47,7 @@ axiosInstance.interceptors.response.use(
           return axiosInstance(originalRequest);
         }
       } catch (refreshError) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('user');
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
-        }
+        console.warn('[axiosInstance] Refresh token failed notice:', refreshError?.message);
         return Promise.reject(refreshError);
       }
     }

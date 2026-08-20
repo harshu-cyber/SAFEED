@@ -111,7 +111,11 @@ class AuthService {
           district: districtStr,
           state: state || 'Uttar Pradesh',
           zone: zoneKey,
-          address: addrStr,
+          address: typeof address === 'object' ? address : {
+            street: typeof address === 'string' && address ? address : `${districtStr} Main Road`,
+            district: districtStr,
+            state: state || 'Uttar Pradesh'
+          },
           principal: userFullName,
           contact: phone,
           email: email.toLowerCase().trim(),
@@ -125,10 +129,17 @@ class AuthService {
           assignedInspector: `DCP ${zoneKey}`,
           assignedInspectorZone: zoneKey,
           assignedInspectorEmail: `dcp${zoneKey.toLowerCase()}@safeedup.gov.in`,
-          staffCount: parseInt(data.staffCount || 0) || 0,
-          classroomCount: parseInt(data.classroomCount || 0) || 0,
+          status: 'PENDING',
+          verificationStatus: 'UNVERIFIED',
+          riskLevel: 'UNDER_REVIEW',
+          complianceScore: 0,
+          totalStudents: parseInt(data.totalStudents || 0) || 100,
+          staffCount: parseInt(data.staffCount || 0) || 10,
+          classroomCount: parseInt(data.classroomCount || 0) || 5,
           floorCount: parseInt(data.floorCount || 1) || 1,
           exitGateCount: parseInt(data.exitGateCount || 2) || 2,
+          isActive: true,
+          isPubliclyVisible: true,
         });
         user.institutionId = inst._id;
       } catch (instErr) {

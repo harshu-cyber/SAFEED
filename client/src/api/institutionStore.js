@@ -53,6 +53,18 @@ export const normalizeInstitution = (inst) => {
   const emailStr = inst.email || (typeof cp === 'object' ? cp?.email : '') || '';
   const zoneKey = normalizeZone(inst.zone || inst.assignedInspectorZone) || 'CENTRAL';
 
+  const cpObj = (cp && typeof cp === 'object') ? cp : {
+    name: principalStr,
+    email: emailStr,
+    phone: contactStr
+  };
+
+  const addrObj = (rawAddr && typeof rawAddr === 'object') ? rawAddr : {
+    street: typeof rawAddr === 'string' && rawAddr ? rawAddr : `${districtStr} Main Road`,
+    district: districtStr,
+    state: inst.state || 'Uttar Pradesh'
+  };
+
   return {
     ...inst,
     _id: inst._id || inst.id || ('inst_' + Date.now()),
@@ -63,19 +75,26 @@ export const normalizeInstitution = (inst) => {
     state: inst.state || 'Uttar Pradesh',
     zone: zoneKey,
     address: formattedAddr,
+    addressObj: addrObj,
+    contactPerson: cpObj,
     principal: principalStr,
     contact: contactStr,
     email: emailStr,
     assignedInspector: inst.assignedInspector || `DCP ${zoneKey}`,
     assignedInspectorZone: inst.assignedInspectorZone || zoneKey,
     assignedInspectorEmail: inst.assignedInspectorEmail || `dcp${zoneKey.toLowerCase()}@safeedup.gov.in`,
+    status: inst.status || 'PENDING',
+    verificationStatus: inst.verificationStatus || 'UNVERIFIED',
+    riskLevel: inst.riskLevel || 'UNDER_REVIEW',
     complianceScore: typeof inst.complianceScore === 'number' ? inst.complianceScore : 0,
-    totalStudents: parseInt(inst.totalStudents || 0) || 0,
-    staffCount: parseInt(inst.staffCount || inst.totalTeachers || 0) || 0,
-    classroomCount: parseInt(inst.classroomCount || inst.totalClassrooms || 0) || 0,
+    totalStudents: parseInt(inst.totalStudents || 0) || 100,
+    staffCount: parseInt(inst.staffCount || inst.totalTeachers || 0) || 10,
+    classroomCount: parseInt(inst.classroomCount || inst.totalClassrooms || 0) || 5,
     floorCount: parseInt(inst.floorCount || inst.buildingFloors || 1) || 1,
     exitGateCount: parseInt(inst.exitGateCount || 2) || 2,
     nearestPoliceStation: inst.nearestPoliceStation || `${districtStr} Police Station`,
+    isActive: true,
+    isPubliclyVisible: true,
   };
 };
 

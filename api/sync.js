@@ -130,39 +130,14 @@ export default async function handler(req, res) {
           await Institution.collection.dropIndex('safeId_1').catch(() => {});
         } catch (e) {}
 
-        const instData = { ...payload };
-        if (instData._id && typeof instData._id === 'string' && instData._id.startsWith('inst_')) {
-          delete instData._id;
+        const rawInst = { ...payload };
+        if (rawInst._id && typeof rawInst._id === 'string' && rawInst._id.startsWith('inst_')) {
+          delete rawInst._id;
         }
-        if (!instData.name && instData.institutionName) {
-          instData.name = instData.institutionName;
-        }
-        if (!instData.type && instData.institutionType) {
-          instData.type = instData.institutionType;
-        }
-        if (!instData.affiliationBoard && instData.board) {
-          instData.affiliationBoard = instData.board;
-        }
-        const districtStr = instData.district || 'Lucknow';
+
+        const districtStr = rawInst.district || 'Lucknow';
         const districtCode = districtStr.slice(0, 3).toUpperCase();
-        if (!instData.safeId || instData.safeId === 'null' || instData.safeId === 'undefined') {
-          instData.safeId = `SAFE-UP-${districtCode}-${Math.floor(100000 + Math.random() * 900000)}`;
-        }
-        if (!instData.address) {
-          instData.address = `${districtStr}, Uttar Pradesh`;
-        } else if (typeof instData.address === 'object') {
-          instData.address = instData.address.street || `${districtStr}, Uttar Pradesh`;
-        }
-        if (!instData.principal) {
-          instData.principal = instData.principalName || instData.contactName || 'Principal';
-        }
-        if (!instData.contact) {
-          instData.contact = instData.phone || '';
-        }
-        if (!instData.email && instData.contactPerson?.email) {
-          instData.email = instData.contactPerson.email;
-        }
-        const rawZ = String(instData.zone || instData.assignedInspectorZone || 'CENTRAL').toLowerCase();
+        const rawZ = String(rawInst.zone || rawInst.assignedInspectorZone || 'CENTRAL').toLowerCase();
         let zoneStr = 'CENTRAL';
         if (rawZ.includes('west')) zoneStr = 'WEST';
         else if (rawZ.includes('north')) zoneStr = 'NORTH';
@@ -170,15 +145,60 @@ export default async function handler(req, res) {
         else if (rawZ.includes('south')) zoneStr = 'SOUTH';
         else zoneStr = 'CENTRAL';
 
-        instData.zone = zoneStr;
-        instData.assignedInspector = `DCP ${zoneStr}`;
-        instData.assignedInspectorZone = zoneStr;
-        instData.assignedInspectorEmail = `dcp${zoneStr.toLowerCase()}@safeedup.gov.in`;
+        const instName = rawInst.name || rawInst.institutionName || 'Institution';
+        const emailStr = (rawInst.email || rawInst.contactPerson?.email || '').toLowerCase().trim();
+        const phoneStr = rawInst.phone || rawInst.contact || rawInst.contactPerson?.phone || '';
+        const principalStr = rawInst.principal || rawInst.principalName || rawInst.contactPerson?.name || 'Principal';
 
-        const filter = (instData.email && typeof instData.email === 'string' && instData.email.trim())
-          ? { email: instData.email.toLowerCase().trim() }
-          : { safeId: instData.safeId || `SAFE-${Date.now()}` };
-        await Institution.findOneAndUpdate(filter, { $set: instData }, { upsert: true, new: true });
+        const canonicalInst = {
+          ...rawInst,
+          name: instName,
+          type: (rawInst.type || rawInst.institutionType || 'SCHOOL').toUpperCase(),
+          affiliationBoard: rawInst.board || rawInst.affiliationBoard || 'CBSE',
+          affiliationCode: rawInst.affiliationCode || '',
+          udiseCode: rawInst.udiseCode || null,
+          district: districtStr,
+          state: rawInst.state || 'Uttar Pradesh',
+          zone: zoneStr,
+          address: typeof rawInst.address === 'object' ? rawInst.address : {
+            street: typeof rawInst.address === 'string' && rawInst.address ? rawInst.address : `${districtStr} Main Road`,
+            district: districtStr,
+            state: rawInst.state || 'Uttar Pradesh'
+          },
+          contactPerson: {
+            name: principalStr,
+            email: emailStr,
+            phone: phoneStr
+          },
+          principal: principalStr,
+          contact: phoneStr,
+          email: emailStr,
+          phone: phoneStr,
+          totalStudents: parseInt(rawInst.totalStudents || 0) || 100,
+          staffCount: parseInt(rawInst.staffCount || rawInst.totalTeachers || 0) || 10,
+          classroomCount: parseInt(rawInst.classroomCount || rawInst.totalClassrooms || 0) || 5,
+          floorCount: parseInt(rawInst.floorCount || rawInst.buildingFloors || 1) || 1,
+          exitGateCount: parseInt(rawInst.exitGateCount || 2) || 2,
+          nearestPoliceStation: rawInst.nearestPoliceStation || `${districtStr} Police Station`,
+          status: rawInst.status || 'PENDING',
+          verificationStatus: rawInst.verificationStatus || 'UNVERIFIED',
+          riskLevel: rawInst.riskLevel || 'UNDER_REVIEW',
+          complianceScore: typeof rawInst.complianceScore === 'number' ? rawInst.complianceScore : 0,
+          assignedInspector: `DCP ${zoneStr}`,
+          assignedInspectorZone: zoneStr,
+          assignedInspectorEmail: `dcp${zoneStr.toLowerCase()}@safeedup.gov.in`,
+          isActive: true,
+          isPubliclyVisible: true,
+          registrationNumber: rawInst.registrationNumber || `REG-${Date.now()}`,
+          safeId: rawInst.safeId || `SAFE-UP-${districtCode}-${Math.floor(100000 + Math.random() * 900000)}`,
+          createdAt: rawInst.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        const filter = (emailStr && typeof emailStr === 'string' && emailStr.trim())
+          ? { email: emailStr }
+          : { safeId: canonicalInst.safeId };
+        await Institution.findOneAndUpdate(filter, { $set: canonicalInst }, { upsert: true, new: true });
       } else if ((action === 'UPDATE_INSTITUTION' || action === 'updateInstitution') && payload) {
         const targetId = payload._id || payload.id;
         if (targetId) await Institution.findByIdAndUpdate(targetId, { $set: payload });

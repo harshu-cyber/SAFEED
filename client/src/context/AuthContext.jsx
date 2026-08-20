@@ -70,6 +70,33 @@ export const AuthProvider = ({ children }) => {
         setUser(storedUser);
         return storedUser;
       }
+
+      // Check if this email is a registered institution
+      const inst = institutionStore.getInstitutionByIdOrEmail(emailLower);
+      if (inst) {
+        const instUser = {
+          _id: inst._id,
+          id: inst._id,
+          name: inst.name,
+          email: inst.email,
+          role: 'SCHOOL_ADMIN',
+          institutionId: inst._id,
+          district: inst.district,
+          state: inst.state,
+        };
+        localStorage.setItem('accessToken', 'inst_' + Date.now());
+        localStorage.setItem('registeredSchoolUser', JSON.stringify({
+          username: inst.email,
+          password: credentials.password,
+          institutionName: inst.name,
+          institutionId: inst._id,
+          safeId: inst.safeId,
+          zone: inst.zone,
+        }));
+        setUser(instUser);
+        return instUser;
+      }
+
       throw err;
     }
   };

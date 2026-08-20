@@ -31,7 +31,7 @@ export const SuperInstitutionsList = () => {
   }, []);
 
   const filtered = institutions.filter(i => {
-    const matchZone = zone === 'ALL' || (i.zone || 'CENTRAL') === zone;
+    const matchZone = zone === 'ALL' || (i.zone || '').toUpperCase().includes(zone) || (zone === 'CENTRAL' && (!i.zone || i.zone === 'CENTRAL'));
     const matchType = type === 'ALL' || (i.type || '').toUpperCase() === type;
     const matchSearch =
       i.name?.toLowerCase().includes(search.toLowerCase()) ||

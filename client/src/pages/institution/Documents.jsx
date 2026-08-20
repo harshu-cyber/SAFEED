@@ -29,7 +29,7 @@ export const DocumentsPage = () => {
   const [viewDoc, setViewDoc] = useState(null);
 
   const getTargetInstId = () => {
-    return user?.institutionId || user?._id || user?.id || user?.email || user?.name || 'inst_user';
+    return user?.institutionId || user?.email || user?._id || user?.id || 'inst_user';
   };
 
   const loadData = async () => {

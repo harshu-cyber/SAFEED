@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    fetchUser();
+    cloudSync.pull().then(() => fetchUser()).catch(() => fetchUser());
   }, []);
 
   const login = async (credentials) => {

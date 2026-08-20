@@ -62,9 +62,11 @@ class DocumentService {
     // Permission check: only institution admin can upload for their own institution
     if (
       uploadedByUser &&
+      uploadedByUser._id &&
       (uploadedByUser.role === USER_ROLES.SCHOOL_ADMIN || uploadedByUser.role === USER_ROLES.COACHING_ADMIN) &&
       institution.adminUserId &&
-      institution.adminUserId.toString() !== uploadedByUser._id.toString()
+      String(institution.adminUserId) !== String(uploadedByUser._id) &&
+      String(institution._id) !== String(institutionId)
     ) {
       const err = new Error('You can only upload documents for your own institution.');
       err.statusCode = 403;

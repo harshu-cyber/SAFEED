@@ -274,6 +274,9 @@ export default async function handler(req, res) {
         if (institutionId && mongoose.Types.ObjectId.isValid(institutionId)) {
           inst = await Institution.findById(institutionId);
         }
+        if (!inst && institutionId) {
+          inst = await Institution.findOne({ $or: [{ _id: institutionId }, { id: institutionId }, { safeId: institutionId }] });
+        }
         if (!inst && emailLow) {
           inst = await Institution.findOne({ email: emailLow });
         }
@@ -283,13 +286,17 @@ export default async function handler(req, res) {
         if (!inst && nameLow) {
           inst = await Institution.findOne({ name: new RegExp(`^${nameLow.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') });
         }
+        if (!inst) {
+          const allInsts = await Institution.find({}).limit(2);
+          if (allInsts.length === 1) inst = allInsts[0];
+        }
 
         if (inst && Array.isArray(inst.documents)) {
-          inst.documents = inst.documents.map(d => (d._id === docId || d.type === docType) ? { ...d, status, remarks: remarks || d.remarks } : d);
+          inst.documents = inst.documents.map(d => (d._id === docId || d.type === docType || d.name === docType) ? { ...d, status, remarks: remarks || d.remarks } : d);
           inst.markModified('documents');
 
           const required = ['FIRE_NOC', 'STRUCTURAL_SAFETY', 'ELECTRICAL_SAFETY', 'EMERGENCY_PLAN'];
-          const verifiedTypes = inst.documents.filter(d => d.status === 'VERIFIED').map(d => d.type);
+          const verifiedTypes = inst.documents.filter(d => d.status === 'VERIFIED').map(d => d.type || d.documentType);
           const score = Math.round((verifiedTypes.length / required.length) * 100);
           inst.complianceScore = score;
           inst.status = score === 100 ? 'VERIFIED' : 'PENDING_DOCUMENT_VERIFICATION';
@@ -304,9 +311,16 @@ export default async function handler(req, res) {
         if (institutionId && mongoose.Types.ObjectId.isValid(institutionId)) {
           inst = await Institution.findById(institutionId);
         }
+        if (!inst && institutionId) {
+          inst = await Institution.findOne({ $or: [{ _id: institutionId }, { id: institutionId }, { safeId: institutionId }] });
+        }
         if (!inst && emailLow) inst = await Institution.findOne({ email: emailLow });
         if (!inst && safeId) inst = await Institution.findOne({ safeId });
         if (!inst && nameLow) inst = await Institution.findOne({ name: new RegExp(`^${nameLow.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') });
+        if (!inst) {
+          const allInsts = await Institution.find({}).limit(2);
+          if (allInsts.length === 1) inst = allInsts[0];
+        }
 
         const targetInstId = inst ? inst._id.toString() : (institutionId || 'inst_unknown');
         const recordId = payload._id || ('ev_' + Date.now());

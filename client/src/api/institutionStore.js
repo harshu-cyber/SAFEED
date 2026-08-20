@@ -53,13 +53,14 @@ export const safeSaveLocalStorage = (key, data) => {
 
 // Normalize any zone string → one of: WEST | CENTRAL | NORTH | EAST | SOUTH | null
 const normalizeZone = (val = '') => {
-  const v = String(val || '').toLowerCase();
+  if (!val) return null;
+  const v = String(val).toLowerCase();
   if (v.includes('west'))    return 'WEST';
   if (v.includes('north'))   return 'NORTH';
   if (v.includes('east'))    return 'EAST';
   if (v.includes('south'))   return 'SOUTH';
   if (v.includes('central')) return 'CENTRAL';
-  return 'CENTRAL';
+  return null;
 };
 
 export { normalizeZone };
@@ -411,8 +412,14 @@ export const institutionStore = {
 
   /** Return documents for a DCP zone or Police Station (checking both inst.documents and global store) */
   getDocumentsForZone: (dcpZone, postingStation) => {
-    const zoneInsts = institutionStore.getInstitutionsForZone(dcpZone, postingStation);
-    if (!Array.isArray(zoneInsts) || zoneInsts.length === 0) return [];
+    const isConstrained = Boolean(dcpZone || postingStation);
+    const zoneInsts = isConstrained 
+      ? institutionStore.getInstitutionsForZone(dcpZone, postingStation) 
+      : institutionStore.getInstitutions();
+
+    if (!Array.isArray(zoneInsts) || zoneInsts.length === 0) {
+      return isConstrained ? [] : institutionStore.getDocuments();
+    }
 
     const idSet = new Set();
     const emailSet = new Set();

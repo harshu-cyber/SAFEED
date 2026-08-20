@@ -27,23 +27,33 @@ class GridFSService {
    */
   uploadStream(buffer, filename, mimeType) {
     return new Promise((resolve, reject) => {
-      const bucket = this.getBucket();
-      const readableStream = new Readable();
-      readableStream.push(buffer);
-      readableStream.push(null);
+      try {
+        const bucket = this.getBucket();
+        const readableStream = new Readable();
+        readableStream.push(buffer);
+        readableStream.push(null);
 
-      const uploadStream = bucket.openUploadStream(filename, {
-        contentType: mimeType,
-        metadata: {
-          uploadedAt: new Date(),
-          mimeType,
-        },
-      });
+        const uploadStream = bucket.openUploadStream(filename || 'document.pdf', {
+          contentType: mimeType || 'application/pdf',
+          metadata: {
+            uploadedAt: new Date(),
+            mimeType: mimeType || 'application/pdf',
+          },
+        });
 
-      readableStream
-        .pipe(uploadStream)
-        .on('error', (err) => reject(err))
-        .on('finish', (file) => resolve(file));
+        readableStream
+          .pipe(uploadStream)
+          .on('error', (err) => {
+            console.error('[GridFSService] Stream upload error:', err);
+            reject(err);
+          })
+          .on('finish', () => {
+            resolve({ _id: uploadStream.id, filename: filename || 'document.pdf' });
+          });
+      } catch (err) {
+        console.error('[GridFSService] Bucket initialization error:', err);
+        reject(err);
+      }
     });
   }
 

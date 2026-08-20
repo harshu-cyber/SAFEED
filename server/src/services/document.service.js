@@ -91,11 +91,18 @@ class DocumentService {
     const gridfsService = require('./gridfs.service');
     let gridfsFile = null;
     if (file && file.buffer) {
-      gridfsFile = await gridfsService.uploadStream(file.buffer, file.originalname, file.mimetype);
+      try {
+        gridfsFile = await gridfsService.uploadStream(file.buffer, file.originalname || 'document.pdf', file.mimetype || 'application/pdf');
+      } catch (err) {
+        console.error('[DocumentService] GridFS upload stream notice:', err.message);
+      }
     }
 
-    const gridfsId = gridfsFile ? gridfsFile._id : null;
-    const fileUrlPath = gridfsId ? `/api/v1/documents/${gridfsId}/file` : `/uploads/documents/${file.filename || 'doc.pdf'}`;
+    const gridfsId = (gridfsFile && gridfsFile._id) ? gridfsFile._id : null;
+    const fileUrlPath = gridfsId ? `/api/v1/documents/${gridfsId}/file` : `/uploads/documents/${file?.filename || 'doc.pdf'}`;
+    const safeOriginalName = file?.originalname || 'document.pdf';
+    const safeMimeType = file?.mimetype || 'application/pdf';
+    const safeSize = file?.size || 1024;
 
     const document = await Document.create({
       institutionId: targetInstId,
@@ -109,15 +116,15 @@ class DocumentService {
       documentType: docType,
       title: docTitle,
       description: data.description || '',
-      originalFileName: file.originalname,
-      storedFileName: file.filename || `${gridfsId}.pdf`,
+      originalFileName: safeOriginalName,
+      storedFileName: file?.filename || (gridfsId ? `${gridfsId}.pdf` : 'doc.pdf'),
       fileStorageType: gridfsId ? 'GRIDFS' : 'LOCAL',
       fileId: gridfsId,
       fileUrl: fileUrlPath,
-      fileName: file.originalname,
-      fileType: file.mimetype,
-      fileMimeType: file.mimetype,
-      fileSize: file.size,
+      fileName: safeOriginalName,
+      fileType: safeMimeType,
+      fileMimeType: safeMimeType,
+      fileSize: safeSize,
       issueDate: data.issueDate || null,
       expiryDate: data.expiryDate || null,
       issuingAuthority: data.issuingAuthority || null,
@@ -138,8 +145,8 @@ class DocumentService {
       status: 'PENDING_REVIEW',
       verificationStatus: 'PENDING',
       uploadedAt: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-      fileSize: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
-      fileName: file.originalname,
+      fileSize: (safeSize / (1024 * 1024)).toFixed(2) + ' MB',
+      fileName: safeOriginalName,
       fileUrl: fileUrlPath,
       remarks: 'Awaiting Inspector verification',
     };
@@ -155,26 +162,30 @@ class DocumentService {
     institution.markModified('documents');
     await institution.save();
 
-    // Notify district admins for document review
-    const districtName = institution.district || (institution.address && institution.address.district) || 'Lucknow';
-    const districtAdmins = await User.find({
-      role: USER_ROLES.DISTRICT_ADMIN,
-      district: districtName,
-      isActive: true,
-    });
+    // Notify district admins for document review (non-blocking)
+    try {
+      const districtName = institution.district || (institution.address && institution.address.district) || 'Lucknow';
+      const districtAdmins = await User.find({
+        role: USER_ROLES.DISTRICT_ADMIN,
+        district: districtName,
+        isActive: true,
+      });
 
-    if (districtAdmins.length > 0) {
-      await Notification.insertMany(
-        districtAdmins.map((admin) => ({
-          userId: admin._id,
-          type: 'INFO',
-          title: 'New Document Uploaded',
-          message: `${institution.name} has uploaded "${document.title}" for verification.`,
-          link: `/dashboard/district-admin/institutions/${targetInstId}`,
-          module: 'DOCUMENT',
-          referenceId: document._id,
-        }))
-      );
+      if (districtAdmins.length > 0) {
+        await Notification.insertMany(
+          districtAdmins.map((admin) => ({
+            userId: admin._id,
+            type: 'INFO',
+            title: 'New Document Uploaded',
+            message: `${institution.name} has uploaded "${document.title}" for verification.`,
+            link: `/dashboard/district-admin/institutions/${targetInstId}`,
+            module: 'DOCUMENT',
+            referenceId: document._id,
+          }))
+        );
+      }
+    } catch (notifErr) {
+      console.warn('[DocumentService] Notification dispatch notice:', notifErr.message);
     }
 
     return document;

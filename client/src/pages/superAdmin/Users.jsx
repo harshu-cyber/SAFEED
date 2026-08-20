@@ -77,7 +77,7 @@ const DEFAULT_FORM = {
   joiningDate: new Date().toISOString().split('T')[0],
   bloodGroup: '',
   rankLevel: 'SI',
-  postingStation: 'Hazratganj',
+  postingStation: '',
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -728,12 +728,12 @@ export const UserManagementPage = () => {
                   <Field label="Department">
                     <input type="text" placeholder="e.g. UP Police — Lucknow Commissionerate" value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} className={inputClass} />
                   </Field>
-                  <Field label="Posting Station (Lucknow)" hint="📌 Choose Lucknow only in DGP, CP, JCP">
+                  <Field label={<>Posting Station (Lucknow) <span className="text-rose-600 font-bold text-[10px] ml-1.5">(choose Lucknow only in DGP , CP , JCP)</span></>}>
                     <select value={form.postingStation} onChange={e => setForm(f => ({ ...f, postingStation: e.target.value }))} className={inputClass}>
                       <option value="">Select Police Station…</option>
                       {LUCKNOW_POLICE_STATIONS.map(s => (
                         <option key={s} value={s}>
-                          {s === 'Lucknow' ? 'Lucknow (Command HQ — DGP / CP / JCP Only)' : `${s} Police Station`}
+                          {s === 'Lucknow' ? 'Lucknow' : `${s} Police Station`}
                         </option>
                       ))}
                     </select>

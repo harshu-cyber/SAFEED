@@ -59,41 +59,51 @@ export const DocumentsPage = () => {
 
     setUploading(true);
 
-    const docName = name || DOC_TYPES.find(t => t.value === type)?.label.split(' (')[0];
-    const instId = institution._id || institution.id || user?.institutionId || user?.email;
+    try {
+      const docName = name || DOC_TYPES.find(t => t.value === type)?.label.split(' (')[0];
+      const instId = institution._id || institution.id || user?.institutionId || user?.email;
 
-    if (file) {
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('documentType', type);
-        formData.append('title', docName);
-        await documentApi.upload(instId, formData);
-      } catch (err) {
-        console.warn('[DocumentsPage] Express API upload notice:', err?.response?.data?.message || err?.message || err);
+      if (file) {
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('documentType', type);
+          formData.append('title', docName);
+
+          // 2.5s timeout wrapper so Vercel frontend never hangs UI if backend route is unreachable
+          await Promise.race([
+            documentApi.upload(instId, formData),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('API Timeout')), 2500))
+          ]);
+        } catch (err) {
+          console.warn('[DocumentsPage] Express API upload notice:', err?.response?.data?.message || err?.message || err);
+        }
       }
+
+      const fileSizeMB = file ? (file.size / (1024 * 1024)).toFixed(2) + ' MB' : '1.2 MB';
+
+      institutionStore.uploadDocument({
+        name: docName,
+        type,
+        institutionId: instId,
+        institutionName: institution.name,
+        uploadedBy: user?.name || institution.principal,
+        fileSize: fileSizeMB,
+        fileName: file?.name || `${docName}.pdf`,
+        fileDataUrl: fileDataUrl || null,
+      });
+
+      setName('');
+      setFile(null);
+      setFileDataUrl(null);
+      loadData();
+      setToast('✅ Document uploaded successfully! Sent to Inspector for verification.');
+      setTimeout(() => setToast(''), 4000);
+    } catch (error) {
+      console.error('[DocumentsPage] Upload error:', error);
+    } finally {
+      setUploading(false); // ALWAYS RESET STATE NO MATTER WHAT
     }
-
-    const fileSizeMB = file ? (file.size / (1024 * 1024)).toFixed(2) + ' MB' : '1.2 MB';
-
-    institutionStore.uploadDocument({
-      name: docName,
-      type,
-      institutionId: instId,
-      institutionName: institution.name,
-      uploadedBy: user?.name || institution.principal,
-      fileSize: fileSizeMB,
-      fileName: file?.name || `${docName}.pdf`,
-      fileDataUrl: fileDataUrl || null,
-    });
-
-    setName('');
-    setFile(null);
-    setFileDataUrl(null);
-    setUploading(false);
-    loadData();
-    setToast('✅ Document uploaded successfully! Sent to Inspector for verification.');
-    setTimeout(() => setToast(''), 4000);
   };
 
   return (

@@ -28,13 +28,22 @@ export const DocumentApproval = () => {
   const [toast, setToast] = useState('');
 
   const loadDocs = async () => {
+    const localDocs = institutionStore.getDocumentsForZone(dcpZone, postingStation);
     try {
       const res = await documentApi.getAssigned({ zone: dcpZone });
       const apiDocs = res.data?.data?.documents || res.data?.documents || [];
-      setDocs(Array.isArray(apiDocs) ? apiDocs : []);
+
+      const mergedMap = new Map();
+      [...localDocs, ...apiDocs].forEach(d => {
+        if (d) {
+          const key = d._id || d.id || `${d.institutionName || 'inst'}_${d.type || d.documentType || d.name}`;
+          mergedMap.set(key, d);
+        }
+      });
+      setDocs(Array.from(mergedMap.values()));
     } catch (e) {
       console.warn('[DocumentApproval] API fetch notice:', e?.message);
-      setDocs([]);
+      setDocs(localDocs);
     }
   };
 

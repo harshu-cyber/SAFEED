@@ -54,7 +54,12 @@ class DocumentService {
     }
 
     // Check for existing document of same type - mark old as non-latest
-    const docType = data.documentType || data.type || 'FIRE_NOC';
+    let docType = data.documentType || data.type || 'FIRE_SAFETY';
+    if (docType === 'FIRE_NOC') docType = 'FIRE_SAFETY';
+    if (docType === 'BUILDING_PLAN') docType = 'BUILDING_SAFETY';
+    if (docType === 'AFFILIATION_CERT') docType = 'ELECTRICAL_SAFETY';
+    if (docType === 'EMERGENCY_PLAN') docType = 'EVACUATION_SAFETY';
+
     if (docType) {
       await Document.updateMany(
         { institutionId: targetInstId, documentType: docType, isLatestVersion: true },
@@ -322,18 +327,26 @@ class DocumentService {
     insts.forEach((i) => {
       if (Array.isArray(i.documents)) {
         i.documents.forEach((d) => {
-          if (d && (d.type || d.name)) {
+          if (d && (d.type || d.documentType || d.name)) {
+            let docType = d.documentType || d.type || d.name;
+            if (docType === 'FIRE_NOC') docType = 'FIRE_SAFETY';
+            if (docType === 'BUILDING_PLAN') docType = 'BUILDING_SAFETY';
+            if (docType === 'AFFILIATION_CERT') docType = 'ELECTRICAL_SAFETY';
+            if (docType === 'EMERGENCY_PLAN') docType = 'EVACUATION_SAFETY';
+
             instDocs.push({
               _id: d._id || ('doc_' + Date.now()),
               institutionId: i._id,
               institutionName: i.name,
-              documentType: d.type || d.documentType || d.name,
-              title: d.name || d.title || 'Document',
+              assignedInspectorId: i.assignedInspectorId || null,
+              assignedInspectorName: i.assignedInspectorName || '',
+              documentType: docType,
+              title: d.name || d.title || docType,
               fileUrl: d.fileUrl || d.fileDataUrl || `/api/v1/documents/${d._id}/file`,
               fileName: d.fileName || `${d.name || 'document'}.pdf`,
               fileSize: d.fileSize || '1.4 MB',
               verificationStatus: d.verificationStatus || d.status || 'PENDING',
-              status: d.status || 'PENDING_REVIEW',
+              status: d.verificationStatus || d.status || 'PENDING',
               uploadedAt: d.uploadedAt || i.createdAt,
               createdAt: d.createdAt || i.createdAt,
               district: i.district,
@@ -346,9 +359,14 @@ class DocumentService {
 
     const mergedMap = new Map();
     [...instDocs, ...docs].forEach((d) => {
-      const type = d.documentType || d.type || d.name;
+      let type = d.documentType || d.type || d.name;
+      if (type === 'FIRE_NOC') type = 'FIRE_SAFETY';
+      if (type === 'BUILDING_PLAN') type = 'BUILDING_SAFETY';
+      if (type === 'AFFILIATION_CERT') type = 'ELECTRICAL_SAFETY';
+      if (type === 'EMERGENCY_PLAN') type = 'EVACUATION_SAFETY';
+
       const key = `${d.institutionId}_${type}`;
-      mergedMap.set(key, d);
+      mergedMap.set(key, { ...d, documentType: type });
     });
 
     return { documents: Array.from(mergedMap.values()) };

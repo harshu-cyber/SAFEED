@@ -69,7 +69,9 @@ module.exports = async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     const conn = await connectDB();
-    if (!conn.ok) return res.status(500).json({ success: false, error: conn.reason });
+    if (!conn.ok) {
+      return res.status(200).json({ success: false, error: conn.reason });
+    }
 
     if (req.method === 'GET') {
       const users = await User.find({}).select('-password').lean();
@@ -180,6 +182,6 @@ module.exports = async function handler(req, res) {
 
     return res.status(405).json({ success: false, error: 'Method Not Allowed' });
   } catch (err) {
-    return res.status(500).json({ success: false, error: `Server error: ${err.message}` });
+    return res.status(200).json({ success: false, error: `Server error: ${err.stack || err.message}` });
   }
 };

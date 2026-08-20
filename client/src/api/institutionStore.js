@@ -457,22 +457,34 @@ export const institutionStore = {
     );
 
     const instDocs = (inst && Array.isArray(inst.documents)) ? inst.documents : [];
-    const globalDocs = institutionStore.getDocuments().filter(
-      d => d.institutionId === instId ||
-           (inst && (
-             d.institutionId === inst._id ||
-             d.institutionId === inst.id ||
-             d.institutionId?.toLowerCase() === idLow ||
-             (inst.email && d.institutionId?.toLowerCase() === inst.email.toLowerCase()) ||
-             d.institutionId === inst.safeId ||
-             (inst.name && d.institutionName?.toLowerCase() === inst.name.toLowerCase())
-           ))
-    );
+    const globalDocs = institutionStore.getDocuments().filter(d => {
+      if (!d) return false;
+      const dInstId = String(d.institutionId || '');
+      const dEmail = String(d.email || d.institutionId || '').toLowerCase().trim();
+      const dSafeId = String(d.safeId || '');
+      const dName = String(d.institutionName || '').toLowerCase().trim();
+
+      const matchesInstId = dInstId === instId || dInstId.toLowerCase() === idLow;
+      const matchesEmail = dEmail && dEmail === idLow;
+      const matchesSafeId = dSafeId && dSafeId === instId;
+      const matchesName = dName && dName === idLow;
+
+      const matchesViaInst = inst && (
+        dInstId === inst._id ||
+        dInstId === inst.id ||
+        (inst.email && dEmail === inst.email.toLowerCase().trim()) ||
+        (inst.contactPerson?.email && dEmail === inst.contactPerson.email.toLowerCase().trim()) ||
+        (inst.safeId && dSafeId === inst.safeId) ||
+        (inst.name && dName === inst.name.toLowerCase().trim())
+      );
+
+      return matchesInstId || matchesEmail || matchesSafeId || matchesName || matchesViaInst;
+    });
 
     const mergedMap = new Map();
     [...instDocs, ...globalDocs].forEach(d => {
-      if (d && (d.type || d.name)) {
-        const key = d.type || d.name;
+      if (d && (d.type || d.name || d.documentType)) {
+        const key = d.type || d.documentType || d.name;
         mergedMap.set(key, d);
       }
     });

@@ -347,7 +347,11 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {requiredDocs.map(req => {
-                const doc = docs.find(d => d.type === req.type);
+                const doc = docs.find(d => 
+                  d.type === req.type || 
+                  d.documentType === req.type || 
+                  (d.name && d.name.toLowerCase().includes(req.label.toLowerCase()))
+                );
                 const isVerified = doc?.status === 'VERIFIED';
 
                 return (
@@ -358,14 +362,14 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
                       <span className="text-base">{req.icon}</span>
                       <div>
                         <p className="font-black text-xs">{req.label}</p>
-                        <p className="text-[9px] opacity-80">{doc ? `Uploaded: ${doc.uploadedAt}` : 'Not Uploaded'}</p>
+                        <p className="text-[9px] opacity-80">{doc ? `Uploaded: ${doc.uploadedAt || 'Recently'}` : 'Not Uploaded'}</p>
                       </div>
                     </div>
 
                     <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase ${
-                      isVerified ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-slate-950'
+                      isVerified ? 'bg-emerald-600 text-white' : doc ? 'bg-blue-600 text-white' : 'bg-amber-500 text-slate-950'
                     }`}>
-                      {isVerified ? '✓ VERIFIED' : '🔒 PENDING'}
+                      {isVerified ? '✓ VERIFIED' : doc ? '⏳ UPLOADED (PENDING AUDIT)' : '🔒 PENDING'}
                     </span>
                   </div>
                 );

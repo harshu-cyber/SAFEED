@@ -20,9 +20,9 @@ router.get('/institution/:id', enforceInstitutionScope('id'), documentController
 router.post(
   '/institution/:id',
   uploadLimiter,
+  upload.single('file'),
   authorizePermission(PERMISSIONS.UPLOAD_DOCUMENT),
   enforceInstitutionScope('id'),
-  upload.single('file'),
   documentController.upload
 );
 

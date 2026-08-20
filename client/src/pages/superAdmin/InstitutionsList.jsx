@@ -32,7 +32,7 @@ export const SuperInstitutionsList = () => {
 
   const filtered = institutions.filter(i => {
     const matchZone = zone === 'ALL' || (i.zone || 'CENTRAL') === zone;
-    const matchType = type === 'ALL' || i.type === type;
+    const matchType = type === 'ALL' || (i.type || '').toUpperCase() === type;
     const matchSearch =
       i.name?.toLowerCase().includes(search.toLowerCase()) ||
       i.safeId?.toLowerCase().includes(search.toLowerCase()) ||

@@ -47,6 +47,22 @@ const instSchema = new mongoose.Schema({
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Institution = mongoose.models.Institution || mongoose.model('Institution', instSchema);
 
+async function getParsedBody(req) {
+  if (req.body) {
+    if (typeof req.body === 'string') {
+      try { return JSON.parse(req.body); } catch (e) { return {}; }
+    }
+    if (typeof req.body === 'object') return req.body;
+  }
+  return new Promise((resolve) => {
+    let data = '';
+    req.on('data', chunk => { data += chunk; });
+    req.on('end', () => {
+      try { resolve(JSON.parse(data)); } catch (e) { resolve({}); }
+    });
+  });
+}
+
 module.exports = async function handler(req, res) {
   try {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -65,7 +81,8 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const { action, payload } = req.body || {};
+      const body = await getParsedBody(req);
+      const { action, payload } = body || {};
 
       if ((action === 'CREATE_USER' || action === 'createUser') && payload) {
         const emailLow = payload.email?.toLowerCase()?.trim();

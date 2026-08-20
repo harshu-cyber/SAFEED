@@ -157,7 +157,11 @@ async function syncHandler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const { action, payload } = req.body || {};
+      let body = req.body;
+      if (typeof body === 'string') {
+        try { body = JSON.parse(body); } catch (e) {}
+      }
+      const { action, payload } = body || {};
 
       try {
         if ((action === 'CREATE_USER' || action === 'createUser') && payload) {

@@ -2,6 +2,10 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/api/sync",
+      "destination": "/api/sync.cjs"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/index.js"
     },

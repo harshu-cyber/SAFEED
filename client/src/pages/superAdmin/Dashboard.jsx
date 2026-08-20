@@ -109,9 +109,18 @@ export const SuperAdminDashboard = () => {
   });
 
   const byType = {
-    School: institutions.filter(i => (i.type || '').toUpperCase() === 'SCHOOL').length,
-    College: institutions.filter(i => (i.type || '').toUpperCase() === 'COLLEGE').length,
-    Coaching: institutions.filter(i => (i.type || '').toUpperCase() === 'COACHING' || (i.type || '').toUpperCase() === 'COACHING_CENTRE').length,
+    School: institutions.filter(i => {
+      const t = (i.type || '').toUpperCase();
+      return t === 'SCHOOL' || t === 'SCHOOL_ADMIN' || t === 'SCHOOLS';
+    }).length,
+    College: institutions.filter(i => {
+      const t = (i.type || '').toUpperCase();
+      return t === 'COLLEGE' || t === 'COLLEGES';
+    }).length,
+    Coaching: institutions.filter(i => {
+      const t = (i.type || '').toUpperCase();
+      return t.includes('COACHING');
+    }).length,
   };
 
   const pendingComplaints = complaints.filter(c => c.status !== 'RESOLVED').length;

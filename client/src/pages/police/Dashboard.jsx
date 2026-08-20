@@ -17,11 +17,17 @@ export const PoliceDashboard = () => {
   const [selectedInstModal, setSelectedInstModal] = useState(null);
   const [institutions, setInstitutions] = useState([]);
 
+  const loadRealTimeData = async () => {
+    try {
+      await cloudSync.pull();
+    } catch {}
+    setInstitutions(institutionStore.getInstitutions());
+  };
+
   useEffect(() => {
-    const load = () => setInstitutions(institutionStore.getInstitutions());
-    cloudSync.pull().then(load).catch(load);
+    loadRealTimeData();
     cloudSync.startAutoSync();
-    const iv = setInterval(load, 5000);
+    const iv = setInterval(loadRealTimeData, 4000);
     return () => {
       clearInterval(iv);
       cloudSync.stopAutoSync();

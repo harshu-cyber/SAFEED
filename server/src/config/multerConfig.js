@@ -7,16 +7,7 @@ const { v4: uuidv4 } = require('uuid');
 const { ALLOWED_FILE_TYPES, ALLOWED_FILE_EXTENSIONS } = require('../constants/statusTypes');
 const env = require('./env');
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../', env.UPLOAD_DIR, 'documents'));
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const uniqueName = `${uuidv4()}${ext}`;
-    cb(null, uniqueName);
-  },
-});
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();
@@ -35,7 +26,7 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: env.MAX_FILE_SIZE_MB * 1024 * 1024,
+    fileSize: (env.MAX_FILE_SIZE_MB || 10) * 1024 * 1024,
   },
 });
 

@@ -34,33 +34,18 @@ export const DocumentsPage = () => {
       try {
         const res = await documentApi.getForInstitution(instId);
         const docs = res.data?.data?.documents || res.data?.documents || [];
-        if (Array.isArray(docs) && docs.length > 0) {
-          setDocuments(docs);
-          return;
-        }
+        setDocuments(Array.isArray(docs) ? docs : []);
+        return;
       } catch (e) {
         console.warn('[DocumentsPage] MongoDB fetch notice:', e?.message);
+        setDocuments([]);
       }
-    }
-
-    let inst = institutionStore.getInstitutionByIdOrEmail(user?.institutionId || user?.email || user?.name);
-    if (!inst) {
-      const allInsts = institutionStore.getInstitutions();
-      if (allInsts.length > 0) inst = allInsts[0];
-    }
-    if (inst) {
-      setInstitution(inst);
-      const docs = institutionStore.getDocumentsForInstitution(inst._id || inst.email || inst.safeId || inst.name);
-      setDocuments(docs);
-    } else {
-      const docs = institutionStore.getDocuments();
-      setDocuments(docs);
     }
   };
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 3000);
+    const interval = setInterval(loadData, 5000);
     return () => clearInterval(interval);
   }, [user]);
 
@@ -79,59 +64,40 @@ export const DocumentsPage = () => {
   const handleUpload = async (e) => {
     e.preventDefault();
     setErrorMsg('');
-    let currentInst = institution || institutionStore.getInstitutionByIdOrEmail(user?.institutionId || user?.email || user?.name);
-    if (!currentInst) {
-      const allInsts = institutionStore.getInstitutions();
-      if (allInsts.length > 0) currentInst = allInsts[0];
+    const instId = user?.institutionId || user?._id || user?.id;
+    if (!instId) {
+      setErrorMsg('Unable to determine institution ID. Please re-login.');
+      return;
     }
-    const instName = currentInst?.name || user?.name || 'Registered Institution';
-    const instId = currentInst?._id || currentInst?.id || user?.institutionId || user?.email || 'inst_user';
+
+    if (!file) {
+      setErrorMsg('Please select a PDF or image file to upload.');
+      return;
+    }
 
     setUploading(true);
 
     try {
       const docName = name || DOC_TYPES.find(t => t.value === type)?.label.split(' (')[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('documentType', type);
+      formData.append('title', docName);
 
-      if (file) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('documentType', type);
-        formData.append('title', docName);
-
-        const response = await documentApi.upload(instId, formData);
-        if (response.data?.success || response.data?.document) {
-          setToast('✅ Document uploaded successfully! Sent to assigned Inspector for verification.');
-          setTimeout(() => setToast(''), 5000);
-        }
-      } else {
-        setErrorMsg('Please select a PDF or image file to upload.');
-        setUploading(false);
-        return;
+      const response = await documentApi.upload(instId, formData);
+      if (response.data?.success || response.data?.document) {
+        setToast('✅ Document uploaded successfully to MongoDB GridFS! Sent to Inspector for verification.');
+        setName('');
+        setFile(null);
+        setFileDataUrl(null);
+        await loadData();
+        setTimeout(() => setToast(''), 5000);
       }
-
-      const fileSizeMB = file ? (file.size / (1024 * 1024)).toFixed(2) + ' MB' : '1.2 MB';
-
-      institutionStore.uploadDocument({
-        name: docName,
-        type,
-        institutionId: instId,
-        institutionName: instName,
-        uploadedBy: user?.name || currentInst?.principal || 'School Administrator',
-        fileSize: fileSizeMB,
-        fileName: file?.name || `${docName}.pdf`,
-        fileDataUrl: fileDataUrl || null,
-      });
-
-      setName('');
-      setFile(null);
-      setFileDataUrl(null);
-      loadData();
-      setToast('✅ Document uploaded successfully! Sent to Inspector for verification.');
-      setTimeout(() => setToast(''), 4000);
     } catch (error) {
       console.error('[DocumentsPage] Upload error:', error);
+      setErrorMsg(error?.response?.data?.message || 'Failed to upload document to backend API.');
     } finally {
-      setUploading(false); // ALWAYS RESET STATE NO MATTER WHAT
+      setUploading(false);
     }
   };
 

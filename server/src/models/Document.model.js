@@ -43,17 +43,22 @@ const documentSchema = new mongoose.Schema(
 
     originalFileName: { type: String, default: '' },
     storedFileName: { type: String, default: '' },
+    fileStorageType: { type: String, enum: ['GRIDFS', 'LOCAL'], default: 'GRIDFS' },
+    fileId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+      index: true,
+    },
     fileUrl: {
       type: String,
-      required: [true, 'File URL is required'],
+      default: function () {
+        return this.fileId ? `/api/v1/documents/${this._id}/file` : '/uploads/documents/document.pdf';
+      },
     },
-    fileName: { type: String, required: true },
-    fileType: {
-      type: String,
-      required: true,
-    },
+    fileName: { type: String, default: 'document.pdf' },
+    fileType: { type: String, default: 'application/pdf' },
     fileMimeType: { type: String, default: 'application/pdf' },
-    fileSize: { type: Number, required: true }, // in bytes
+    fileSize: { type: Number, default: 0 }, // in bytes
     issueDate: { type: Date, default: null },
     expiryDate: { type: Date, default: null },
     issuingAuthority: { type: String, trim: true, default: null },

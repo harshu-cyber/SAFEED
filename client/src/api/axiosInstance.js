@@ -29,8 +29,10 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    const token = localStorage.getItem('accessToken');
-    if (!token || token.startsWith('demo_token_')) {
+    if (!originalRequest) return Promise.reject(error);
+
+    // If endpoint is refresh-token itself or login/register, don't try refreshing
+    if (originalRequest.url?.includes('/auth/refresh-token') || originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/register')) {
       return Promise.reject(error);
     }
 
@@ -45,8 +47,10 @@ axiosInstance.interceptors.response.use(
           return axiosInstance(originalRequest);
         }
       } catch (refreshError) {
-        if (refreshError.response?.status !== 401) {
-          console.warn('Refresh token failed:', refreshError);
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
         }
         return Promise.reject(refreshError);
       }

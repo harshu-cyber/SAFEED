@@ -84,4 +84,16 @@ const getMapData = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { register, list, getById, update, verify, getMapData };
+// GET /api/v1/institutions/:institutionId/safe-status
+const getSafeStatus = asyncHandler(async (req, res) => {
+  const documentService = require('../services/document.service');
+  const compliance = await documentService.getCompliance(req.params.institutionId);
+
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Safe status compliance retrieved successfully.',
+    data: compliance,
+  });
+});
+
+module.exports = { register, list, getById, update, verify, getMapData, getSafeStatus };

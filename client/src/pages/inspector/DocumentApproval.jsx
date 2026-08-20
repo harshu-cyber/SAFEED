@@ -31,16 +31,11 @@ export const DocumentApproval = () => {
     try {
       const res = await documentApi.getAssigned({ zone: dcpZone });
       const apiDocs = res.data?.data?.documents || res.data?.documents || [];
-      if (Array.isArray(apiDocs) && apiDocs.length > 0) {
-        setDocs(apiDocs);
-        return;
-      }
+      setDocs(Array.isArray(apiDocs) ? apiDocs : []);
     } catch (e) {
-      console.warn('[DocumentApproval] API fetch fallback notice:', e?.message);
+      console.warn('[DocumentApproval] API fetch notice:', e?.message);
+      setDocs([]);
     }
-    // ✅ ZONE & STATION FILTERED FALLBACK
-    const all = institutionStore.getDocumentsForZone(dcpZone, postingStation);
-    setDocs(all);
   };
 
   useEffect(() => {

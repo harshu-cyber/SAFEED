@@ -31,36 +31,17 @@ const authenticate = asyncHandler(async (req, res, next) => {
   try {
     decoded = verifyAccessToken(token);
   } catch (err) {
-    if (typeof token === 'string' && (token.startsWith('inst_') || token.startsWith('officer_') || token.startsWith('demo_') || token.startsWith('admin_'))) {
-      const isOfficer = token.startsWith('officer_');
-      decoded = {
-        id: token,
-        email: isOfficer ? 'inspector@safeedup.gov.in' : 'institution@safeedup.gov.in',
-        role: isOfficer ? 'INSPECTION_OFFICER' : 'SCHOOL_ADMIN',
-      };
-    } else {
-      if (err.name === 'TokenExpiredError') {
-        return sendError(res, { statusCode: 401, message: 'Session expired. Please login again.' });
-      }
-      return sendError(res, { statusCode: 401, message: 'Invalid authentication token.' });
+    if (err.name === 'TokenExpiredError') {
+      return sendError(res, { statusCode: 401, message: 'Session expired. Please login again.' });
     }
+    return sendError(res, { statusCode: 401, message: 'Invalid authentication token.' });
   }
 
-  // Verify user still exists
-  let user;
-  if (
-    require('mongoose').connection.readyState !== 1 ||
-    String(decoded.id).startsWith('inst_') ||
-    String(decoded.id).startsWith('officer_') ||
-    String(decoded.id).startsWith('demo_') ||
-    String(decoded.id).startsWith('admin_')
-  ) {
-    user = { _id: decoded.id, email: decoded.email, role: decoded.role, isActive: true };
-  } else {
-    user = await User.findById(decoded.id).select('+isActive +isEmailVerified');
-    if (!user) {
-      user = { _id: decoded.id, email: decoded.email, role: decoded.role, isActive: true };
-    }
+  // Fetch user from MongoDB database
+  const user = await User.findById(decoded.id).select('+isActive +isEmailVerified');
+
+  if (!user) {
+    return sendError(res, { statusCode: 401, message: 'User account associated with token no longer exists.' });
   }
 
   if (!user.isActive) {

@@ -13,6 +13,7 @@ export const authApi = {
 export const institutionApi = {
   list: (params) => axiosInstance.get('/institutions', { params }),
   getById: (id) => axiosInstance.get(`/institutions/${id}`),
+  getSafeStatus: (id) => axiosInstance.get(`/institutions/${id}/safe-status`),
   register: (data) => axiosInstance.post('/institutions', data),
   update: (id, data) => axiosInstance.patch(`/institutions/${id}`, data),
   verify: (id, data) => axiosInstance.patch(`/institutions/${id}/verify`, data),

@@ -31,11 +31,7 @@ export const SafeIDPage = () => {
         }
       }
 
-      const inst = institutionStore.getInstitutionByIdOrEmail(user?.institutionId || user?.email);
-      if (inst) {
-        setInstitution(inst);
-        setIsUnlocked(institutionStore.isCertificateUnlocked(inst._id));
-      }
+      setIsUnlocked(false);
       setLoading(false);
     };
 

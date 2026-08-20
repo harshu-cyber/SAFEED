@@ -29,6 +29,9 @@ router.post(
   institutionController.register
 );
 
+// GET /api/v1/institutions/:institutionId/safe-status
+router.get('/:institutionId/safe-status', institutionController.getSafeStatus);
+
 // GET /api/v1/institutions/:id
 router.get('/:id', enforceInstitutionScope('id'), institutionController.getById);
 

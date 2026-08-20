@@ -121,6 +121,13 @@ const serveFile = asyncHandler(async (req, res) => {
   const fs = require('fs');
   const fileData = await documentService.getFile(req.params.id);
 
+  if (fileData && fileData.stream) {
+    const filename = fileData.filename || 'document.pdf';
+    res.setHeader('Content-Type', fileData.mimeType || 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    return fileData.stream.pipe(res);
+  }
+
   if (fileData && fileData.filePath && fs.existsSync(fileData.filePath)) {
     res.setHeader('Content-Type', fileData.mimeType || 'application/pdf');
     res.setHeader('Content-Disposition', 'inline');

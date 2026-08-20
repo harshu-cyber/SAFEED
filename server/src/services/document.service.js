@@ -63,7 +63,16 @@ class DocumentService {
     }
 
     const docTitle = data.title || data.name || docType;
-    const fileUrlPath = `/uploads/documents/${file.filename}`;
+
+    // Upload file buffer to MongoDB GridFS
+    const gridfsService = require('./gridfs.service');
+    let gridfsFile = null;
+    if (file && file.buffer) {
+      gridfsFile = await gridfsService.uploadStream(file.buffer, file.originalname, file.mimetype);
+    }
+
+    const gridfsId = gridfsFile ? gridfsFile._id : null;
+    const fileUrlPath = gridfsId ? `/api/v1/documents/${gridfsId}/file` : `/uploads/documents/${file.filename || 'doc.pdf'}`;
 
     const document = await Document.create({
       institutionId: targetInstId,
@@ -78,7 +87,9 @@ class DocumentService {
       title: docTitle,
       description: data.description || '',
       originalFileName: file.originalname,
-      storedFileName: file.filename,
+      storedFileName: file.filename || `${gridfsId}.pdf`,
+      fileStorageType: gridfsId ? 'GRIDFS' : 'LOCAL',
+      fileId: gridfsId,
       fileUrl: fileUrlPath,
       fileName: file.originalname,
       fileType: file.mimetype,
@@ -344,20 +355,48 @@ class DocumentService {
   }
 
   /**
-   * Resolve physical file path for serving document
+   * Resolve physical file path or GridFS stream for serving document
    */
   async getFile(documentId) {
-    const document = await Document.findById(documentId);
+    const gridfsService = require('./gridfs.service');
+    const mongoose = require('mongoose');
+
+    let document = null;
+    let fileId = documentId;
+
+    if (mongoose.Types.ObjectId.isValid(documentId)) {
+      document = await Document.findById(documentId);
+      if (document && document.fileId) {
+        fileId = document.fileId;
+      }
+    }
+
+    // Try GridFS file stream first
+    try {
+      const gridFile = await gridfsService.findFileById(fileId);
+      if (gridFile) {
+        const downloadStream = gridfsService.openDownloadStream(fileId);
+        return {
+          stream: downloadStream,
+          mimeType: gridFile.metadata?.mimeType || gridFile.contentType || 'application/pdf',
+          filename: gridFile.filename || 'document.pdf',
+          document,
+        };
+      }
+    } catch (e) {
+      console.warn('[DocumentService] GridFS file lookup notice:', e?.message);
+    }
+
+    // Disk fallback if document was uploaded locally
     let filePath = null;
     let mimeType = 'application/pdf';
 
     if (document && document.fileUrl) {
       filePath = path.join(__dirname, '../../', document.fileUrl);
-      mimeType = document.fileType || 'application/pdf';
+      mimeType = document.fileType || document.fileMimeType || 'application/pdf';
     }
 
     if (!filePath || !fs.existsSync(filePath)) {
-      // Check fallback uploads folder
       const fallbackPath = path.join(__dirname, '../../uploads/documents', `${documentId}.pdf`);
       if (fs.existsSync(fallbackPath)) {
         filePath = fallbackPath;

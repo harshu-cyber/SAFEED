@@ -263,6 +263,33 @@ export default async function handler(req, res) {
             inst.documents = currentDocs;
             inst.markModified('documents');
             await inst.save();
+
+            try {
+              const Document = mongoose.models.Document || mongoose.model('Document', new mongoose.Schema({}, { strict: false }));
+              const docType = doc.type || doc.documentType || 'FIRE_NOC';
+              const docTitle = doc.name || doc.title || docType;
+              await Document.create({
+                institutionId: inst._id,
+                institutionSafeId: inst.safeId,
+                institutionName: inst.name,
+                uploadedBy: inst.email || 'Institution Admin',
+                uploadedByUserId: inst.adminUserId || inst._id,
+                documentType: docType,
+                title: docTitle,
+                fileUrl: doc.fileUrl || doc.fileDataUrl || '/uploads/documents/document.pdf',
+                fileName: doc.fileName || `${docType}.pdf`,
+                fileType: doc.fileType || 'application/pdf',
+                fileSize: doc.fileSize || '1.4 MB',
+                verificationStatus: doc.verificationStatus || 'PENDING',
+                status: doc.status || 'PENDING_REVIEW',
+                district: inst.district || 'Lucknow',
+                zone: inst.zone || 'CENTRAL',
+                isLatestVersion: true,
+                createdAt: new Date(),
+              });
+            } catch (dErr) {
+              console.warn('[sync.js] Document insert notice:', dErr?.message);
+            }
           }
         }
       } else if ((action === 'VERIFY_DOCUMENT' || action === 'verifyDocument') && payload) {

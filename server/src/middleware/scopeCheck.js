@@ -44,16 +44,18 @@ const enforceInstitutionScope = (paramName = 'id') => {
       return sendError(res, { statusCode: 401, message: 'Authentication required.' });
     }
 
-    const { role, institutionId } = req.user;
+    const { role, institutionId, email } = req.user;
 
     // Admins and Officers bypass own-institution restriction
     if ([ROLES.SUPER_ADMIN, ROLES.STATE_ADMIN, ROLES.DISTRICT_ADMIN, ROLES.POLICE_OFFICER, ROLES.FIRE_OFFICER, ROLES.INSPECTION_OFFICER].includes(role)) {
       return next();
     }
 
-    const targetId = req.params[paramName] || req.body.institutionId || req.query.institutionId;
+    const targetId = String(req.params[paramName] || req.body.institutionId || req.query.institutionId || '').toLowerCase().trim();
+    const userInstId = String(institutionId || '').toLowerCase().trim();
+    const userEmail = String(email || '').toLowerCase().trim();
 
-    if (institutionId && targetId && institutionId.toString() !== targetId.toString()) {
+    if (targetId && userInstId && targetId !== userInstId && targetId !== userEmail) {
       return sendError(res, {
         statusCode: 403,
         message: 'Access denied. You are only authorized to access your own institution data.',

@@ -39,6 +39,7 @@ const POLICE_RANKS = [
 ];
 
 const LUCKNOW_POLICE_STATIONS = [
+  'Lucknow',
   'Chowk', 'Wazirganj', 'Thakurganj', 'Saadatganj', 'Bazarkhala', 'Talkatora',
   'Kaisarbagh', 'Aminabad', 'Naka', 'Kakori', 'Dubagga', 'Para',
   'Hazratganj', 'Husainganj', 'Gautampalli', 'Mahila Thana', 'Mahanagar',
@@ -727,10 +728,14 @@ export const UserManagementPage = () => {
                   <Field label="Department">
                     <input type="text" placeholder="e.g. UP Police — Lucknow Commissionerate" value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} className={inputClass} />
                   </Field>
-                  <Field label="Posting Station (Lucknow)">
+                  <Field label="Posting Station (Lucknow)" hint="📌 Choose Lucknow only in DGP, CP, JCP">
                     <select value={form.postingStation} onChange={e => setForm(f => ({ ...f, postingStation: e.target.value }))} className={inputClass}>
                       <option value="">Select Police Station…</option>
-                      {LUCKNOW_POLICE_STATIONS.map(s => <option key={s} value={s}>{s} Police Station</option>)}
+                      {LUCKNOW_POLICE_STATIONS.map(s => (
+                        <option key={s} value={s}>
+                          {s === 'Lucknow' ? 'Lucknow (Command HQ — DGP / CP / JCP Only)' : `${s} Police Station`}
+                        </option>
+                      ))}
                     </select>
                   </Field>
                   {(form.role === 'INSPECTION_OFFICER' || ['DCP', 'ADCP', 'ACP', 'PS', 'SI', 'SHO'].includes(form.rankLevel)) && (

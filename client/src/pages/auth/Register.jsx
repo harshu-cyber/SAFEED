@@ -179,32 +179,7 @@ export const Register = () => {
       console.warn('[Register] Institution cloud sync failed:', err);
     }
 
-    // 2️⃣ Create user account in MongoDB Atlas via sync endpoint
-    try {
-      await cloudSync.syncAction('CREATE_USER', {
-        name: data.principalName || data.institutionName,
-        email: data.email.toLowerCase(),
-        phone: data.phone,
-        password: data.phone,
-        role: data.institutionType === 'COACHING' ? 'COACHING_ADMIN' : 'SCHOOL_ADMIN',
-        assignedPortal: data.institutionType === 'COACHING' ? 'COACHING_ADMIN' : 'SCHOOL_ADMIN',
-        state: data.state || 'Uttar Pradesh',
-        district: data.district || 'Lucknow',
-        designation: 'Institution Admin',
-        department: data.institutionName || 'Institution',
-        isActive: true,
-      });
-    } catch (err) {
-      // Non-blocking: user account creation failure should not block registration flow
-      console.warn('[Register] User account creation via sync failed:', err.message);
-      // Fallback: try the backend register endpoint
-      axiosInstance.post('/auth/register', {
-        ...data,
-        password: data.phone,
-        role: data.institutionType === 'COACHING' ? 'COACHING_ADMIN' : 'SCHOOL_ADMIN',
-      }).catch(console.warn);
-    }
-
+    // 2️⃣ Generate institution login credentials session
     const generatedCredentials = {
       username: data.email.toLowerCase(),
       password: data.phone,

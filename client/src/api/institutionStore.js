@@ -537,6 +537,7 @@ export const institutionStore = {
     const targetInst = insts.find(
       i => i._id === docData.institutionId ||
            i.id === docData.institutionId ||
+           (i.adminUserId && String(i.adminUserId) === docData.institutionId) ||
            (idLow && i.email?.toLowerCase().trim() === idLow) ||
            (idLow && i.contactPerson?.email?.toLowerCase().trim() === idLow) ||
            i.safeId === docData.institutionId ||

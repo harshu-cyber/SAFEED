@@ -242,6 +242,25 @@ class AuthService {
       await user.updateOne({ $set: { loginAttempts: 0 }, $unset: { lockUntil: 1 } });
     }
 
+    // Auto-link institutionId to User if missing
+    if (!user.institutionId && (user.role === 'SCHOOL_ADMIN' || user.role === 'COACHING_ADMIN')) {
+      const Institution = require('../models/Institution.model');
+      const inst = await Institution.findOne({
+        $or: [
+          { adminUserId: user._id },
+          { email: user.email.toLowerCase() },
+          { 'contactPerson.email': user.email.toLowerCase() }
+        ]
+      });
+      if (inst) {
+        user.institutionId = inst._id;
+        if (!inst.adminUserId) {
+          inst.adminUserId = user._id;
+          await inst.save();
+        }
+      }
+    }
+
     const { accessToken, refreshToken } = generateTokenPair(user);
     user.refreshToken = refreshToken;
     user.lastLogin = new Date();

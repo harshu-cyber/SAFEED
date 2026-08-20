@@ -21,19 +21,38 @@ class DocumentService {
     
     if (institutionId && mongoose.Types.ObjectId.isValid(institutionId)) {
       institution = await Institution.findById(institutionId);
+      if (!institution) {
+        const u = await User.findById(institutionId).lean();
+        if (u) {
+          if (u.institutionId) institution = await Institution.findById(u.institutionId);
+          if (!institution) institution = await Institution.findOne({
+            $or: [
+              { adminUserId: u._id },
+              { email: u.email.toLowerCase() },
+              { 'contactPerson.email': u.email.toLowerCase() }
+            ]
+          });
+        }
+      }
     }
     if (!institution && uploadedByUser && uploadedByUser._id) {
-      institution = await Institution.findOne({ adminUserId: uploadedByUser._id });
-    }
-    if (!institution && uploadedByUser && uploadedByUser.email) {
-      institution = await Institution.findOne({ email: uploadedByUser.email.toLowerCase() });
+      if (uploadedByUser.institutionId) institution = await Institution.findById(uploadedByUser.institutionId);
+      if (!institution) institution = await Institution.findOne({
+        $or: [
+          { adminUserId: uploadedByUser._id },
+          { email: uploadedByUser.email.toLowerCase() },
+          { 'contactPerson.email': uploadedByUser.email.toLowerCase() }
+        ]
+      });
     }
     if (!institution) {
       const idStr = String(institutionId || '').toLowerCase().trim();
       institution = await Institution.findOne({
         $or: [
           { email: idStr },
+          { 'contactPerson.email': idStr },
           { safeId: institutionId },
+          { adminUserId: institutionId },
           { name: new RegExp(`^${String(institutionId).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') }
         ]
       });
@@ -205,13 +224,28 @@ class DocumentService {
 
     if (institutionId && mongoose.Types.ObjectId.isValid(institutionId)) {
       inst = await Institution.findById(institutionId);
+      if (!inst) {
+        const u = await User.findById(institutionId).lean();
+        if (u) {
+          if (u.institutionId) inst = await Institution.findById(u.institutionId);
+          if (!inst) inst = await Institution.findOne({
+            $or: [
+              { adminUserId: u._id },
+              { email: u.email.toLowerCase() },
+              { 'contactPerson.email': u.email.toLowerCase() }
+            ]
+          });
+        }
+      }
     }
     if (!inst) {
       const idStr = String(institutionId || '').toLowerCase().trim();
       inst = await Institution.findOne({
         $or: [
           { email: idStr },
+          { 'contactPerson.email': idStr },
           { safeId: institutionId },
+          { adminUserId: institutionId },
           { name: new RegExp(`^${String(institutionId).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') }
         ]
       });
@@ -223,7 +257,9 @@ class DocumentService {
     const query = {
       $or: [
         { institutionId: targetInstId },
-        { institutionId: String(institutionId) }
+        { institutionId: String(targetInstId) },
+        { institutionId: String(institutionId) },
+        { email: inst ? inst.email : String(institutionId) }
       ],
       isLatestVersion: true
     };

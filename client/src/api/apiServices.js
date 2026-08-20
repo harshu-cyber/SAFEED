@@ -30,6 +30,7 @@ export const inspectionApi = {
 
 export const documentApi = {
   getForInstitution: (institutionId, params) => axiosInstance.get(`/documents/institution/${institutionId}`, { params }),
+  getPending: (params) => axiosInstance.get('/documents/inspector/pending', { params }),
   upload: (institutionId, formData) => axiosInstance.post(`/documents/institution/${institutionId}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),

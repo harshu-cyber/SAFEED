@@ -56,6 +56,39 @@ const verifyDocument = asyncHandler(async (req, res) => {
   });
 });
 
+// GET /api/v1/documents/inspector/pending
+const getForInspector = asyncHandler(async (req, res) => {
+  const { zone, district, page, limit } = req.query;
+  const inspectorZone = zone || req.user?.assignedZone || req.user?.zone;
+  const inspectorDistrict = district || req.user?.district;
+  const result = await documentService.getForInspector({
+    zone: inspectorZone,
+    district: inspectorDistrict,
+    page,
+    limit,
+  });
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Inspector documents retrieved successfully.',
+    data: { documents: result.documents },
+  });
+});
+
+// GET /api/v1/documents/:id/file
+const serveFile = asyncHandler(async (req, res) => {
+  const path = require('path');
+  const fs = require('fs');
+  const fileData = await documentService.getFile(req.params.id);
+
+  if (fileData && fileData.filePath && fs.existsSync(fileData.filePath)) {
+    res.setHeader('Content-Type', fileData.mimeType || 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline');
+    return res.sendFile(path.resolve(fileData.filePath));
+  }
+
+  return sendError(res, { statusCode: 404, message: 'Document file unavailable.' });
+});
+
 // DELETE /api/v1/documents/:id
 const deleteDocument = asyncHandler(async (req, res) => {
   await documentService.delete(req.params.id, req.user._id, req.user.role);
@@ -65,4 +98,4 @@ const deleteDocument = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { upload, getForInstitution, verifyDocument, deleteDocument };
+module.exports = { upload, getForInstitution, getForInspector, serveFile, verifyDocument, deleteDocument };

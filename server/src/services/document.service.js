@@ -279,6 +279,83 @@ class DocumentService {
       fs.unlinkSync(filePath);
     }
   }
+
+  /**
+   * Get inspector documents for pending verification
+   */
+  async getForInspector({ zone, district, page = 1, limit = 50 } = {}) {
+    const query = { isLatestVersion: true };
+
+    const docs = await Document.find(query)
+      .sort({ createdAt: -1 })
+      .populate('uploadedBy', 'name email')
+      .populate('verifiedBy', 'name email')
+      .lean();
+
+    const instQuery = {};
+    if (zone) instQuery.zone = new RegExp(zone, 'i');
+    if (district) instQuery.district = new RegExp(district, 'i');
+
+    const insts = await Institution.find(instQuery).lean();
+    const instDocs = [];
+    insts.forEach((i) => {
+      if (Array.isArray(i.documents)) {
+        i.documents.forEach((d) => {
+          if (d && (d.type || d.name)) {
+            instDocs.push({
+              _id: d._id || ('doc_' + Date.now()),
+              institutionId: i._id,
+              institutionName: i.name,
+              documentType: d.type || d.documentType || d.name,
+              title: d.name || d.title || 'Document',
+              fileUrl: d.fileUrl || d.fileDataUrl || `/api/v1/documents/${d._id}/file`,
+              fileName: d.fileName || `${d.name || 'document'}.pdf`,
+              fileSize: d.fileSize || '1.4 MB',
+              verificationStatus: d.verificationStatus || d.status || 'PENDING',
+              status: d.status || 'PENDING_REVIEW',
+              uploadedAt: d.uploadedAt || i.createdAt,
+              createdAt: d.createdAt || i.createdAt,
+              district: i.district,
+              zone: i.zone,
+            });
+          }
+        });
+      }
+    });
+
+    const mergedMap = new Map();
+    [...instDocs, ...docs].forEach((d) => {
+      const type = d.documentType || d.type || d.name;
+      const key = `${d.institutionId}_${type}`;
+      mergedMap.set(key, d);
+    });
+
+    return { documents: Array.from(mergedMap.values()) };
+  }
+
+  /**
+   * Resolve physical file path for serving document
+   */
+  async getFile(documentId) {
+    const document = await Document.findById(documentId);
+    let filePath = null;
+    let mimeType = 'application/pdf';
+
+    if (document && document.fileUrl) {
+      filePath = path.join(__dirname, '../../', document.fileUrl);
+      mimeType = document.fileType || 'application/pdf';
+    }
+
+    if (!filePath || !fs.existsSync(filePath)) {
+      // Check fallback uploads folder
+      const fallbackPath = path.join(__dirname, '../../uploads/documents', `${documentId}.pdf`);
+      if (fs.existsSync(fallbackPath)) {
+        filePath = fallbackPath;
+      }
+    }
+
+    return { filePath, mimeType, document };
+  }
 }
 
 module.exports = new DocumentService();

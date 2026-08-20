@@ -13,6 +13,12 @@ const { uploadLimiter } = require('../middleware/rateLimiter');
 
 router.use(authenticate);
 
+// GET /api/v1/documents/inspector/pending
+router.get('/inspector/pending', documentController.getForInspector);
+
+// GET /api/v1/documents/:id/file
+router.get('/:id/file', documentController.serveFile);
+
 // GET /api/v1/documents/institution/:id
 router.get('/institution/:id', enforceInstitutionScope('id'), documentController.getForInstitution);
 

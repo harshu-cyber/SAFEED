@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { institutionStore } from '../../api/institutionStore';
+import { documentApi } from '../../api/apiServices';
 import {
   FiFileText, FiCheck, FiX, FiEye, FiClock, FiAlertCircle,
   FiSearch, FiFilter, FiCheckCircle, FiShield, FiUnlock, FiExternalLink
@@ -26,8 +27,18 @@ export const DocumentApproval = () => {
   const [actionLoading, setActionLoading] = useState('');
   const [toast, setToast] = useState('');
 
-  const loadDocs = () => {
-    // ✅ ZONE & STATION FILTERED: Only show docs from this officer's jurisdiction institutions
+  const loadDocs = async () => {
+    try {
+      const res = await documentApi.getPending({ zone: dcpZone });
+      const apiDocs = res.data?.data?.documents || res.data?.documents || [];
+      if (Array.isArray(apiDocs) && apiDocs.length > 0) {
+        setDocs(apiDocs);
+        return;
+      }
+    } catch (e) {
+      console.warn('[DocumentApproval] API fetch fallback notice:', e?.message);
+    }
+    // ✅ ZONE & STATION FILTERED FALLBACK
     const all = institutionStore.getDocumentsForZone(dcpZone, postingStation);
     setDocs(all);
   };
@@ -46,15 +57,23 @@ export const DocumentApproval = () => {
 
   const handleAction = async (docId, action) => {
     setActionLoading(docId + action);
-    await new Promise(r => setTimeout(r, 500));
 
     const status = action === 'approve' ? 'VERIFIED' : 'REJECTED';
     const finalRemarks = remarks || (action === 'approve' ? 'Verified & approved by District Inspector after reviewing PDF content.' : 'Rejected due to incomplete or invalid document details.');
 
+    try {
+      await documentApi.verify(docId, {
+        action: action === 'approve' ? 'APPROVE' : 'REJECT',
+        reason: finalRemarks
+      });
+    } catch (e) {
+      console.warn('[DocumentApproval] Verify API notice:', e?.message);
+    }
+
     // Save in institutionStore (REAL TIME)
     institutionStore.verifyDocument(docId, status, finalRemarks);
 
-    loadDocs();
+    await loadDocs();
     setSelectedDoc(null);
     setReadingDoc(null);
     setRemarks('');

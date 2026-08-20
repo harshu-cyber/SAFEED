@@ -3,6 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { evidenceStore } from '../../../api/evidenceStore';
 import { complaintStore } from '../../../api/complaintStore';
 import { institutionStore } from '../../../api/institutionStore';
+import { documentApi } from '../../../api/apiServices';
 import {
   FiShield, FiMapPin, FiUsers, FiCheckCircle, FiXCircle,
   FiCamera, FiClock, FiFileText, FiLock, FiUnlock, FiPhone,
@@ -20,6 +21,7 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
   const [lockReason, setLockReason] = useState('');
   const [unlockNotes, setUnlockNotes] = useState('');
   const [actionErr, setActionErr] = useState('');
+  const [apiDocs, setApiDocs] = useState([]);
 
   useEffect(() => {
     if (institution) {
@@ -27,10 +29,23 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
     }
   }, [institution]);
 
-  if (!institution && !localInst?._id && !localInst?.id) return null;
-
   const currentInst = localInst._id || localInst.id ? localInst : (institution || {});
   const instId = currentInst._id || currentInst.id;
+
+  useEffect(() => {
+    const targetId = instId || currentInst.email || currentInst.safeId;
+    if (targetId) {
+      documentApi.getForInstitution(targetId)
+        .then(res => {
+          if (res?.data?.data?.documents && Array.isArray(res.data.data.documents)) {
+            setApiDocs(res.data.data.documents);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [instId, currentInst.email, currentInst.safeId]);
+
+  if (!institution && !localInst?._id && !localInst?.id) return null;
 
   const handleLockSubmit = (e) => {
     e.preventDefault();
@@ -71,12 +86,18 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
   let isUnlocked = false;
   let instEvidence = [];
   let instComplaints = [];
-  let docs = [];
+  let localDocs = [];
+  try { localDocs = (instId || currentInst.email || currentInst.safeId) ? (institutionStore.getDocumentsForInstitution(instId || currentInst.email || currentInst.safeId) || []) : []; } catch {}
+  const embeddedDocs = Array.isArray(currentInst.documents) ? currentInst.documents : [];
 
-  try { isUnlocked = instId ? institutionStore.isCertificateUnlocked(instId) : false; } catch {}
-  try { instEvidence = instId ? (evidenceStore.getEvidenceForInstitution(instId) || []) : []; } catch {}
-  try { instComplaints = instId ? (complaintStore.getComplaintsForInstitution(instId) || []) : []; } catch {}
-  try { docs = (instId || currentInst.email || currentInst.safeId) ? (institutionStore.getDocumentsForInstitution(instId || currentInst.email || currentInst.safeId) || []) : []; } catch {}
+  const mergedDocMap = new Map();
+  [...embeddedDocs, ...localDocs, ...apiDocs].forEach(d => {
+    if (d) {
+      const typeKey = d.documentType || d.type || d.name;
+      if (typeKey) mergedDocMap.set(typeKey, d);
+    }
+  });
+  const docs = Array.from(mergedDocMap.values());
 
   const staffCount = parseInt(currentInst.staffCount || currentInst.totalTeachers || 0) || 0;
   const classroomCount = parseInt(currentInst.classroomCount || currentInst.totalClassrooms || 0) || 0;

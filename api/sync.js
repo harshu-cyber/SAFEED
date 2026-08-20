@@ -1,8 +1,8 @@
 // ============================================================
-// SafeED-UP — Self-Contained Standalone Serverless Sync Endpoint
+// SafeED-UP — Self-Contained Standalone Serverless Sync Endpoint (ESM)
 // Pure Mongoose - Zero external module dependencies (no bcryptjs requirement)
 // ============================================================
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 let isConnected = false;
 async function connectDB() {
@@ -60,7 +60,7 @@ function getParsedBody(req) {
   return {};
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   try {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');

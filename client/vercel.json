@@ -1,14 +1,5 @@
 {
-  "version": 2,
   "rewrites": [
-    {
-      "source": "/api/sync",
-      "destination": "/api/sync.js"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index.js"
-    },
     {
       "source": "/((?!api/).*)",
       "destination": "/index.html"

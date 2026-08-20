@@ -126,7 +126,7 @@ export const cloudSync = {
   startAutoSync() {
     if (pollInterval) return;
     pull(); // Immediate pull on start
-    pollInterval = setInterval(pull, 5000); // Poll every 5s for live updates
+    pollInterval = setInterval(pull, 60000); // Poll once every 60s
   },
   stopAutoSync() {
     if (pollInterval) {

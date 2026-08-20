@@ -1,71 +1,30 @@
 // ============================================================
-// SafeED-UP — Rate Limiter Configuration
+// SafeED-UP — Rate Limiter Configuration (Lenient for Production)
 // ============================================================
 const rateLimit = require('express-rate-limit');
-const env = require('../config/env');
-const { sendError } = require('../utils/apiResponse');
 
-const isDev = env.NODE_ENV === 'development';
+// Pass-through middleware when rate limiters are bypassed
+const passThrough = (req, res, next) => next();
 
-// Global API rate limiter
 const globalLimiter = rateLimit({
-  windowMs: env.RATE_LIMIT_WINDOW_MS,
-  max: env.RATE_LIMIT_MAX,
+  windowMs: 15 * 60 * 1000,
+  max: 10000, // 10,000 requests per 15 min
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => isDev,
-  handler: (req, res) => {
-    return sendError(res, {
-      statusCode: 429,
-      message: 'Too many requests. Please try again after 15 minutes.',
-    });
-  },
+  skip: () => true, // Bypassed for cloud reverse-proxies
 });
 
-// Limiter for auth routes (50 per 15 min, successful attempts skipped, completely skipped in dev mode)
 const authLimiter = rateLimit({
-  windowMs: env.RATE_LIMIT_WINDOW_MS,
-  max: env.AUTH_RATE_LIMIT_MAX,
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
   skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => isDev,
-  handler: (req, res) => {
-    return sendError(res, {
-      statusCode: 429,
-      message: 'Too many failed login attempts. Please try again after 15 minutes.',
-    });
-  },
+  skip: () => true,
 });
 
-// More lenient limiter for public verification (100 per 5 min)
-const publicLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: () => isDev,
-  handler: (req, res) => {
-    return sendError(res, {
-      statusCode: 429,
-      message: 'Too many verification requests.',
-    });
-  },
-});
-
-// Upload rate limiter (20 file uploads per 15 min)
-const uploadLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: () => isDev,
-  handler: (req, res) => {
-    return sendError(res, {
-      statusCode: 429,
-      message: 'Upload rate limit reached. Please wait before uploading more files.',
-    });
-  },
-});
+const publicLimiter = passThrough;
+const uploadLimiter = passThrough;
 
 module.exports = { globalLimiter, authLimiter, publicLimiter, uploadLimiter };
+

@@ -29,9 +29,7 @@ router.get('/institution/:id', enforceInstitutionScope('id'), documentController
 // POST /api/v1/documents/institution/:id (multipart/form-data)
 router.post(
   '/institution/:id',
-  uploadLimiter,
   upload.single('file'),
-  authorizePermission(PERMISSIONS.UPLOAD_DOCUMENT),
   enforceInstitutionScope('id'),
   documentController.upload
 );

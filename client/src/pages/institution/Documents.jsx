@@ -49,8 +49,6 @@ export const DocumentsPage = () => {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
   }, [user]);
 
   const handleFileChange = (e) => {

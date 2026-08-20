@@ -93,6 +93,7 @@ export const normalizeInstitution = (inst) => {
     floorCount: parseInt(inst.floorCount || inst.buildingFloors || 1) || 1,
     exitGateCount: parseInt(inst.exitGateCount || 2) || 2,
     nearestPoliceStation: inst.nearestPoliceStation || `${districtStr} Police Station`,
+    documents: Array.isArray(inst.documents) ? inst.documents : [],
     isActive: true,
     isPubliclyVisible: true,
   };
@@ -341,13 +342,31 @@ export const institutionStore = {
     return institutionStore.getDocuments().filter(d => zoneInstIds.has(d.institutionId));
   },
 
-  /** Return only documents for a specific institution ID */
+  /** Return only documents for a specific institution (checking both inst.documents and global store) */
   getDocumentsForInstitution: (instId) => {
     if (!instId) return [];
-    return institutionStore.getDocuments().filter(d => d.institutionId === instId);
+    const allInsts = institutionStore.getInstitutions();
+    const idLow = String(instId).toLowerCase();
+    const inst = allInsts.find(
+      i => i._id === instId || i.id === instId || i.email?.toLowerCase() === idLow || i.safeId === instId
+    );
+
+    const instDocs = (inst && Array.isArray(inst.documents)) ? inst.documents : [];
+    const globalDocs = institutionStore.getDocuments().filter(
+      d => d.institutionId === instId || (inst && (d.institutionId === inst._id || d.institutionId === inst.id || d.institutionId?.toLowerCase() === idLow || d.institutionId === inst.safeId))
+    );
+
+    const mergedMap = new Map();
+    [...instDocs, ...globalDocs].forEach(d => {
+      if (d && (d.type || d.name)) {
+        const key = d.type || d.name;
+        mergedMap.set(key, d);
+      }
+    });
+    return Array.from(mergedMap.values());
   },
 
-  /** Upload a document */
+  /** Upload a document & sync to institution object + MongoDB Atlas */
   uploadDocument: (docData) => {
     const all = institutionStore.getDocuments();
     const newDoc = {
@@ -371,16 +390,68 @@ export const institutionStore = {
     };
     all.unshift(newDoc);
     localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(all));
+
+    // Update matching institution object's documents array & trigger CloudSync
+    const insts = institutionStore.getInstitutions();
+    const idLow = String(docData.institutionId).toLowerCase();
+    const targetInst = insts.find(
+      i => i._id === docData.institutionId || i.id === docData.institutionId || i.email?.toLowerCase() === idLow || i.safeId === docData.institutionId
+    );
+
+    if (targetInst) {
+      const currentDocs = Array.isArray(targetInst.documents) ? [...targetInst.documents] : [];
+      const existingIdx = currentDocs.findIndex(d => d.type === newDoc.type);
+      if (existingIdx >= 0) {
+        currentDocs[existingIdx] = { ...currentDocs[existingIdx], ...newDoc };
+      } else {
+        currentDocs.unshift(newDoc);
+      }
+      targetInst.documents = currentDocs;
+      localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(insts));
+
+      cloudSync.syncAction('UPLOAD_DOCUMENT', {
+        institutionId: targetInst._id,
+        email: targetInst.email,
+        safeId: targetInst.safeId,
+        document: newDoc,
+      }).catch(err => console.warn('[uploadDocument] cloud sync failed:', err));
+    }
+
     return newDoc;
   },
 
-  /** Inspector: approve or reject a document */
+  /** Inspector: approve or reject a document & sync to MongoDB Atlas */
   verifyDocument: (docId, status, remarks = '') => {
     const docs = institutionStore.getDocuments();
     const updated = docs.map(d => (d._id === docId ? { ...d, status, remarks } : d));
     localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(updated));
     const target = docs.find(d => d._id === docId);
-    if (target) institutionStore.recalculateInstitutionStatus(target.institutionId);
+
+    if (target) {
+      const insts = institutionStore.getInstitutions();
+      const idLow = String(target.institutionId).toLowerCase();
+      const targetInst = insts.find(
+        i => i._id === target.institutionId || i.id === target.institutionId || i.email?.toLowerCase() === idLow || i.safeId === target.institutionId
+      );
+
+      if (targetInst && Array.isArray(targetInst.documents)) {
+        targetInst.documents = targetInst.documents.map(
+          d => (d._id === docId || d.type === target.type) ? { ...d, status, remarks } : d
+        );
+        localStorage.setItem(STORAGE_KEYS.INSTITUTIONS, JSON.stringify(insts));
+
+        cloudSync.syncAction('VERIFY_DOCUMENT', {
+          institutionId: targetInst._id,
+          email: targetInst.email,
+          safeId: targetInst.safeId,
+          docId,
+          docType: target.type,
+          status,
+          remarks,
+        }).catch(err => console.warn('[verifyDocument] cloud sync failed:', err));
+      }
+      institutionStore.recalculateInstitutionStatus(target.institutionId);
+    }
     return updated;
   },
 

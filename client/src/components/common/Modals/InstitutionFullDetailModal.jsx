@@ -76,7 +76,7 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
   try { isUnlocked = instId ? institutionStore.isCertificateUnlocked(instId) : false; } catch {}
   try { instEvidence = instId ? (evidenceStore.getEvidenceForInstitution(instId) || []) : []; } catch {}
   try { instComplaints = instId ? (complaintStore.getComplaintsForInstitution(instId) || []) : []; } catch {}
-  try { docs = instId ? (institutionStore.getDocumentsForInstitution(instId) || []) : []; } catch {}
+  try { docs = (instId || currentInst.email || currentInst.safeId) ? (institutionStore.getDocumentsForInstitution(instId || currentInst.email || currentInst.safeId) || []) : []; } catch {}
 
   const staffCount = parseInt(currentInst.staffCount || currentInst.totalTeachers || 0) || 0;
   const classroomCount = parseInt(currentInst.classroomCount || currentInst.totalClassrooms || 0) || 0;

@@ -207,6 +207,43 @@ export default async function handler(req, res) {
       } else if ((action === 'DELETE_INSTITUTION' || action === 'deleteInstitution') && payload) {
         const targetId = payload.id || payload._id;
         if (targetId) await Institution.deleteOne({ _id: targetId });
+      } else if ((action === 'UPLOAD_DOCUMENT' || action === 'uploadDocument') && payload) {
+        const { institutionId, email, safeId, document: doc } = payload;
+        if (doc) {
+          const filter = (institutionId && mongoose.Types.ObjectId.isValid(institutionId))
+            ? { _id: institutionId }
+            : email ? { email: email.toLowerCase() } : { safeId };
+          const inst = await Institution.findOne(filter);
+          if (inst) {
+            const currentDocs = Array.isArray(inst.documents) ? inst.documents : [];
+            const existingIdx = currentDocs.findIndex(d => d.type === doc.type || (doc._id && d._id === doc._id));
+            if (existingIdx >= 0) {
+              currentDocs[existingIdx] = { ...currentDocs[existingIdx], ...doc };
+            } else {
+              currentDocs.unshift(doc);
+            }
+            inst.documents = currentDocs;
+            inst.markModified('documents');
+            await inst.save();
+          }
+        }
+      } else if ((action === 'VERIFY_DOCUMENT' || action === 'verifyDocument') && payload) {
+        const { institutionId, email, safeId, docId, docType, status, remarks } = payload;
+        const filter = (institutionId && mongoose.Types.ObjectId.isValid(institutionId))
+          ? { _id: institutionId }
+          : email ? { email: email.toLowerCase() } : { safeId };
+        const inst = await Institution.findOne(filter);
+        if (inst && Array.isArray(inst.documents)) {
+          inst.documents = inst.documents.map(d => (d._id === docId || d.type === docType) ? { ...d, status, remarks: remarks || d.remarks } : d);
+          inst.markModified('documents');
+
+          const required = ['FIRE_NOC', 'STRUCTURAL_SAFETY', 'ELECTRICAL_SAFETY', 'EMERGENCY_PLAN'];
+          const verifiedTypes = inst.documents.filter(d => d.status === 'VERIFIED').map(d => d.type);
+          const score = Math.round((verifiedTypes.length / required.length) * 100);
+          inst.complianceScore = score;
+          inst.status = score === 100 ? 'VERIFIED' : 'PENDING_DOCUMENT_VERIFICATION';
+          await inst.save();
+        }
       }
 
       const users = await User.find({}).select('-password').lean();

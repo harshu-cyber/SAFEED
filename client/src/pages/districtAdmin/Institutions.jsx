@@ -4,6 +4,7 @@ import { Card, Badge } from '../../components/common/Card/Card';
 import { Button } from '../../components/common/Button/Button';
 import { useAuth } from '../../context/AuthContext';
 import { institutionStore } from '../../api/institutionStore';
+import { cloudSync } from '../../api/cloudSync';
 import { InstitutionFullDetailModal } from '../../components/common/Modals/InstitutionFullDetailModal';
 import { FiCheck, FiX, FiDownload, FiUserPlus, FiEye, FiShield } from 'react-icons/fi';
 import { MdVerified, MdLocalPolice } from 'react-icons/md';
@@ -26,14 +27,17 @@ export const DistrictInstitutionsPage = () => {
   const [selectedOfficer, setSelectedOfficer] = useState('DCP CENTRAL');
   const [toast, setToast] = useState('');
 
-  const loadRealTimeData = () => {
+  const loadRealTimeData = async () => {
+    try {
+      await cloudSync.pull();
+    } catch {}
     const all = institutionStore.getInstitutions();
     setInstitutions(all);
   };
 
   useEffect(() => {
     loadRealTimeData();
-    const interval = setInterval(loadRealTimeData, 4000);
+    const interval = setInterval(loadRealTimeData, 5000);
     return () => clearInterval(interval);
   }, []);
 

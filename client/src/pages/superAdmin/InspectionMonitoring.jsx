@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { institutionStore } from '../../api/institutionStore';
+import { cloudSync } from '../../api/cloudSync';
 import { InstitutionFullDetailModal } from '../../components/common/Modals/InstitutionFullDetailModal';
 import {
   FiShield, FiSearch, FiFilter, FiEye, FiMapPin, FiCheckCircle, FiXCircle,
@@ -22,7 +23,10 @@ export const SuperInspectionMonitoring = () => {
   const [selectedInst, setSelectedInst] = useState(null);
 
   useEffect(() => {
-    const load = () => setInstitutions(institutionStore.getInstitutions());
+    const load = async () => {
+      try { await cloudSync.pull(); } catch {}
+      setInstitutions(institutionStore.getInstitutions());
+    };
     load();
     const iv = setInterval(load, 5000);
     return () => clearInterval(iv);

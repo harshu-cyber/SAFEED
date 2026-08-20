@@ -170,14 +170,39 @@ export const Register = () => {
   const onSubmit = async (data) => {
     setError('');
 
-    // ✅ Create real-time institution record in client store & sync to MongoDB Atlas!
+    // 1️⃣ Save institution locally and push to MongoDB Atlas
     const newInst = institutionStore.registerInstitution(data);
 
-    // Direct MongoDB Atlas sync
     try {
       await cloudSync.syncAction('CREATE_INSTITUTION', newInst);
     } catch (err) {
-      console.warn('[Register] Cloud sync failed:', err);
+      console.warn('[Register] Institution cloud sync failed:', err);
+    }
+
+    // 2️⃣ Create user account in MongoDB Atlas via sync endpoint
+    try {
+      await cloudSync.syncAction('CREATE_USER', {
+        name: data.principalName || data.institutionName,
+        email: data.email.toLowerCase(),
+        phone: data.phone,
+        password: data.phone,
+        role: data.institutionType === 'COACHING' ? 'COACHING_ADMIN' : 'SCHOOL_ADMIN',
+        assignedPortal: data.institutionType === 'COACHING' ? 'COACHING_ADMIN' : 'SCHOOL_ADMIN',
+        state: data.state || 'Uttar Pradesh',
+        district: data.district || 'Lucknow',
+        designation: 'Institution Admin',
+        department: data.institutionName || 'Institution',
+        isActive: true,
+      });
+    } catch (err) {
+      // Non-blocking: user account creation failure should not block registration flow
+      console.warn('[Register] User account creation via sync failed:', err.message);
+      // Fallback: try the backend register endpoint
+      axiosInstance.post('/auth/register', {
+        ...data,
+        password: data.phone,
+        role: data.institutionType === 'COACHING' ? 'COACHING_ADMIN' : 'SCHOOL_ADMIN',
+      }).catch(console.warn);
     }
 
     const generatedCredentials = {
@@ -186,18 +211,11 @@ export const Register = () => {
       institutionName: data.institutionName || data.name,
       institutionId: newInst._id,
       safeId: newInst.safeId,
-      zone: newInst.zone,  // e.g. 'CENTRAL', 'WEST', etc.
+      zone: newInst.zone,
     };
 
     // Save to localStorage for instant real-time login session
     localStorage.setItem('registeredSchoolUser', JSON.stringify(generatedCredentials));
-
-    // Try backend call asynchronously (non-blocking)
-    axiosInstance.post('/auth/register', {
-      ...data,
-      password: data.phone,
-      role: data.institutionType === 'COACHING' ? 'COACHING_ADMIN' : 'SCHOOL_ADMIN',
-    }).catch(console.warn);
 
     // Show popup modal!
     setCredentials(generatedCredentials);

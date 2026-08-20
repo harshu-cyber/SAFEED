@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { institutionStore } from '../../api/institutionStore';
+import { cloudSync } from '../../api/cloudSync';
 import { evidenceStore } from '../../api/evidenceStore';
 import { complaintStore } from '../../api/complaintStore';
 import { InstitutionTypePieChart } from '../../components/common/Charts/InstitutionTypePieChart';
@@ -80,7 +81,8 @@ export const DistrictAdminDashboard = ({ defaultTab }) => {
     }
   }, [defaultTab, location.pathname]);
 
-  const loadRealTimeData = () => {
+  const loadRealTimeData = async () => {
+    try { await cloudSync.pull(); } catch {}
     const insts = institutionStore.getInstitutions();
     setInstitutions(insts);
     const docs = institutionStore.getDocuments();
@@ -93,8 +95,8 @@ export const DistrictAdminDashboard = ({ defaultTab }) => {
 
   useEffect(() => {
     loadRealTimeData();
-    // Real-time interval polling every 4 seconds
-    const interval = setInterval(loadRealTimeData, 4000);
+    // Real-time interval polling every 5 seconds
+    const interval = setInterval(loadRealTimeData, 5000);
     return () => clearInterval(interval);
   }, []);
 

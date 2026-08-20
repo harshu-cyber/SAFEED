@@ -220,10 +220,21 @@ class DocumentService {
 
     await document.save();
 
-    // Notify institution admin
-    const institution = document.institutionId;
-    await Notification.create({
-      userId: institution.adminUserId,
+    // Sync status change to embedded institution.documents array
+    const institution = await Institution.findById(document.institutionId);
+    if (institution && Array.isArray(institution.documents)) {
+      institution.documents = institution.documents.map(d =>
+        (d._id === document._id.toString() || d.type === document.documentType || d.documentType === document.documentType)
+          ? { ...d, status: action === 'APPROVE' ? 'VERIFIED' : 'REJECTED', verificationStatus: document.verificationStatus, remarks: reason || d.remarks }
+          : d
+      );
+      institution.markModified('documents');
+      await institution.save();
+    }
+
+    if (institution && institution.adminUserId) {
+      await Notification.create({
+        userId: institution.adminUserId,
       type: action === 'APPROVE' ? 'SUCCESS' : 'WARNING',
       title: action === 'APPROVE' ? 'Document Approved ✓' : 'Document Rejected',
       message:
@@ -234,9 +245,10 @@ class DocumentService {
       module: 'DOCUMENT',
       referenceId: document._id,
     });
-
-    return document;
   }
+
+  return document;
+}
 
   /**
    * Delete a document (soft delete by marking non-latest)

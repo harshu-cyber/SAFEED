@@ -94,8 +94,13 @@ class AuthService {
     // Auto-create Institution in Atlas if registering a School/Coaching
     const Institution = require('../models/Institution.model');
     if (institutionName) {
-      const instType = (institutionType || (role === 'COACHING_ADMIN' ? 'COACHING' : 'SCHOOL'));
-      const safeId = `SAFE-${district ? district.toUpperCase().slice(0, 3) : 'LKO'}-${Math.floor(100000 + Math.random() * 900000)}`;
+      const instType = (institutionType || (role === 'COACHING_ADMIN' ? 'COACHING' : 'SCHOOL')).toUpperCase();
+      const districtStr = district || 'Lucknow';
+      const districtCode = districtStr.slice(0, 3).toUpperCase();
+      const safeId = data.safeId || `SAFE-UP-${districtCode}-${Math.floor(100000 + Math.random() * 900000)}`;
+      const zoneKey = (data.zone || 'CENTRAL').toUpperCase();
+      const addrStr = typeof address === 'string' ? address : (address?.street || `${districtStr}, Uttar Pradesh`);
+
       try {
         const inst = await Institution.create({
           safeId,
@@ -103,19 +108,27 @@ class AuthService {
           type: instType,
           registrationNumber: data.registrationNumber || `REG-${Date.now()}`,
           affiliationBoard: data.board || data.affiliationBoard || 'CBSE',
-          address: {
-            street: address || 'Main Road',
-            district: district || 'Lucknow',
-            state: state || 'Uttar Pradesh',
-          },
+          district: districtStr,
+          state: state || 'Uttar Pradesh',
+          zone: zoneKey,
+          address: addrStr,
+          principal: userFullName,
+          contact: phone,
+          email: email.toLowerCase().trim(),
           contactPerson: {
             name: userFullName,
-            email: email.toLowerCase(),
+            email: email.toLowerCase().trim(),
             phone: phone,
           },
           adminUserId: user._id,
-          nearestPoliceStation: data.nearestPoliceStation || 'Hazratganj Police Station',
-          zone: data.zone || 'CENTRAL',
+          nearestPoliceStation: data.nearestPoliceStation || `${districtStr} Police Station`,
+          assignedInspector: `DCP ${zoneKey}`,
+          assignedInspectorZone: zoneKey,
+          assignedInspectorEmail: `dcp${zoneKey.toLowerCase()}@safeedup.gov.in`,
+          staffCount: parseInt(data.staffCount || 0) || 0,
+          classroomCount: parseInt(data.classroomCount || 0) || 0,
+          floorCount: parseInt(data.floorCount || 1) || 1,
+          exitGateCount: parseInt(data.exitGateCount || 2) || 2,
         });
         user.institutionId = inst._id;
       } catch (instErr) {

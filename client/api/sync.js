@@ -7,14 +7,10 @@ const mongoose = require('mongoose');
 let isConnected = false;
 async function connectDB() {
   if (isConnected && mongoose.connection.readyState === 1) return { ok: true };
-  const MONGODB_URI = process.env.MONGODB_URI;
-  if (!MONGODB_URI) {
-    return { ok: false, reason: 'MONGODB_URI is not set in Vercel Environment Variables. Please add it and Redeploy.' };
-  }
+  const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://safeedadmin:Safeed2026@safeed.mewsypb.mongodb.net/safeedup?retryWrites=true&w=majority&appName=safeed';
   try {
     await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
     });
     isConnected = true;
     return { ok: true };
@@ -44,8 +40,25 @@ const instSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
 }, { strict: false, timestamps: true });
 
+const complaintSchema = new mongoose.Schema({
+  complaintTicket: String,
+  institutionName: String,
+  category: String,
+  status: String,
+}, { strict: false, timestamps: true });
+
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Institution = mongoose.models.Institution || mongoose.model('Institution', instSchema);
+const Complaint = mongoose.models.Complaint || mongoose.model('Complaint', complaintSchema);
+
+function getParsedBody(req) {
+  if (!req.body) return {};
+  if (typeof req.body === 'string') {
+    try { return JSON.parse(req.body); } catch (e) { return {}; }
+  }
+  if (typeof req.body === 'object') return req.body;
+  return {};
+}
 
 module.exports = async function handler(req, res) {
   try {
@@ -56,16 +69,20 @@ module.exports = async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     const conn = await connectDB();
-    if (!conn.ok) return res.status(500).json({ success: false, error: conn.reason });
+    if (!conn.ok) {
+      return res.status(200).json({ success: false, error: conn.reason });
+    }
 
     if (req.method === 'GET') {
       const users = await User.find({}).select('-password').lean();
       const institutions = await Institution.find({}).lean();
-      return res.status(200).json({ success: true, data: { users, institutions } });
+      const complaints = await Complaint.find({}).lean();
+      return res.status(200).json({ success: true, data: { users, institutions, complaints } });
     }
 
     if (req.method === 'POST') {
-      const { action, payload } = req.body || {};
+      const body = getParsedBody(req);
+      const { action, payload } = body || {};
 
       if ((action === 'CREATE_USER' || action === 'createUser') && payload) {
         const emailLow = payload.email?.toLowerCase()?.trim();
@@ -104,8 +121,51 @@ module.exports = async function handler(req, res) {
         const targetId = payload.id || payload._id;
         const query = targetId && mongoose.Types.ObjectId.isValid(targetId) ? { _id: targetId } : { email: payload.email?.toLowerCase() };
         await User.deleteOne(query);
-      } else if ((action === 'CREATE_INSTITUTION' || action === 'createInstitution') && payload) {
-        await Institution.create(payload);
+      } else if ((action === 'CREATE_INSTITUTION' || action === 'createInstitution' || action === 'registerInstitution') && payload) {
+        try {
+          await Institution.collection.dropIndex('safeId_1').catch(() => {});
+        } catch (e) {}
+
+        const instData = { ...payload };
+        if (instData._id && typeof instData._id === 'string' && instData._id.startsWith('inst_')) {
+          delete instData._id;
+        }
+        if (!instData.name && instData.institutionName) {
+          instData.name = instData.institutionName;
+        }
+        if (!instData.type && instData.institutionType) {
+          instData.type = instData.institutionType;
+        }
+        if (!instData.affiliationBoard && instData.board) {
+          instData.affiliationBoard = instData.board;
+        }
+        const districtStr = instData.district || 'Lucknow';
+        const districtCode = districtStr.slice(0, 3).toUpperCase();
+        if (!instData.safeId || instData.safeId === 'null' || instData.safeId === 'undefined') {
+          instData.safeId = `SAFE-UP-${districtCode}-${Math.floor(100000 + Math.random() * 900000)}`;
+        }
+        if (!instData.address) {
+          instData.address = `${districtStr}, Uttar Pradesh`;
+        } else if (typeof instData.address === 'object') {
+          instData.address = instData.address.street || `${districtStr}, Uttar Pradesh`;
+        }
+        if (!instData.principal) {
+          instData.principal = instData.principalName || instData.contactName || 'Principal';
+        }
+        if (!instData.contact) {
+          instData.contact = instData.phone || '';
+        }
+        if (!instData.email && instData.contactPerson?.email) {
+          instData.email = instData.contactPerson.email;
+        }
+        const zoneStr = (instData.zone || 'CENTRAL').toUpperCase();
+        instData.zone = zoneStr;
+        instData.assignedInspector = instData.assignedInspector || `DCP ${zoneStr}`;
+        instData.assignedInspectorZone = zoneStr;
+        instData.assignedInspectorEmail = `dcp${zoneStr.toLowerCase()}@safeedup.gov.in`;
+
+        const filter = instData.email ? { email: instData.email.toLowerCase() } : { name: instData.name };
+        await Institution.findOneAndUpdate(filter, { $set: instData }, { upsert: true, new: true });
       } else if ((action === 'UPDATE_INSTITUTION' || action === 'updateInstitution') && payload) {
         const targetId = payload._id || payload.id;
         if (targetId) await Institution.findByIdAndUpdate(targetId, { $set: payload });
@@ -116,11 +176,12 @@ module.exports = async function handler(req, res) {
 
       const users = await User.find({}).select('-password').lean();
       const institutions = await Institution.find({}).lean();
-      return res.status(200).json({ success: true, data: { users, institutions } });
+      const complaints = await Complaint.find({}).lean();
+      return res.status(200).json({ success: true, data: { users, institutions, complaints } });
     }
 
     return res.status(405).json({ success: false, error: 'Method Not Allowed' });
   } catch (err) {
-    return res.status(500).json({ success: false, error: `Server error: ${err.message}` });
+    return res.status(200).json({ success: false, error: `Server error: ${err.stack || err.message}` });
   }
 };

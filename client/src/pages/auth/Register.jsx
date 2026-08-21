@@ -172,36 +172,44 @@ export const Register = () => {
 
     const formattedData = {
       ...data,
+      name: (data.principalName || data.name || data.institutionName || 'School Admin').trim(),
       phone: String(data.phone || '').replace(/\D/g, '').slice(-10) || data.phone,
       email: (data.email || '').toLowerCase().trim(),
       institutionName: (data.institutionName || '').trim(),
+      role: data.institutionType === 'COACHING' ? 'COACHING_ADMIN' : 'SCHOOL_ADMIN',
     };
-
-    // 1️⃣ Save institution locally and push to MongoDB Atlas
-    const newInst = institutionStore.registerInstitution(formattedData);
 
     try {
-      await cloudSync.syncAction('CREATE_INSTITUTION', newInst);
-      await cloudSync.pull();
+      // 1️⃣ Send canonical registration request to Express backend (creates User + Institution in Atlas)
+      const res = await authApi.register(formattedData);
+      const resData = res.data?.data || {};
+
+      const registeredCredentials = {
+        username: formattedData.email,
+        password: formattedData.phone, // Password is auto-set to Mobile Number
+        institutionName: resData.credentials?.institutionName || formattedData.institutionName,
+        institutionId: resData.user?.institutionId || resData.user?._id,
+        safeId: resData.credentials?.safeId || `SAFE-UP-LKO-${Math.floor(100000 + Math.random() * 900000)}`,
+        zone: formattedData.zone || 'CENTRAL',
+      };
+
+      // Also mirror to local institutionStore for instant UI reactivity
+      institutionStore.registerInstitution({
+        ...formattedData,
+        _id: registeredCredentials.institutionId,
+        safeId: registeredCredentials.safeId,
+      });
+
+      // Save credentials session in localStorage
+      localStorage.setItem('registeredSchoolUser', JSON.stringify(registeredCredentials));
+
+      // Display official credentials popup modal
+      setCredentials(registeredCredentials);
     } catch (err) {
-      console.warn('[Register] Institution cloud sync failed:', err);
+      console.error('[Register] Backend registration error:', err);
+      const msg = err.response?.data?.message || 'Registration failed. Please check your details and try again.';
+      setError(msg);
     }
-
-    // 2️⃣ Generate institution login credentials session
-    const generatedCredentials = {
-      username: formattedData.email,
-      password: formattedData.phone,
-      institutionName: newInst.name,
-      institutionId: newInst._id,
-      safeId: newInst.safeId,
-      zone: newInst.zone,
-    };
-
-    // Save to localStorage for instant real-time login session
-    localStorage.setItem('registeredSchoolUser', JSON.stringify(generatedCredentials));
-
-    // Show popup modal!
-    setCredentials(generatedCredentials);
   };
 
   const inputClass = "w-full text-xs px-3 py-2.5 border border-[#1E3A5F] rounded-xl outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-[#D4AF37] transition-all bg-[#0B223D] text-white placeholder:text-slate-500";

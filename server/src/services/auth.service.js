@@ -42,8 +42,8 @@ class AuthService {
       }
     }
 
-    // ✅ Auto-set password = mobile number (as per requirement)
-    const autoPassword = phone;
+    // ✅ Auto-set password = custom password or mobile number
+    const autoPassword = data.password || phone;
     const userFullName = (name || data.principalName || institutionName || 'School Admin').trim();
 
     const userData = {

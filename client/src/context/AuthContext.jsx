@@ -64,43 +64,9 @@ export const AuthProvider = ({ children }) => {
       setUser(loggedUser);
       return loggedUser;
     } catch (err) {
-      // Fallback: check local userStore if offline sync present
-      const emailLower = credentials.email?.toLowerCase()?.trim();
-      const storedUser = userStore.getUserByEmail(emailLower);
-      if (storedUser) {
-        if (!storedUser.isActive) throw new Error('Account deactivated.');
-        localStorage.setItem('accessToken', 'officer_' + Date.now());
-        setUser(storedUser);
-        return storedUser;
-      }
-
-      // Check if this email is a registered institution
-      const inst = institutionStore.getInstitutionByIdOrEmail(emailLower);
-      if (inst) {
-        const instUser = {
-          _id: inst._id,
-          id: inst._id,
-          name: inst.name,
-          email: inst.email,
-          role: 'SCHOOL_ADMIN',
-          institutionId: inst._id,
-          district: inst.district,
-          state: inst.state,
-        };
-        localStorage.setItem('accessToken', 'inst_' + Date.now());
-        localStorage.setItem('registeredSchoolUser', JSON.stringify({
-          username: inst.email,
-          password: credentials.password,
-          institutionName: inst.name,
-          institutionId: inst._id,
-          safeId: inst.safeId,
-          zone: inst.zone,
-        }));
-        setUser(instUser);
-        return instUser;
-      }
-
-      throw err;
+      console.error('[AuthContext] Login API Error:', err.response?.data || err.message);
+      const serverMsg = err.response?.data?.message || err.message || 'Login failed. Please check credentials.';
+      throw new Error(serverMsg);
     }
   };
 

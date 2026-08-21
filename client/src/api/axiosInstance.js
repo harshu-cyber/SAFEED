@@ -42,33 +42,32 @@ axiosInstance.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      try {
-        const storedRefreshToken = localStorage.getItem('refreshToken');
-        const res = await axios.post(
-          `${baseURL}/auth/refresh-token`,
-          { refreshToken: storedRefreshToken },
-          { withCredentials: true }
-        );
-        const { accessToken, refreshToken: newRefreshToken } = res.data?.data || {};
-        if (accessToken) {
-          localStorage.setItem('accessToken', accessToken);
-          if (newRefreshToken) {
-            localStorage.setItem('refreshToken', newRefreshToken);
+      const storedRefreshToken = localStorage.getItem('refreshToken');
+      if (storedRefreshToken) {
+        try {
+          const res = await axios.post(
+            `${baseURL}/auth/refresh-token`,
+            { refreshToken: storedRefreshToken },
+            { withCredentials: true }
+          );
+          const { accessToken, refreshToken: newRefreshToken } = res.data?.data || {};
+          if (accessToken) {
+            localStorage.setItem('accessToken', accessToken);
+            if (newRefreshToken) {
+              localStorage.setItem('refreshToken', newRefreshToken);
+            }
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            return axiosInstance(originalRequest);
           }
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          return axiosInstance(originalRequest);
+        } catch (refreshError) {
+          console.warn('[axiosInstance] Refresh token attempt failed:', refreshError?.message);
         }
-      } catch (refreshError) {
-        console.warn('[axiosInstance] Session expired or refresh token invalid. Clearing stale credentials.');
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('registeredSchoolUser');
-
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-          window.location.href = '/login?session_expired=1';
-        }
-        return Promise.reject(refreshError);
       }
+
+      // If refresh token absent or failed, clear stale items cleanly
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('registeredSchoolUser');
     }
     return Promise.reject(error);
   }

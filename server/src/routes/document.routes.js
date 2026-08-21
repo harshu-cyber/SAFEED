@@ -11,7 +11,7 @@ const upload = require('../config/multerConfig');
 router.use(authenticate);
 
 // POST /api/v1/documents (Institution upload with multipart/form-data)
-router.post('/', upload.single('file'), documentController.upload);
+router.post('/', upload.any(), documentController.upload);
 
 // GET /api/v1/documents/my (Institution canonical document list)
 router.get('/my', documentController.getMyDocuments);

@@ -8,11 +8,12 @@ const asyncHandler = require('../utils/asyncHandler');
 
 // POST /api/v1/documents
 const upload = asyncHandler(async (req, res) => {
-  if (!req.file) {
+  const uploadedFile = req.file || (req.files && req.files[0]);
+  if (!uploadedFile) {
     return sendError(res, { statusCode: 400, message: 'No file uploaded. Please attach a file.' });
   }
 
-  const document = await documentService.uploadDocument(req.user, req.file, req.body);
+  const document = await documentService.uploadDocument(req.user, uploadedFile, req.body);
   return sendSuccess(res, {
     statusCode: 201,
     message: 'Document uploaded successfully and queued for Inspector review.',

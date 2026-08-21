@@ -51,6 +51,26 @@ const authenticate = asyncHandler(async (req, res, next) => {
     return sendError(res, { statusCode: 403, message: 'Your account has been deactivated. Contact administrator.' });
   }
 
+  // Auto-heal missing institutionId linkage for institution admins
+  if (!user.institutionId && (user.role === 'SCHOOL_ADMIN' || user.role === 'COACHING_ADMIN')) {
+    const Institution = require('../models/Institution.model');
+    const inst = await Institution.findOne({
+      $or: [
+        { adminUserId: user._id },
+        { email: user.email.toLowerCase() },
+        { 'contactPerson.email': user.email.toLowerCase() },
+      ],
+    });
+    if (inst) {
+      user.institutionId = inst._id;
+      await User.findByIdAndUpdate(user._id, { institutionId: inst._id });
+      if (!inst.adminUserId) {
+        inst.adminUserId = user._id;
+        await inst.save();
+      }
+    }
+  }
+
   req.user = user;
   next();
 });

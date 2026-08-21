@@ -102,17 +102,28 @@ class DocumentService {
       throw err;
     }
 
-    // 1. Upload file buffer to GridFS
-    const gridfsFile = await gridfsService.uploadStream(
-      file.buffer,
-      file.originalname || `${canonicalType}.pdf`,
-      file.mimetype || 'application/pdf'
-    );
+    // 1. Upload file buffer to Cloudinary CDN
+    const cloudinaryService = require('./cloudinary.service');
+    let cloudResult = null;
+    try {
+      cloudResult = await cloudinaryService.uploadFileBuffer(
+        file.buffer,
+        file.originalname || `${canonicalType}.pdf`,
+        'safeed_documents',
+        file.mimetype || 'application/pdf'
+      );
+    } catch (cloudErr) {
+      console.warn('Cloudinary upload warning, falling back to GridFS:', cloudErr.message);
+    }
 
-    if (!gridfsFile || !gridfsFile._id) {
-      const err = new Error('Failed to store document in GridFS file storage.');
-      err.statusCode = 500;
-      throw err;
+    // Fallback: GridFS storage if Cloudinary unavailable
+    let gridfsFile = null;
+    if (!cloudResult) {
+      gridfsFile = await gridfsService.uploadStream(
+        file.buffer,
+        file.originalname || `${canonicalType}.pdf`,
+        file.mimetype || 'application/pdf'
+      );
     }
 
     // 2. Resolve inspector assignment
@@ -126,7 +137,11 @@ class DocumentService {
       originalFileName: file.originalname || `${canonicalType}.pdf`,
       mimeType: file.mimetype || 'application/pdf',
       fileSize: file.size || file.buffer.length || 0,
-      fileStorageId: gridfsFile._id,
+      fileUrl: cloudResult ? cloudResult.url : null,
+      cloudinarySecureUrl: cloudResult ? cloudResult.url : null,
+      cloudinaryPublicId: cloudResult ? cloudResult.publicId : null,
+      cloudinaryResourceType: cloudResult ? (cloudResult.resourceType || 'auto') : null,
+      fileStorageId: gridfsFile ? gridfsFile._id : null,
       uploadedBy: user._id,
       assignedInspectorId,
       zone: institution.zone || '',
@@ -135,7 +150,18 @@ class DocumentService {
       uploadedAt: new Date(),
     };
 
-    const document = await Document.create(docData);
+    let document;
+    try {
+      document = await Document.create(docData);
+    } catch (createErr) {
+      // Rollback orphan Cloudinary asset if DB creation fails
+      if (cloudResult && cloudResult.publicId) {
+        console.warn('⚠️ MongoDB creation failed after Cloudinary upload. Cleaning up orphan asset:', cloudResult.publicId);
+        await cloudinaryService.deleteFile(cloudResult.publicId, cloudResult.resourceType);
+      }
+      throw createErr;
+    }
+
     return document;
   }
 
@@ -201,25 +227,41 @@ class DocumentService {
     }
 
     const document = await Document.findById(documentId);
-    if (!document || !document.fileStorageId) {
+    if (!document) {
       const err = new Error('Document record not found.');
       err.statusCode = 404;
       throw err;
     }
 
-    const gridFile = await gridfsService.findFileById(document.fileStorageId);
-    if (!gridFile) {
-      const err = new Error('Physical document file not found in storage.');
-      err.statusCode = 404;
-      throw err;
+    // 1. Cloudinary CDN Storage Path
+    if (document.fileUrl) {
+      return {
+        fileUrl: document.fileUrl,
+        mimeType: document.mimeType || 'application/pdf',
+        originalFileName: document.originalFileName || 'document.pdf',
+      };
     }
 
-    const downloadStream = gridfsService.openDownloadStream(document.fileStorageId);
-    return {
-      stream: downloadStream,
-      mimeType: document.mimeType || gridFile.contentType || 'application/pdf',
-      originalFileName: document.originalFileName || gridFile.filename || 'document.pdf',
-    };
+    // 2. GridFS Storage Path (Fallback)
+    if (document.fileStorageId) {
+      const gridFile = await gridfsService.findFileById(document.fileStorageId);
+      if (!gridFile) {
+        const err = new Error('Physical document file not found in storage.');
+        err.statusCode = 404;
+        throw err;
+      }
+
+      const downloadStream = gridfsService.openDownloadStream(document.fileStorageId);
+      return {
+        stream: downloadStream,
+        mimeType: document.mimeType || gridFile.contentType || 'application/pdf',
+        originalFileName: document.originalFileName || gridFile.filename || 'document.pdf',
+      };
+    }
+
+    const err = new Error('No physical file found for this document.');
+    err.statusCode = 404;
+    throw err;
   }
 
   /**

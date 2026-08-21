@@ -42,11 +42,15 @@ const getInspectorAssigned = asyncHandler(async (req, res) => {
 
 // GET /api/v1/documents/:id/file
 const serveFile = asyncHandler(async (req, res) => {
-  const { stream, mimeType, originalFileName } = await documentService.getDocumentFileStream(req.params.id);
+  const fileData = await documentService.getDocumentFileStream(req.params.id);
 
-  res.setHeader('Content-Type', mimeType || 'application/pdf');
-  res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(originalFileName)}"`);
-  return stream.pipe(res);
+  if (fileData.fileUrl) {
+    return res.redirect(fileData.fileUrl);
+  }
+
+  res.setHeader('Content-Type', fileData.mimeType || 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(fileData.originalFileName)}"`);
+  return fileData.stream.pipe(res);
 });
 
 // PATCH /api/v1/documents/:id/approve

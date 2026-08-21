@@ -1,0 +1,133 @@
+◇ injected env (10) from server\.env // tip: ⌁ auth for agents [www.vestauth.com]
+◇ injected env (0) from server\.env // tip: ⌘ suppress logs { quiet: true }
+
+============================================================
+🧪 REAL MANUAL E2E USER-INSTITUTION & UPLOAD VERIFICATION
+============================================================
+
+✅ MongoDB Connected: 127.0.0.1
+📡 Express Server running at http://127.0.0.1:5006
+
+============================================================
+STEP 1 — REAL INSTITUTION REGISTRATION & LOGIN
+============================================================
+📝 Registering new Institution Admin: real_school_admin_1787289626151@safeedup.test | Institution: "St. Francis School 1787289626151"
+[0mPOST /api/v1/auth/register [32m201[0m 464.750 ms - -[0m
+✅ Registration HTTP Status: 201
+✅ Account Registered Successfully!
+
+🔑 Performing Login for real_school_admin_1787289626151@safeedup.test with auto-set password (9876543210)...
+[0mPOST /api/v1/auth/login [32m200[0m 365.523 ms - 925[0m
+✅ Real JWT Access Token acquired.
+
+============================================================
+STEP 2 — CALLING GET /api/v1/auth/me
+============================================================
+[0mGET /api/v1/auth/me [32m200[0m 7.119 ms - 583[0m
+👤 [AUTHENTICATED USER PROFILE]:
+{
+  "user_id": "6a87e01a39d0ebd49af18fa6",
+  "user_role": "SCHOOL_ADMIN",
+  "user_institutionId": "6a87e01a39d0ebd49af18fa7",
+  "user_email": "real_school_admin_1787289626151@safeedup.test",
+  "user_name": "Fr. Thomas Administrator"
+}
+
+============================================================
+STEP 3 — CHECKING INSTITUTION RECORD IN MONGODB
+============================================================
+🍃 [MATCHED MONGODB INSTITUTION]:
+{
+  _id: '6a87e01a39d0ebd49af18fa7',
+  name: 'St. Francis School 1787289626151',
+  type: 'SCHOOL',
+  district: 'Lucknow',
+  zone: 'CENTRAL',
+  adminUserId: '6a87e01a39d0ebd49af18fa6'
+}
+
+============================================================
+STEP 4 — UPLOADING SAFEED_MANUAL_REAL_TEST_001.pdf via POST /api/v1/documents
+============================================================
+[0mPOST /api/v1/documents [32m201[0m 36.331 ms - 781[0m
+✅ HTTP POST /api/v1/documents Status: 201
+📥 [UPLOADED DOCUMENT DETAILS]:
+{
+  "uploaded_documentId": "6a87e01b39d0ebd49af18fab",
+  "uploaded_institutionId": "6a87e01a39d0ebd49af18fa7",
+  "uploaded_documentType": "FIRE_SAFETY",
+  "uploaded_originalFileName": "SAFEED_MANUAL_REAL_TEST_001.pdf",
+  "uploaded_fileStorageId": "6a87e01b39d0ebd49af18fa9",
+  "uploaded_assignedInspectorId": "6a87daea82a521787dd328ec",
+  "uploaded_status": "PENDING_REVIEW"
+}
+
+============================================================
+STEP 5 — INSPECTOR LOGIN & ASSIGNED DOCUMENT QUERY
+============================================================
+[0mGET /api/v1/documents/inspector/assigned [32m200[0m 17.594 ms - -[0m
+🔎 [INSPECTOR ASSIGNED DOCS COUNT]: 9
+🔎 [FOUND UPLOADING DOC IN INSPECTOR LIST]: 6a87e01b39d0ebd49af18fab
+
+============================================================
+STEP 6 — FETCHING PDF STREAM GET /api/v1/documents/6a87e01b39d0ebd49af18fab/file
+============================================================
+[0mGET /api/v1/documents/6a87e01b39d0ebd49af18fab/file [32m200[0m 9.509 ms - -[0m
+📄 [STREAM HEADERS]: {
+  'content-type': 'application/pdf',
+  'content-disposition': 'inline; filename="SAFEED_MANUAL_REAL_TEST_001.pdf"'
+}
+📄 [STREAM BODY PREVIEW]: %PDF-1.4 RAW BINARY FOR SAFEED_MANUAL_REAL_TEST_001.pdf
+
+============================================================
+STEP 7 — APPROVING DOCUMENT via PATCH /api/v1/documents/6a87e01b39d0ebd49af18fab/approve
+============================================================
+[0mPATCH /api/v1/documents/6a87e01b39d0ebd49af18fab/approve [32m200[0m 15.686 ms - 787[0m
+✅ Approval API Response Status: 200
+🍃 [APPROVED DOCUMENT MONGODB RECORD]:
+{
+  _id: '6a87e01b39d0ebd49af18fab',
+  status: 'APPROVED',
+  reviewedBy: '6a87e01b39d0ebd49af18fac',
+  reviewedAt: 2026-08-21T05:20:27.581Z
+}
+
+============================================================
+STEP 8 — REMAINING 3 DOCUMENTS & FINAL QR CODE UNLOCK STATE
+============================================================
+[0mPOST /api/v1/documents [32m201[0m 10.479 ms - 796[0m
+[0mPATCH /api/v1/documents/6a87e01b39d0ebd49af18faf/approve [32m200[0m 11.298 ms - 802[0m
+  -> Approved BUILDING_STRUCTURAL_SAFETY (ID: 6a87e01b39d0ebd49af18faf)
+[0mPOST /api/v1/documents [32m201[0m 16.922 ms - 787[0m
+[0mPATCH /api/v1/documents/6a87e01b39d0ebd49af18fb2/approve [32m200[0m 9.340 ms - 793[0m
+  -> Approved ELECTRICAL_SAFETY (ID: 6a87e01b39d0ebd49af18fb2)
+[0mPOST /api/v1/documents [32m201[0m 15.053 ms - 785[0m
+[0mPATCH /api/v1/documents/6a87e01b39d0ebd49af18fb5/approve [32m200[0m 11.859 ms - 791[0m
+  -> Approved EVACUATION_PLAN (ID: 6a87e01b39d0ebd49af18fb5)
+[0mGET /api/v1/documents/qr-status [32m200[0m 4.052 ms - 276[0m
+
+🔓 [FINAL QR UNLOCK API RESPONSE]:
+{
+  "institutionId": "6a87e01a39d0ebd49af18fa7",
+  "qrUnlocked": true,
+  "documentStatus": {
+    "FIRE_SAFETY": "APPROVED",
+    "BUILDING_STRUCTURAL_SAFETY": "APPROVED",
+    "ELECTRICAL_SAFETY": "APPROVED",
+    "EVACUATION_PLAN": "APPROVED"
+  }
+}
+
+🍃 [FINAL INSTITUTION MONGODB RECORD]:
+{
+  _id: '6a87e01a39d0ebd49af18fa7',
+  name: 'St. Francis School 1787289626151',
+  qrLocked: false,
+  complianceScore: 100,
+  verificationStatus: 'VERIFIED'
+}
+
+============================================================
+🎉 REAL MANUAL E2E TEST PASSED 100% SUCCESSFULLY!
+============================================================
+

@@ -1,0 +1,49 @@
+◇ injected env (13) from server\.env // tip: ⌘ enable debugging { debug: true }
+◇ injected env (0) from server\.env // tip: ⌘ enable debugging { debug: true }
+
+============================================================
+☁️ CLOUDINARY CDN DOCUMENT WORKFLOW VERIFICATION
+============================================================
+
+✅ MongoDB Connected: 127.0.0.1
+📡 Express Server running at http://127.0.0.1:5007
+
+📝 Registering Institution: "Cloudinary Academy 1787291941251"...
+[0mPOST /api/v1/auth/register [32m201[0m 443.027 ms - -[0m
+[0mPOST /api/v1/auth/login [32m200[0m 320.311 ms - 916[0m
+✅ Registered & Logged In with JWT Token!
+
+📤 Uploading document SAFEED_CLOUDINARY_TEST_001.pdf to Cloudinary CDN...
+[0mPOST /api/v1/documents [32m201[0m 5070.724 ms - 975[0m
+✅ Upload HTTP Response Status: 201
+
+☁️ [CLOUDINARY CDN METADATA IN MONGODB]:
+{
+  "documentId": "6a87e92ba5a2e4227efbefbc",
+  "institutionId": "6a87e925a5a2e4227efbefba",
+  "documentType": "FIRE_SAFETY",
+  "originalFileName": "SAFEED_CLOUDINARY_TEST_001.pdf",
+  "fileUrl": "https://res.cloudinary.com/y2ddgstl/image/upload/v1787291946/safeed_documents/SAFEED_CLOUDINARY_TEST_001_1787291942314.pdf",
+  "cloudinaryPublicId": "safeed_documents/SAFEED_CLOUDINARY_TEST_001_1787291942314",
+  "status": "PENDING_REVIEW"
+}
+
+📄 Fetching PDF Stream from GET /api/v1/documents/6a87e92ba5a2e4227efbefbc/file...
+[0mGET /api/v1/documents/6a87e92ba5a2e4227efbefbc/file [36m302[0m 8.367 ms - 144[0m
+📄 [FILE ENDPOINT RESPONSE STATUS]: 302
+📄 [FILE ENDPOINT LOCATION HEADER]: https://res.cloudinary.com/y2ddgstl/image/upload/v1787291946/safeed_documents/SAFEED_CLOUDINARY_TEST_001_1787291942314.pdf
+✅ Correctly issuing HTTP 302 Redirect to Cloudinary CDN URL: https://res.cloudinary.com/y2ddgstl/image/upload/v1787291946/safeed_documents/SAFEED_CLOUDINARY_TEST_001_1787291942314.pdf
+
+👮 Approving Cloudinary Document via Inspector...
+[0mPATCH /api/v1/documents/6a87e92ba5a2e4227efbefbc/approve [32m200[0m 19.445 ms - 981[0m
+✅ Approval API Status: 200
+🍃 [APPROVED MONGODB RECORD]: {
+  _id: '6a87e92ba5a2e4227efbefbc',
+  status: 'APPROVED',
+  fileUrl: 'https://res.cloudinary.com/y2ddgstl/image/upload/v1787291946/safeed_documents/SAFEED_CLOUDINARY_TEST_001_1787291942314.pdf'
+}
+
+============================================================
+🎉 CLOUDINARY CDN INTEGRATION VERIFIED 100% SUCCESSFULLY!
+============================================================
+

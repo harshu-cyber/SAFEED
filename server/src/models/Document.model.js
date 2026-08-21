@@ -49,9 +49,29 @@ const documentSchema = new mongoose.Schema(
       type: Number, // in bytes
       required: [true, 'fileSize is required'],
     },
+    fileUrl: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    cloudinarySecureUrl: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    cloudinaryPublicId: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    cloudinaryResourceType: {
+      type: String,
+      default: 'auto',
+      trim: true,
+    },
     fileStorageId: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'fileStorageId (GridFS ObjectId) is required'],
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
       index: true,
     },
     uploadedBy: {

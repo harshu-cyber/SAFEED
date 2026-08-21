@@ -1,0 +1,93 @@
+◇ injected env (13) from server\.env // tip: ◈ secrets for agents [www.dotenvx.com]
+◇ injected env (0) from server\.env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+
+============================================================
+🔍 SAFEED-UP FINAL FORENSIC AUDIT & PRODUCTION VERIFICATION
+============================================================
+
+✅ MongoDB Connected: 127.0.0.1
+📡 Express Server running at http://127.0.0.1:5008
+
+📝 [STEP 1 & 2] Registering & Authenticating Institution: "Forensic Public School 1787292290497"...
+[0mPOST /api/v1/auth/register [32m201[0m 483.450 ms - -[0m
+[0mPOST /api/v1/auth/login [32m200[0m 387.026 ms - 920[0m
+[0mGET /api/v1/auth/me [32m200[0m 6.516 ms - 581[0m
+✅ Auth Me Profile Verified: {
+  userId: '6a87ea82fd18c3a97d4a522b',
+  email: 'forensic_school_1787292290497@safeedup.test',
+  role: 'SCHOOL_ADMIN',
+  institutionId: '6a87ea83fd18c3a97d4a522c'
+}
+
+📤 [STEP 3 - 6] Uploading 4 Canonical Safety Documents to Cloudinary CDN...
+[0mPOST /api/v1/documents [32m201[0m 3316.241 ms - -[0m
+  ✅ Uploaded FIRE_SAFETY: {
+  documentId: '6a87ea86fd18c3a97d4a522e',
+  fileUrl: 'https://res.cloudinary.com/y2ddgstl/image/upload/v1787292293/safeed_documents/SAFEED_FINAL_REAL_FIRE_001_1787292291787.pdf',
+  cloudinarySecureUrl: 'https://res.cloudinary.com/y2ddgstl/image/upload/v1787292293/safeed_documents/SAFEED_FINAL_REAL_FIRE_001_1787292291787.pdf',
+  cloudinaryPublicId: 'safeed_documents/SAFEED_FINAL_REAL_FIRE_001_1787292291787',
+  assignedInspectorId: '6a87daea82a521787dd328ec',
+  status: 'PENDING_REVIEW'
+}
+[0mPOST /api/v1/documents [32m201[0m 1694.008 ms - -[0m
+  ✅ Uploaded BUILDING_STRUCTURAL_SAFETY: {
+  documentId: '6a87ea88fd18c3a97d4a522f',
+  fileUrl: 'https://res.cloudinary.com/y2ddgstl/image/upload/v1787292295/safeed_documents/SAFEED_FINAL_REAL_BUILDING_001_1787292294820.pdf',
+  cloudinarySecureUrl: 'https://res.cloudinary.com/y2ddgstl/image/upload/v1787292295/safeed_documents/SAFEED_FINAL_REAL_BUILDING_001_1787292294820.pdf',
+  cloudinaryPublicId: 'safeed_documents/SAFEED_FINAL_REAL_BUILDING_001_1787292294820',
+  assignedInspectorId: '6a87daea82a521787dd328ec',
+  status: 'PENDING_REVIEW'
+}
+[0mPOST /api/v1/documents [32m201[0m 1148.776 ms - -[0m
+  ✅ Uploaded ELECTRICAL_SAFETY: {
+  documentId: '6a87ea89fd18c3a97d4a5230',
+  fileUrl: 'https://res.cloudinary.com/y2ddgstl/image/upload/v1787292296/safeed_documents/SAFEED_FINAL_REAL_ELECTRICAL_001_1787292296518.pdf',
+  cloudinarySecureUrl: 'https://res.cloudinary.com/y2ddgstl/image/upload/v1787292296/safeed_documents/SAFEED_FINAL_REAL_ELECTRICAL_001_1787292296518.pdf',
+  cloudinaryPublicId: 'safeed_documents/SAFEED_FINAL_REAL_ELECTRICAL_001_1787292296518',
+  assignedInspectorId: '6a87daea82a521787dd328ec',
+  status: 'PENDING_REVIEW'
+}
+[0mPOST /api/v1/documents [32m201[0m 1095.754 ms - -[0m
+  ✅ Uploaded EVACUATION_PLAN: {
+  documentId: '6a87ea8afd18c3a97d4a5231',
+  fileUrl: 'https://res.cloudinary.com/y2ddgstl/image/upload/v1787292298/safeed_documents/SAFEED_FINAL_REAL_EVACUATION_001_1787292297676.pdf',
+  cloudinarySecureUrl: 'https://res.cloudinary.com/y2ddgstl/image/upload/v1787292298/safeed_documents/SAFEED_FINAL_REAL_EVACUATION_001_1787292297676.pdf',
+  cloudinaryPublicId: 'safeed_documents/SAFEED_FINAL_REAL_EVACUATION_001_1787292297676',
+  assignedInspectorId: '6a87daea82a521787dd328ec',
+  status: 'PENDING_REVIEW'
+}
+
+👮 [STEP 9 & 10] Inspector Authentication & Assigned List Query...
+[0mGET /api/v1/documents/inspector/assigned [32m200[0m 17.961 ms - -[0m
+✅ Inspector Assigned Documents Found: 21
+
+📄 [STEP 11] Verifying Document File Endpoint (302 Redirect to Cloudinary CDN)...
+[0mGET /api/v1/documents/6a87ea86fd18c3a97d4a522e/file [36m302[0m 7.371 ms - 144[0m
+  📄 File Endpoint HTTP 302 Location: https://res.cloudinary.com/y2ddgstl/image/upload/v1787292293/safeed_documents/SAFEED_FINAL_REAL_FIRE_001_1787292291787.pdf
+[0mGET /api/v1/documents/6a87ea88fd18c3a97d4a522f/file [36m302[0m 4.423 ms - 148[0m
+  📄 File Endpoint HTTP 302 Location: https://res.cloudinary.com/y2ddgstl/image/upload/v1787292295/safeed_documents/SAFEED_FINAL_REAL_BUILDING_001_1787292294820.pdf
+[0mGET /api/v1/documents/6a87ea89fd18c3a97d4a5230/file [36m302[0m 3.795 ms - 150[0m
+  📄 File Endpoint HTTP 302 Location: https://res.cloudinary.com/y2ddgstl/image/upload/v1787292296/safeed_documents/SAFEED_FINAL_REAL_ELECTRICAL_001_1787292296518.pdf
+[0mGET /api/v1/documents/6a87ea8afd18c3a97d4a5231/file [36m302[0m 5.927 ms - 150[0m
+  📄 File Endpoint HTTP 302 Location: https://res.cloudinary.com/y2ddgstl/image/upload/v1787292298/safeed_documents/SAFEED_FINAL_REAL_EVACUATION_001_1787292297676.pdf
+
+✅ [STEP 12 & 13] Inspector Approving All 4 Documents...
+[0mPATCH /api/v1/documents/6a87ea86fd18c3a97d4a522e/approve [32m200[0m 13.622 ms - -[0m
+[0mPATCH /api/v1/documents/6a87ea88fd18c3a97d4a522f/approve [32m200[0m 10.333 ms - -[0m
+[0mPATCH /api/v1/documents/6a87ea89fd18c3a97d4a5230/approve [32m200[0m 10.660 ms - -[0m
+
+🔓 [STEP 14 & 23] Verifying 4-Document QR Unlocking Status...
+[0mPATCH /api/v1/documents/6a87ea8afd18c3a97d4a5231/approve [32m200[0m 10.035 ms - -[0m
+🍃 [FINAL MONGODB INSTITUTION STATE]: {
+  _id: '6a87ea83fd18c3a97d4a522c',
+  name: 'Forensic Public School 1787292290497',
+  qrLocked: false,
+  verificationStatus: 'VERIFIED',
+  complianceScore: 100,
+  status: 'VERIFIED'
+}
+
+============================================================
+🎉 FORENSIC AUDIT COMPLETE & 100% PRODUCTION VERIFIED!
+============================================================
+

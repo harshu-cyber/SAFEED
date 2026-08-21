@@ -34,9 +34,7 @@ export const documentApi = {
   getAssigned: () => axiosInstance.get('/documents/inspector/assigned'),
   getPending: () => axiosInstance.get('/documents/inspector/assigned'),
   getForInstitution: (instId) => axiosInstance.get('/documents/my'),
-  upload: (formData) => axiosInstance.post('/documents', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
+  upload: (formData) => axiosInstance.post('/documents', formData),
   approve: (id) => axiosInstance.patch(`/documents/${id}/approve`),
   reject: (id, data) => axiosInstance.patch(`/documents/${id}/reject`, data),
   getQrStatus: (institutionId) => axiosInstance.get('/documents/qr-status', { params: { institutionId } }),

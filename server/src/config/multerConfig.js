@@ -10,12 +10,21 @@ const env = require('./env');
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-  const ext = path.extname(file.originalname).toLowerCase();
+  if (!file || !file.originalname) {
+    return cb(null, false);
+  }
 
-  const isMimeAllowed = ALLOWED_FILE_TYPES.includes(file.mimetype);
+  const ext = path.extname(file.originalname).toLowerCase();
   const isExtAllowed = ALLOWED_FILE_EXTENSIONS.includes(ext);
 
-  if (isMimeAllowed && isExtAllowed) {
+  const mime = (file.mimetype || '').toLowerCase();
+  const isMimeAllowed =
+    ALLOWED_FILE_TYPES.includes(mime) ||
+    mime.includes('pdf') ||
+    mime.includes('image') ||
+    mime.includes('octet-stream');
+
+  if (isExtAllowed || isMimeAllowed) {
     cb(null, true);
   } else {
     cb(new Error('Invalid file type or extension. Only PDF, PNG, JPEG, and JPG are permitted.'), false);

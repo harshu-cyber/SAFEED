@@ -148,6 +148,11 @@ export const DocumentsPage = () => {
                 required
                 className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-[#0F2038] file:text-[#D4AF37] hover:file:bg-[#1E3A5F] cursor-pointer"
               />
+              {file && (
+                <p className="mt-1.5 text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-300 p-2 rounded-lg flex items-center gap-1.5">
+                  ✓ Selected File: <span>{file.name}</span> ({(file.size / (1024 * 1024)).toFixed(2)} MB)
+                </p>
+              )}
             </div>
 
             <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-[11px] text-amber-800 font-semibold space-y-1">

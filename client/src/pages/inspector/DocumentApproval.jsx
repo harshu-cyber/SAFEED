@@ -282,7 +282,11 @@ export const DocumentApproval = () => {
                 const rawProxyUrl = documentApi.getFileUrl(readingDoc._id);
                 const tokenProxyUrl = storedToken ? `${rawProxyUrl}?token=${encodeURIComponent(storedToken)}` : rawProxyUrl;
                 const targetUrl = readingDoc.cloudinarySecureUrl || readingDoc.fileUrl || tokenProxyUrl;
-                const isImage = readingDoc.mimeType?.startsWith('image/');
+                const mime = (readingDoc.mimeType || readingDoc.fileType || '').toLowerCase();
+                const fileName = (readingDoc.originalFileName || readingDoc.fileName || '').toLowerCase();
+                const isImage = mime.startsWith('image/');
+                const isWord = mime.includes('word') || mime.includes('officedocument') || fileName.endsWith('.doc') || fileName.endsWith('.docx');
+
                 return (
                   <div className="border-2 border-slate-300 rounded-xl overflow-hidden bg-[#0F2038] shadow">
                     {isImage ? (
@@ -291,6 +295,21 @@ export const DocumentApproval = () => {
                         alt={readingDoc.originalFileName}
                         className="max-w-full h-auto mx-auto"
                       />
+                    ) : isWord ? (
+                      <div className="p-8 text-center text-white space-y-4">
+                        <div className="text-5xl">📝</div>
+                        <h4 className="text-base font-black text-[#D4AF37]">{readingDoc.originalFileName || 'Microsoft Word Document'}</h4>
+                        <p className="text-xs text-slate-300">Word document stream is ready for review.</p>
+                        <a
+                          href={targetUrl}
+                          download={readingDoc.originalFileName || 'document.docx'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-[#D4AF37] text-[#0F2038] text-xs font-black px-5 py-2.5 rounded-xl inline-flex items-center gap-2 hover:bg-amber-400 transition-all cursor-pointer"
+                        >
+                          Download / Open Word Document (.docx) ↗
+                        </a>
+                      </div>
                     ) : (
                       <object data={targetUrl} type={readingDoc.mimeType || 'application/pdf'} className="w-full h-[550px]">
                         <embed src={targetUrl} type={readingDoc.mimeType || 'application/pdf'} className="w-full h-[550px]" />

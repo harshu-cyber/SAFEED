@@ -140,10 +140,10 @@ export const DocumentsPage = () => {
             </div>
 
             <div>
-              <label className="block font-black text-[#0F2038] mb-1">Select File (PDF, PNG, JPG) <span className="text-rose-500">*</span></label>
+              <label className="block font-black text-[#0F2038] mb-1">Select File (PDF, DOC/DOCX, PNG, JPG) <span className="text-rose-500">*</span></label>
               <input
                 type="file"
-                accept=".pdf,.png,.jpg,.jpeg"
+                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
                 onChange={handleFileChange}
                 required
                 className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-[#0F2038] file:text-[#D4AF37] hover:file:bg-[#1E3A5F] cursor-pointer"

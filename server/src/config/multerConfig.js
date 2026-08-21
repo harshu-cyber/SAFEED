@@ -27,7 +27,7 @@ const fileFilter = (req, file, cb) => {
   if (isExtAllowed || isMimeAllowed) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type or extension. Only PDF, PNG, JPEG, and JPG are permitted.'), false);
+    cb(new Error('Invalid file type or extension. Allowed formats: PDF, DOC, DOCX, PNG, JPEG, JPG, and WEBP.'), false);
   }
 };
 

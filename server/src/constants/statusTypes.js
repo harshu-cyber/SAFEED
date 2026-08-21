@@ -104,8 +104,16 @@ const NOTIFICATION_TYPES = {
   SYSTEM: 'SYSTEM',
 };
 
-const ALLOWED_FILE_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
-const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.png', '.jpeg', '.jpg'];
+const ALLOWED_FILE_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+];
+const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.doc', '.docx', '.png', '.jpeg', '.jpg', '.webp'];
 
 const AFFILIATION_BOARDS = [
   'CBSE', 'ICSE', 'State Board', 'IB', 'IGCSE', 'NIOS', 'Other',

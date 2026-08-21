@@ -1,65 +1,35 @@
 // ============================================================
-// SafeED-UP — Document Routes
+// SafeED-UP — Canonical Document Routes
+// Single Source of Truth for Document Verification Workflow
 // ============================================================
 const router = require('express').Router();
 const documentController = require('../controllers/document.controller');
 const authenticate = require('../middleware/authenticate');
-const { authorizeRoles, authorizePermission } = require('../middleware/authorize');
-const { ROLES, PERMISSIONS } = require('../constants/roles');
 const upload = require('../config/multerConfig');
 
-const { enforceInstitutionScope } = require('../middleware/scopeCheck');
-const { uploadLimiter } = require('../middleware/rateLimiter');
-
+// Authenticate all document endpoints with real JWT token
 router.use(authenticate);
 
-// GET /api/v1/documents/inspector/assigned
-router.get('/inspector/assigned', documentController.getForInspector);
-router.get('/inspector/pending', documentController.getForInspector);
+// POST /api/v1/documents (Institution upload with multipart/form-data)
+router.post('/', upload.single('file'), documentController.upload);
 
-// GET /api/v1/documents/institution/:id/compliance
-router.get('/institution/:id/compliance', documentController.getCompliance);
+// GET /api/v1/documents/my (Institution canonical document list)
+router.get('/my', documentController.getMyDocuments);
 
-// GET /api/v1/documents/:id/file
+// GET /api/v1/documents/inspector/assigned (Inspector assigned document list)
+router.get('/inspector/assigned', documentController.getInspectorAssigned);
+router.get('/inspector/pending', documentController.getInspectorAssigned);
+
+// GET /api/v1/documents/qr-status (4-doc QR status)
+router.get('/qr-status', documentController.getQrStatus);
+
+// GET /api/v1/documents/:id/file (Binary file stream from GridFS)
 router.get('/:id/file', documentController.serveFile);
 
-// GET /api/v1/documents/institution/:id
-router.get('/institution/:id', enforceInstitutionScope('id'), documentController.getForInstitution);
+// PATCH /api/v1/documents/:id/approve (Inspector approve)
+router.patch('/:id/approve', documentController.approveDocument);
 
-// POST /api/v1/documents/institution/:id (multipart/form-data)
-router.post(
-  '/institution/:id',
-  upload.single('file'),
-  enforceInstitutionScope('id'),
-  documentController.upload
-);
-
-// PATCH /api/v1/documents/:id/approve
-router.patch(
-  '/:id/approve',
-  authorizePermission(PERMISSIONS.VERIFY_DOCUMENT),
-  documentController.approveDocument
-);
-
-// PATCH /api/v1/documents/:id/reject
-router.patch(
-  '/:id/reject',
-  authorizePermission(PERMISSIONS.VERIFY_DOCUMENT),
-  documentController.rejectDocument
-);
-
-// PATCH /api/v1/documents/:id/verify
-router.patch(
-  '/:id/verify',
-  authorizePermission(PERMISSIONS.VERIFY_DOCUMENT),
-  documentController.verifyDocument
-);
-
-// DELETE /api/v1/documents/:id
-router.delete(
-  '/:id',
-  authorizePermission(PERMISSIONS.DELETE_DOCUMENT),
-  documentController.deleteDocument
-);
+// PATCH /api/v1/documents/:id/reject (Inspector reject)
+router.patch('/:id/reject', documentController.rejectDocument);
 
 module.exports = router;

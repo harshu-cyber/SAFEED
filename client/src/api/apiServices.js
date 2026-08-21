@@ -30,21 +30,26 @@ export const inspectionApi = {
 };
 
 export const documentApi = {
-  getForInstitution: (institutionId, params) => axiosInstance.get(`/documents/institution/${institutionId}`, { params }),
-  getPending: (params) => axiosInstance.get('/documents/inspector/pending', { params }),
-  getAssigned: (params) => axiosInstance.get('/documents/inspector/assigned', { params }),
-  getCompliance: (institutionId) => axiosInstance.get(`/documents/institution/${institutionId}/compliance`),
-  upload: (institutionId, formData) => axiosInstance.post(`/documents/institution/${institutionId}`, formData, {
+  getMyDocuments: () => axiosInstance.get('/documents/my'),
+  getAssigned: () => axiosInstance.get('/documents/inspector/assigned'),
+  getPending: () => axiosInstance.get('/documents/inspector/assigned'),
+  getForInstitution: (instId) => axiosInstance.get('/documents/my'),
+  upload: (formData) => axiosInstance.post('/documents', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
   approve: (id) => axiosInstance.patch(`/documents/${id}/approve`),
   reject: (id, data) => axiosInstance.patch(`/documents/${id}/reject`, data),
-  verify: (id, data) => axiosInstance.patch(`/documents/${id}/verify`, data),
-  delete: (id) => axiosInstance.delete(`/documents/${id}`),
+  getQrStatus: (institutionId) => axiosInstance.get('/documents/qr-status', { params: { institutionId } }),
+  getFileUrl: (id) => {
+    const rawBase = import.meta.env.VITE_API_URL || '';
+    const cleanBase = rawBase ? rawBase.replace(/\/+$/, '') : '';
+    const baseURL = cleanBase ? (cleanBase.endsWith('/api/v1') ? cleanBase : `${cleanBase}/api/v1`) : '/api/v1';
+    return `${baseURL}/documents/${id}/file`;
+  },
 };
 
 export const qrApi = {
-  getQrStatus: (institutionId) => axiosInstance.get(`/qr/institution/${institutionId}/status`),
+  getQrStatus: (institutionId) => axiosInstance.get('/documents/qr-status', { params: { institutionId } }),
 };
 
 export const analyticsApi = {

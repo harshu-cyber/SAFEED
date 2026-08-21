@@ -15,16 +15,7 @@ const axiosInstance = axios.create({
 // Interceptor to inject JWT token
 axiosInstance.interceptors.request.use(
   (config) => {
-    let token = localStorage.getItem('accessToken');
-    if (!token) {
-      const savedSchoolStr = localStorage.getItem('registeredSchoolUser');
-      if (savedSchoolStr) {
-        try {
-          const parsed = JSON.parse(savedSchoolStr);
-          token = 'inst_' + (parsed.institutionId || parsed.username || 'user');
-        } catch (_) {}
-      }
-    }
+    const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -41,7 +32,11 @@ axiosInstance.interceptors.response.use(
     if (!originalRequest) return Promise.reject(error);
 
     // If endpoint is refresh-token itself or login/register, don't try refreshing
-    if (originalRequest.url?.includes('/auth/refresh-token') || originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/register')) {
+    if (
+      originalRequest.url?.includes('/auth/refresh-token') ||
+      originalRequest.url?.includes('/auth/login') ||
+      originalRequest.url?.includes('/auth/register')
+    ) {
       return Promise.reject(error);
     }
 

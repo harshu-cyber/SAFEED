@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { institutionStore } from '../../api/institutionStore';
 import { documentApi } from '../../api/apiServices';
 import {
   FiUpload, FiFileText, FiCheckCircle, FiClock, FiX,
@@ -8,137 +7,78 @@ import {
 } from 'react-icons/fi';
 import { MdVerified } from 'react-icons/md';
 
-const DOC_TYPES = [
+const CANONICAL_DOC_TYPES = [
   { value: 'FIRE_SAFETY', label: 'Fire Safety Certificate (अग्नि शमन प्रमाणपत्र)' },
-  { value: 'BUILDING_SAFETY', label: 'Building Structural Safety Certificate (भवन सुरक्षा प्रमाणपत्र)' },
-  { value: 'ELECTRICAL_SAFETY', label: 'Electrical Safety Audit Report (विद्युत सुरक्षा ऑडिट)' },
-  { value: 'EVACUATION_SAFETY', label: 'Emergency Evacuation Plan (आपातकालीन निकासी योजना)' },
+  { value: 'BUILDING_STRUCTURAL_SAFETY', label: 'Building Structural Safety Certificate (भवन सुरक्षा प्रमाणपत्र)' },
+  { value: 'ELECTRICAL_SAFETY', label: 'Electrical Safety Certificate (विद्युत सुरक्षा ऑडिट)' },
+  { value: 'EVACUATION_PLAN', label: 'Emergency Evacuation Plan (आपातकालीन निकासी योजना)' },
 ];
 
 export const DocumentsPage = () => {
   const { user } = useAuth();
-  const [institution, setInstitution] = useState(null);
   const [documents, setDocuments] = useState([]);
-  const [name, setName] = useState('');
-  const [type, setType] = useState('FIRE_SAFETY');
+  const [loading, setLoading] = useState(true);
+  const [documentType, setDocumentType] = useState('FIRE_SAFETY');
   const [file, setFile] = useState(null);
-  const [fileDataUrl, setFileDataUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [viewDoc, setViewDoc] = useState(null);
 
-  const getTargetInstId = () => {
-    return user?.institutionId || user?.email || user?._id || user?.id || 'inst_user';
-  };
-
-  const loadData = async () => {
-    const instId = getTargetInstId();
-    const localDocs = instId ? institutionStore.getDocumentsForInstitution(instId) : [];
-
-    if (instId) {
-      try {
-        const res = await documentApi.getForInstitution(instId);
-        const apiDocs = res.data?.data?.documents || res.data?.documents || [];
-
-        const mergedMap = new Map();
-        [...localDocs, ...apiDocs].forEach(d => {
-          if (d) {
-            const key = d.documentType || d.type || d.name || d.title;
-            mergedMap.set(key, d);
-          }
-        });
-        setDocuments(Array.from(mergedMap.values()));
-        return;
-      } catch (e) {
-        console.warn('[DocumentsPage] MongoDB fetch notice:', e?.message);
-        setDocuments(localDocs);
-      }
-    } else {
-      setDocuments(localDocs);
+  const loadDocuments = async () => {
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await documentApi.getMyDocuments();
+      const docs = res.data?.data?.documents || res.data?.documents || [];
+      setDocuments(docs);
+    } catch (err) {
+      console.error('[DocumentsPage] Fetch error:', err);
+      const msg = err.response?.data?.message || 'Failed to fetch documents from server. Please verify authentication.';
+      setErrorMsg(msg);
+      setDocuments([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    loadDocuments();
   }, [user]);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       setFile(selectedFile);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFileDataUrl(reader.result);
-      };
-      reader.readAsDataURL(selectedFile);
     }
   };
 
   const handleUpload = async (e) => {
     e.preventDefault();
     setErrorMsg('');
-    const instId = getTargetInstId();
-    if (!instId) {
-      setErrorMsg('Unable to determine institution ID. Please re-login.');
-      return;
-    }
 
     if (!file) {
-      setErrorMsg('Please select a PDF or image file to upload.');
+      setErrorMsg('Please select a valid PDF, PNG, or JPG file to upload.');
       return;
     }
 
     setUploading(true);
 
     try {
-      const docName = name || DOC_TYPES.find(t => t.value === type)?.label.split(' (')[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('documentType', documentType);
 
-      let dataUrl = fileDataUrl;
-      if (!dataUrl && file) {
-        dataUrl = await new Promise((resolve) => {
-          const r = new FileReader();
-          r.onloadend = () => resolve(r.result);
-          r.readAsDataURL(file);
-        });
-      }
-
-      // 1. Instant local store update for 0ms UI response
-      institutionStore.uploadDocument({
-        institutionId: instId,
-        institutionName: user?.institutionName || user?.name || 'Institution',
-        name: docName,
-        type: type,
-        documentType: type,
-        fileSize: file ? (file.size / (1024 * 1024)).toFixed(2) + ' MB' : '1.4 MB',
-        uploadedBy: user?.name || 'Institution Admin',
-        fileDataUrl: dataUrl || null,
-        fileName: file?.name || `${docName}.pdf`,
-      });
-
-      await loadData();
-      setToast('✅ Document uploaded successfully! Sent to District Inspector for verification.');
-      setName('');
-      setFile(null);
-      setFileDataUrl(null);
-
-      // 2. Background MongoDB Atlas API Sync
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('documentType', type);
-        formData.append('title', docName);
-
-        const response = await documentApi.upload(instId, formData);
-        if (response.data?.success || response.data?.document) {
-          await loadData();
-        }
-      } catch (backendErr) {
-        console.warn('[DocumentsPage] Background MongoDB sync notice:', backendErr?.message);
+      const response = await documentApi.upload(formData);
+      if (response.data?.success || response.data?.data?.document) {
+        setToast('✅ Document uploaded successfully! Sent to District Inspector for verification.');
+        setFile(null);
+        await loadDocuments();
       }
     } catch (error) {
       console.error('[DocumentsPage] Upload error:', error);
-      setErrorMsg(error?.response?.data?.message || 'Failed to upload document.');
+      const message = error.response?.data?.message || 'Failed to upload document to server.';
+      setErrorMsg(message);
     } finally {
       setUploading(false);
       setTimeout(() => setToast(''), 5000);
@@ -155,6 +95,14 @@ export const DocumentsPage = () => {
         </div>
       )}
 
+      {/* Error Message */}
+      {errorMsg && (
+        <div className="bg-rose-950 text-rose-200 font-bold text-xs px-4 py-3 rounded-xl shadow-xl border border-rose-600 flex items-center justify-between">
+          <span className="flex items-center gap-2"><FiAlertCircle size={16} /> {errorMsg}</span>
+          <button onClick={() => setErrorMsg('')} className="text-white hover:text-rose-300 font-bold ml-4">✕</button>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <div className="flex items-center gap-2 mb-1">
@@ -163,9 +111,9 @@ export const DocumentsPage = () => {
             UP Police Document Vault
           </span>
         </div>
-        <h1 className="text-xl font-black text-[#0F2038] font-serif">Official Document Vault — {institution?.name}</h1>
+        <h1 className="text-xl font-black text-[#0F2038] font-serif">Official Document Verification — SAFEED-UP</h1>
         <p className="text-xs text-slate-500 mt-0.5">
-          Upload required safety certificates. District Inspector will open and inspect your uploaded PDF/document to verify.
+          Upload required safety certificates directly to MongoDB GridFS file storage. District Inspector will inspect and verify binary content.
         </p>
       </div>
 
@@ -174,32 +122,21 @@ export const DocumentsPage = () => {
         <div className="lg:col-span-1 bg-white border-2 border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-200">
             <FiUpload className="text-[#D4AF37] text-base" />
-            <h2 className="text-sm font-black text-[#0F2038]">Upload New Document</h2>
+            <h2 className="text-sm font-black text-[#0F2038]">Upload Canonical Document</h2>
           </div>
 
           <form onSubmit={handleUpload} className="space-y-4 text-xs">
             <div>
-              <label className="block font-black text-[#0F2038] mb-1">Document Category <span className="text-rose-500">*</span></label>
+              <label className="block font-black text-[#0F2038] mb-1">Canonical Document Type <span className="text-rose-500">*</span></label>
               <select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
+                value={documentType}
+                onChange={(e) => setDocumentType(e.target.value)}
                 className="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#D4AF37]"
               >
-                {DOC_TYPES.map(t => (
+                {CANONICAL_DOC_TYPES.map(t => (
                   <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </select>
-            </div>
-
-            <div>
-              <label className="block font-black text-[#0F2038] mb-1">Custom Document Title (Optional)</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Fire NOC Certificate 2025-26"
-                className="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#D4AF37]"
-              />
             </div>
 
             <div>
@@ -214,8 +151,8 @@ export const DocumentsPage = () => {
             </div>
 
             <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-[11px] text-amber-800 font-semibold space-y-1">
-              <p className="font-black flex items-center gap-1"><FiLock size={12} /> Inspection Approval Rule:</p>
-              <p>Uploaded PDF/Image goes directly to the District Inspector. They will read and verify it to unlock your Safe ID certificate.</p>
+              <p className="font-black flex items-center gap-1"><FiLock size={12} /> Real-Time Inspector Verification:</p>
+              <p>Uploaded binary document goes to MongoDB GridFS. Assigned Inspector streams the binary PDF to review and approve.</p>
             </div>
 
             <button
@@ -223,7 +160,7 @@ export const DocumentsPage = () => {
               disabled={uploading}
               className="w-full bg-[#0F2038] text-[#D4AF37] border-2 border-[#D4AF37] font-black py-3 rounded-xl hover:bg-[#1E3A5F] transition-all cursor-pointer shadow flex items-center justify-center gap-2 disabled:opacity-60"
             >
-              {uploading ? 'Uploading Document...' : <><FiUpload size={14} /> Upload & Submit for Inspector PDF Verification</>}
+              {uploading ? 'Uploading Binary File...' : <><FiUpload size={14} /> Upload Document</>}
             </button>
           </form>
         </div>
@@ -239,32 +176,35 @@ export const DocumentsPage = () => {
               <span className="text-xs font-black text-slate-500">{documents.length} Files</span>
             </div>
 
-            {documents.length === 0 ? (
+            {loading ? (
+              <div className="p-8 text-center text-slate-400 font-bold text-xs">Loading documents from MongoDB...</div>
+            ) : documents.length === 0 ? (
               <div className="p-8 text-center text-slate-400 space-y-2">
                 <FiFileText size={36} className="mx-auto opacity-30" />
-                <p className="text-xs font-black text-slate-600">No Documents Uploaded Yet</p>
-                <p className="text-[11px]">Use the form on the left to upload your Fire NOC and Safety certificates.</p>
+                <p className="text-xs font-black text-slate-600">No Documents Found</p>
+                <p className="text-[11px]">Upload your safety certificates using the form on the left.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {documents.map((doc) => {
-                  const docTitle = doc.title || doc.name || doc.documentType || 'Official Document';
-                  const docCategory = (doc.documentType || doc.type || '').replace(/_/g, ' ');
-                  const docStatus = doc.verificationStatus || doc.status || 'PENDING';
-                  const isVerified = docStatus === 'APPROVED' || docStatus === 'VERIFIED';
+                  const docTitle = doc.originalFileName || doc.documentType;
+                  const docCategory = doc.documentType;
+                  const docStatus = doc.status || 'PENDING_REVIEW';
+                  const isVerified = docStatus === 'APPROVED';
                   const isRejected = docStatus === 'REJECTED';
+                  const formattedSize = doc.fileSize ? (doc.fileSize / (1024 * 1024)).toFixed(2) + ' MB' : '0 MB';
 
                   return (
-                    <div key={doc._id || doc.id || Math.random()} className="bg-[#F4F6F9] border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#D4AF37] transition-all">
+                    <div key={doc._id} className="bg-[#F4F6F9] border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#D4AF37] transition-all">
                       <div className="flex items-start gap-3">
                         <div className="w-8 h-8 bg-[#0F2038] text-[#D4AF37] rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                           <FiFileText size={16} />
                         </div>
                         <div>
                           <p className="text-xs font-black text-[#0F2038]">{docTitle}</p>
-                          <p className="text-[10px] text-slate-500 font-semibold">{docCategory} • Uploaded: {doc.uploadedAt || 'Recently'} • Size: {doc.fileSize || '1.4 MB'}</p>
-                          {doc.remarks && (
-                            <p className="text-[10px] text-slate-600 italic mt-0.5">"{doc.remarks}"</p>
+                          <p className="text-[10px] text-slate-500 font-semibold">{docCategory} • Size: {formattedSize} • Uploaded: {new Date(doc.uploadedAt).toLocaleDateString('en-IN')}</p>
+                          {doc.rejectionReason && (
+                            <p className="text-[10px] text-rose-700 italic mt-0.5">Rejection reason: "{doc.rejectionReason}"</p>
                           )}
                         </div>
                       </div>
@@ -283,7 +223,7 @@ export const DocumentsPage = () => {
                             ? 'bg-rose-100 text-rose-800 border-rose-300'
                             : 'bg-amber-100 text-amber-800 border-amber-300'
                         }`}>
-                          {isVerified ? '✓ VERIFIED BY INSPECTOR' : isRejected ? '✗ REJECTED' : '⏳ PENDING INSPECTOR APPROVAL'}
+                          {isVerified ? '✓ APPROVED BY INSPECTOR' : isRejected ? '✗ REJECTED' : '⏳ PENDING REVIEW'}
                         </span>
                       </div>
                     </div>
@@ -303,39 +243,30 @@ export const DocumentsPage = () => {
               <div className="flex items-center gap-3">
                 <img src="/up-govt-seal.png" alt="UP Seal" className="w-8 h-8 object-contain" />
                 <div>
-                  <p className="text-xs font-black text-[#D4AF37] uppercase tracking-wider">Official Document Reader — {viewDoc.title || viewDoc.name}</p>
-                  <p className="text-[10px] text-slate-300">Institution: {viewDoc.institutionName || 'SafeED Portal'} • Type: {viewDoc.documentType || viewDoc.type}</p>
+                  <p className="text-xs font-black text-[#D4AF37] uppercase tracking-wider">Canonical Document Reader — {viewDoc.originalFileName}</p>
+                  <p className="text-[10px] text-slate-300">Type: {viewDoc.documentType} • ID: {viewDoc._id}</p>
                 </div>
               </div>
               <button onClick={() => setViewDoc(null)} className="text-white hover:text-[#D4AF37] font-black text-lg p-1">✕</button>
             </div>
 
-            {/* Document Viewer Body */}
+            {/* Document Binary Stream Viewer */}
             <div className="p-6 overflow-y-auto space-y-4 flex-1 bg-[#F4F6F9]">
               {(() => {
-                const dataUrl = viewDoc.fileDataUrl;
-                const fileUrl = viewDoc.fileUrl;
-                let targetUrl = dataUrl || fileUrl;
-
-                if (!targetUrl || (!targetUrl.startsWith('data:') && !targetUrl.startsWith('http'))) {
-                  const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
-                  const path = targetUrl || `/api/v1/documents/${viewDoc._id}/file`;
-                  targetUrl = apiBase ? `${apiBase}${path.startsWith('/') ? '' : '/'}${path}` : path;
-                }
-
-                const isImage = typeof targetUrl === 'string' && (targetUrl.startsWith('data:image') || targetUrl.match(/\.(jpg|jpeg|png|webp)$/i) || viewDoc.fileMimeType?.startsWith('image/'));
+                const targetUrl = documentApi.getFileUrl(viewDoc._id);
+                const isImage = viewDoc.mimeType?.startsWith('image/');
 
                 return (
                   <div className="border-2 border-slate-300 rounded-xl overflow-hidden bg-white shadow p-2 flex items-center justify-center min-h-[400px]">
                     {isImage ? (
-                      <img src={targetUrl} alt={viewDoc.title || viewDoc.name} className="max-w-full h-auto max-h-[600px] mx-auto object-contain" />
+                      <img src={targetUrl} alt={viewDoc.originalFileName} className="max-w-full h-auto max-h-[600px] mx-auto object-contain" />
                     ) : (
-                      <object data={targetUrl} type={viewDoc.fileMimeType || 'application/pdf'} className="w-full h-[550px]">
-                        <embed src={targetUrl} type={viewDoc.fileMimeType || 'application/pdf'} className="w-full h-[550px]" />
+                      <object data={targetUrl} type={viewDoc.mimeType || 'application/pdf'} className="w-full h-[550px]">
+                        <embed src={targetUrl} type={viewDoc.mimeType || 'application/pdf'} className="w-full h-[550px]" />
                         <div className="p-4 text-center">
-                          <p className="text-xs font-bold text-slate-700 mb-2">PDF Document Preview Ready</p>
-                          <a href={targetUrl} download={viewDoc.fileName || `${viewDoc.title || 'document'}.pdf`} className="bg-[#0F2038] text-[#D4AF37] text-xs font-black px-4 py-2 rounded-lg inline-block">
-                            Download / Open PDF Document 📥
+                          <p className="text-xs font-bold text-slate-700 mb-2">Binary PDF Stream Ready</p>
+                          <a href={targetUrl} target="_blank" rel="noopener noreferrer" className="bg-[#0F2038] text-[#D4AF37] text-xs font-black px-4 py-2 rounded-lg inline-block">
+                            Open PDF Stream 📥
                           </a>
                         </div>
                       </object>
@@ -350,7 +281,7 @@ export const DocumentsPage = () => {
                 onClick={() => setViewDoc(null)}
                 className="bg-[#0F2038] text-[#D4AF37] font-black text-xs px-5 py-2.5 rounded-xl border border-[#D4AF37]"
               >
-                Close Document Reader
+                Close Reader
               </button>
             </div>
           </div>

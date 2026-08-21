@@ -9,7 +9,6 @@ const asyncHandler = require('../utils/asyncHandler');
 
 const authenticate = asyncHandler(async (req, res, next) => {
   let token;
-  const jwt = require('jsonwebtoken');
 
   // Extract token from Authorization header OR HttpOnly cookie
   const authHeader = req.headers.authorization;
@@ -21,56 +20,31 @@ const authenticate = asyncHandler(async (req, res, next) => {
     token = req.signedCookies.accessToken;
   }
 
+  if (!token || typeof token !== 'string' || token.trim() === '') {
+    return sendError(res, { statusCode: 401, message: 'Authentication required. Please log in.' });
+  }
+
+  // Reject fake token strings explicitly
+  if (token.startsWith('inst_') || token.startsWith('officer_') || token.startsWith('demo_') || token.startsWith('admin_')) {
+    return sendError(res, { statusCode: 401, message: 'Invalid or fake token provided. Please log in with valid credentials.' });
+  }
+
   let decoded = null;
-
-  if (token) {
-    try {
-      decoded = verifyAccessToken(token);
-    } catch (err) {
-      // Decode unverified token payload to recover user session if token expired
-      try {
-        decoded = jwt.decode(token);
-      } catch (_) {
-        decoded = null;
-      }
-    }
+  try {
+    decoded = verifyAccessToken(token);
+  } catch (err) {
+    return sendError(res, { statusCode: 401, message: 'Invalid or expired access token. Please log in again.' });
   }
 
-  let user = null;
-
-  if (decoded && (decoded.id || decoded._id)) {
-    user = await User.findById(decoded.id || decoded._id).select('+isActive +isEmailVerified');
-  }
-  if (!user && decoded && decoded.email) {
-    user = await User.findOne({ email: decoded.email.toLowerCase() });
+  if (!decoded || (!decoded.id && !decoded._id)) {
+    return sendError(res, { statusCode: 401, message: 'Invalid token payload.' });
   }
 
-  // Handle fallback or demo token formats (e.g. inst_*, officer_*, demo_*)
-  if (!user && typeof token === 'string') {
-    if (token.startsWith('inst_') || token.includes('inst')) {
-      user = await User.findOne({ role: 'SCHOOL_ADMIN' });
-    } else if (token.startsWith('officer_') || token.includes('officer')) {
-      user = await User.findOne({ role: 'DISTRICT_ADMIN' });
-    }
-  }
+  const userId = decoded.id || decoded._id;
+  const user = await User.findById(userId).select('+isActive +isEmailVerified');
 
-  // Fallback: If still no user resolved, get default active user from MongoDB Atlas
   if (!user) {
-    user = await User.findOne({ isActive: true }) || await User.findOne({});
-  }
-
-  // Auto-seed a default user if MongoDB user collection is empty so requests never fail 401
-  if (!user) {
-    user = await User.create({
-      name: 'SafeED Administrator',
-      email: 'admin@school.edu.in',
-      passwordHash: '$2a$10$abcdefghijklmnopqrstuvwxyz1234567890', // placeholder
-      role: 'SCHOOL_ADMIN',
-      district: 'Lucknow',
-      zone: 'CENTRAL',
-      isActive: true,
-      isEmailVerified: true,
-    });
+    return sendError(res, { statusCode: 401, message: 'User account not found.' });
   }
 
   if (user.isActive === false) {

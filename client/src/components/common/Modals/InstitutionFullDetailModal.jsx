@@ -34,7 +34,7 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
 
   useEffect(() => {
     const targetId = instId || currentInst.email || currentInst.safeId;
-    if (targetId) {
+    if (targetId && typeof documentApi?.getForInstitution === 'function') {
       documentApi.getForInstitution(targetId)
         .then(res => {
           if (res?.data?.data?.documents && Array.isArray(res.data.data.documents)) {

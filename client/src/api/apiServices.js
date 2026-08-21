@@ -29,22 +29,8 @@ export const inspectionApi = {
   submitResults: (id, data) => axiosInstance.patch(`/inspections/${id}/submit`, data),
 };
 
-export const documentApi = {
-  getMyDocuments: () => axiosInstance.get('/documents/my'),
-  getAssigned: () => axiosInstance.get('/documents/inspector/assigned'),
-  getPending: () => axiosInstance.get('/documents/inspector/assigned'),
-  getForInstitution: (instId) => axiosInstance.get('/documents/my'),
-  upload: (formData) => axiosInstance.post('/documents', formData),
-  approve: (id) => axiosInstance.patch(`/documents/${id}/approve`),
-  reject: (id, data) => axiosInstance.patch(`/documents/${id}/reject`, data),
-  getQrStatus: (institutionId) => axiosInstance.get('/documents/qr-status', { params: { institutionId } }),
-  getFileUrl: (id) => {
-    const rawBase = import.meta.env.VITE_API_URL || '';
-    const cleanBase = rawBase ? rawBase.replace(/\/+$/, '') : '';
-    const baseURL = cleanBase ? (cleanBase.endsWith('/api/v1') ? cleanBase : `${cleanBase}/api/v1`) : '/api/v1';
-    return `${baseURL}/documents/${id}/file`;
-  },
-};
+import documentApi from './documentApi';
+export { documentApi };
 
 export const qrApi = {
   getQrStatus: (institutionId) => axiosInstance.get('/documents/qr-status', { params: { institutionId } }),

@@ -63,11 +63,6 @@ axiosInstance.interceptors.response.use(
           console.warn('[axiosInstance] Refresh token attempt failed:', refreshError?.message);
         }
       }
-
-      // If refresh token absent or failed, clear stale items cleanly
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('registeredSchoolUser');
     }
     return Promise.reject(error);
   }

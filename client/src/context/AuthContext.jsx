@@ -13,10 +13,19 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchUser = async () => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
     try {
       const res = await authApi.getMe();
-      setUser(res.data.data.user);
-    } catch {
+      if (res.data?.data?.user) {
+        setUser(res.data.data.user);
+      }
+    } catch (err) {
+      console.warn('[AuthContext] getMe fetch error:', err.message);
       const savedSchoolStr = localStorage.getItem('registeredSchoolUser');
       if (savedSchoolStr) {
         try {
@@ -33,14 +42,8 @@ export const AuthProvider = ({ children }) => {
               district: inst.district,
               state: inst.state,
             });
-          } else {
-            setUser(null);
           }
-        } catch {
-          setUser(null);
-        }
-      } else {
-        setUser(null);
+        } catch (_) {}
       }
     } finally {
       setLoading(false);

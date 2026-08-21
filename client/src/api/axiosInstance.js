@@ -12,12 +12,16 @@ const axiosInstance = axios.create({
   withCredentials: true,
 });
 
-// Interceptor to inject JWT token
+// Interceptor to inject JWT token and manage FormData Content-Type
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+      delete config.headers['content-type'];
     }
     return config;
   },

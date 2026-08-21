@@ -33,6 +33,12 @@ export const Login = () => {
 
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm();
 
+  useEffect(() => {
+    if (window.location.search.includes('session_expired=1')) {
+      setError('Your session has expired. Please log in again.');
+    }
+  }, []);
+
   const drawCaptcha = useCallback((code) => {
     const canvas = canvasRef.current;
     if (!canvas) return;

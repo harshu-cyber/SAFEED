@@ -7,7 +7,9 @@ const path = require('path');
 const dotenv = require('dotenv');
 
 dotenv.config({ path: path.join(__dirname, '../../.env') });
-process.env.MONGODB_URI = 'mongodb://127.0.0.1:27017/safeed_test';
+if (!process.env.MONGODB_URI) {
+  process.env.MONGODB_URI = 'mongodb://127.0.0.1:27017/safeed_test';
+}
 process.env.PORT = '5008';
 
 const connectDB = require('../config/db');
@@ -140,6 +142,18 @@ async function runForensicAuditVerification() {
     // STEP 4: Inspector Login & Document Retrieval
     console.log('\n👮 [STEP 9 & 10] Inspector Authentication & Assigned List Query...');
     let inspector = await User.findOne({ email: 'manual_inspector_lucknow@safeed.test' });
+    if (!inspector) {
+      inspector = await User.create({
+        name: 'Manual Inspector Lucknow',
+        email: 'manual_inspector_lucknow@safeed.test',
+        password: 'TestPassword123!',
+        role: 'INSPECTION_OFFICER',
+        district: 'Lucknow',
+        zone: 'CENTRAL',
+        postingStation: 'Hazratganj Police Station',
+        isActive: true,
+      });
+    }
     const { generateTokenPair } = require('../utils/tokenUtils');
     const inspectorTokens = generateTokenPair(inspector);
 

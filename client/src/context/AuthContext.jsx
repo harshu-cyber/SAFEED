@@ -58,6 +58,9 @@ export const AuthProvider = ({ children }) => {
       if (res.data.data.accessToken) {
         localStorage.setItem('accessToken', res.data.data.accessToken);
       }
+      if (res.data.data.refreshToken) {
+        localStorage.setItem('refreshToken', res.data.data.refreshToken);
+      }
       setUser(loggedUser);
       return loggedUser;
     } catch (err) {
@@ -104,6 +107,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try { await authApi.logout(); } catch (_) {}
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('registeredSchoolUser');
     setUser(null);
   };

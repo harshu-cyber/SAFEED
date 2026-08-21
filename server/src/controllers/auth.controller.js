@@ -35,6 +35,7 @@ const register = asyncHandler(async (req, res) => {
     data: {
       user: result.user,
       accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
       // Auto-generated credentials for popup display
       credentials: result.credentials,
     },
@@ -55,6 +56,7 @@ const login = asyncHandler(async (req, res) => {
     data: {
       user: result.user,
       accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
     },
   });
 });
@@ -88,7 +90,10 @@ const refreshToken = asyncHandler(async (req, res) => {
   return sendSuccess(res, {
     statusCode: 200,
     message: 'Token refreshed successfully.',
-    data: { accessToken: result.accessToken },
+    data: {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    },
   });
 });
 

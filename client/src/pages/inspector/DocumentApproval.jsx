@@ -278,7 +278,10 @@ export const DocumentApproval = () => {
             {/* Binary Stream Content */}
             <div className="p-6 overflow-y-auto space-y-4 flex-1 bg-[#F4F6F9]">
               {(() => {
-                const targetUrl = documentApi.getFileUrl(readingDoc._id);
+                const storedToken = localStorage.getItem('accessToken');
+                const rawProxyUrl = documentApi.getFileUrl(readingDoc._id);
+                const tokenProxyUrl = storedToken ? `${rawProxyUrl}?token=${encodeURIComponent(storedToken)}` : rawProxyUrl;
+                const targetUrl = readingDoc.cloudinarySecureUrl || readingDoc.fileUrl || tokenProxyUrl;
                 const isImage = readingDoc.mimeType?.startsWith('image/');
                 return (
                   <div className="border-2 border-slate-300 rounded-xl overflow-hidden bg-[#0F2038] shadow">

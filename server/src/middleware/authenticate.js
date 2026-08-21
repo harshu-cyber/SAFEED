@@ -10,10 +10,12 @@ const asyncHandler = require('../utils/asyncHandler');
 const authenticate = asyncHandler(async (req, res, next) => {
   let token;
 
-  // Extract token from Authorization header OR HttpOnly cookie
+  // Extract token from Authorization header, query parameter, OR HttpOnly cookie
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.split(' ')[1];
+  } else if (req.query?.token) {
+    token = req.query.token;
   } else if (req.cookies?.accessToken) {
     token = req.cookies.accessToken;
   } else if (req.signedCookies?.accessToken) {

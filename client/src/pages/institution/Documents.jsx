@@ -253,7 +253,10 @@ export const DocumentsPage = () => {
             {/* Document Binary Stream Viewer */}
             <div className="p-6 overflow-y-auto space-y-4 flex-1 bg-[#F4F6F9]">
               {(() => {
-                const targetUrl = documentApi.getFileUrl(viewDoc._id);
+                const storedToken = localStorage.getItem('accessToken');
+                const rawProxyUrl = documentApi.getFileUrl(viewDoc._id);
+                const tokenProxyUrl = storedToken ? `${rawProxyUrl}?token=${encodeURIComponent(storedToken)}` : rawProxyUrl;
+                const targetUrl = viewDoc.cloudinarySecureUrl || viewDoc.fileUrl || tokenProxyUrl;
                 const isImage = viewDoc.mimeType?.startsWith('image/');
 
                 return (

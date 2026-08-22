@@ -207,6 +207,11 @@ BEGIN
   user_zone := NEW.raw_user_meta_data->>'zone';
   user_inst_id := (NEW.raw_user_meta_data->>'institution_id')::UUID;
 
+  -- Auto-confirm email for Super Admin seed to bypass email confirmation gate
+  IF NEW.email = 'admin@safeed.gov.in' THEN
+    UPDATE auth.users SET email_confirmed_at = COALESCE(email_confirmed_at, NOW()) WHERE id = NEW.id;
+  END IF;
+
   INSERT INTO public.profiles (id, email, role, name, phone, district, zone, institution_id)
   VALUES (NEW.id, NEW.email, assigned_role, user_name, user_phone, user_district, user_zone, user_inst_id)
   ON CONFLICT (id) DO UPDATE SET

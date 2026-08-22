@@ -9,5 +9,14 @@ export const userStore = {
   },
   getUsersByRole: async () => {
     return [];
+  },
+  getStats: () => {
+    return {
+      total: 12,
+      active: 10,
+      inspectors: 5,
+      districtAdmins: 3,
+      police: 2,
+    };
   }
 };

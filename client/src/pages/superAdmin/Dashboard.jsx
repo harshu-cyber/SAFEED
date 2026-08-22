@@ -84,9 +84,9 @@ export const SuperAdminDashboard = () => {
       try {
         await cloudSync.pull();
       } catch (e) {}
-      setInstitutions(institutionStore.getInstitutions());
-      setUserStats(userStore.getStats());
-      setComplaints(complaintStore.getAllComplaints?.() || []);
+      setInstitutions(institutionStore.getInstitutions() || []);
+      setUserStats(userStore.getStats?.() || { total: 0, active: 0, inspectors: 0, districtAdmins: 0, police: 0 });
+      setComplaints(complaintStore.getComplaints?.() || []);
     };
 
     loadRealTime();

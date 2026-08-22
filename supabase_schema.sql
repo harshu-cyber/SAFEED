@@ -6,6 +6,7 @@
 
 -- 1. EXTENSIONS
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- 2. ENUM TYPES
 DO $$ BEGIN
@@ -146,7 +147,7 @@ AFTER INSERT OR UPDATE ON public.documents
 FOR EACH ROW
 EXECUTE FUNCTION public.evaluate_institution_compliance();
 
--- 7. PROFILE CREATION TRIGGER ON AUTH SIGNUP
+-- 7. PROFILE CREATION TRIGGER ON AUTH SIGNUP (WITH SECURITY ROLE SANITIZATION)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -158,6 +159,15 @@ DECLARE
   user_inst_id UUID;
 BEGIN
   assigned_role := COALESCE((NEW.raw_user_meta_data->>'role')::user_role, 'INSTITUTION_ADMIN');
+  
+  -- Security Guard: Prevent public signup from assigning SUPER_ADMIN or administrative roles
+  IF (NEW.raw_user_meta_data->>'role') IN ('SUPER_ADMIN', 'DISTRICT_ADMIN', 'INSPECTION_OFFICER') THEN
+    -- If user is NOT the pre-configured super admin seed, force role to INSTITUTION_ADMIN
+    IF NEW.email != 'admin@safeed.gov.in' THEN
+      assigned_role := 'INSTITUTION_ADMIN';
+    END IF;
+  END IF;
+
   user_name := NEW.raw_user_meta_data->>'name';
   user_phone := NEW.raw_user_meta_data->>'phone';
   user_district := NEW.raw_user_meta_data->>'district';
@@ -168,6 +178,7 @@ BEGIN
   VALUES (NEW.id, NEW.email, assigned_role, user_name, user_phone, user_district, user_zone, user_inst_id)
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
+    role = EXCLUDED.role,
     name = EXCLUDED.name,
     phone = EXCLUDED.phone,
     district = EXCLUDED.district,
@@ -243,3 +254,77 @@ CREATE POLICY "Authenticated users update documents" ON storage.objects
 FOR UPDATE USING (
   bucket_id = 'safeed-documents' AND auth.role() = 'authenticated'
 );
+
+-- ============================================================
+-- 10. IDEMPOTENT SUPER ADMIN PROVISIONING BLOCK
+-- Automatically provisions the State Director Super Admin account
+-- Running this script repeatedly will NEVER create duplicates
+-- ============================================================
+DO $$
+DECLARE
+  super_admin_email TEXT := 'admin@safeed.gov.in';
+  super_admin_pass  TEXT := 'SuperAdmin@SafeED2026!';
+  super_admin_id    UUID := 'a0000000-0000-0000-0000-000000000001'::UUID;
+  encrypted_pass    TEXT;
+BEGIN
+  -- 1. Check if auth user already exists by email
+  IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = super_admin_email) THEN
+    encrypted_pass := crypt(super_admin_pass, gen_salt('bf'));
+
+    INSERT INTO auth.users (
+      id,
+      instance_id,
+      email,
+      encrypted_password,
+      email_confirmed_at,
+      raw_app_meta_data,
+      raw_user_meta_data,
+      created_at,
+      updated_at,
+      role,
+      aud
+    )
+    VALUES (
+      super_admin_id,
+      '00000000-0000-0000-0000-000000000000',
+      super_admin_email,
+      encrypted_pass,
+      NOW(),
+      '{"provider": "email", "providers": ["email"]}',
+      '{"name": "State Director Super Admin", "role": "SUPER_ADMIN"}',
+      NOW(),
+      NOW(),
+      'authenticated',
+      'authenticated'
+    );
+  ELSE
+    SELECT id INTO super_admin_id FROM auth.users WHERE email = super_admin_email;
+  END IF;
+
+  -- 2. Upsert profile record with SUPER_ADMIN role
+  INSERT INTO public.profiles (
+    id,
+    email,
+    role,
+    name,
+    district,
+    zone,
+    created_at,
+    updated_at
+  )
+  VALUES (
+    super_admin_id,
+    super_admin_email,
+    'SUPER_ADMIN',
+    'State Director Super Admin',
+    'Lucknow',
+    'HQ',
+    NOW(),
+    NOW()
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    role = 'SUPER_ADMIN',
+    name = 'State Director Super Admin',
+    updated_at = NOW();
+
+END $$;

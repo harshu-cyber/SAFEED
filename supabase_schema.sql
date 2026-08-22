@@ -2,6 +2,7 @@
 -- SAFEED-UP — Supabase Single Source of Truth Production Schema
 -- Production PostgreSQL DDL, RLS Policies, & Automated Triggers
 -- Paste this entire SQL into Supabase SQL Editor and Click RUN
+-- Fully Idempotent (Can be re-run unlimited times safely)
 -- ============================================================
 
 -- 1. EXTENSIONS
@@ -195,17 +196,23 @@ AFTER INSERT ON auth.users
 FOR EACH ROW
 EXECUTE FUNCTION public.handle_new_user();
 
--- 8. ROW LEVEL SECURITY (RLS) POLICIES
+-- 8. ROW LEVEL SECURITY (RLS) POLICIES (WITH IDEMPOTENT DROPS)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.institutions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
 
 -- PROFILES POLICIES
+DROP POLICY IF EXISTS "Public profiles reading" ON public.profiles;
 CREATE POLICY "Public profiles reading" ON public.profiles FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
 -- INSTITUTIONS POLICIES
+DROP POLICY IF EXISTS "Public institutions reading for verification" ON public.institutions;
 CREATE POLICY "Public institutions reading for verification" ON public.institutions FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Admins & Inspectors can manage institutions" ON public.institutions;
 CREATE POLICY "Admins & Inspectors can manage institutions" ON public.institutions FOR ALL USING (
   EXISTS (
     SELECT 1 FROM public.profiles p 
@@ -213,6 +220,8 @@ CREATE POLICY "Admins & Inspectors can manage institutions" ON public.institutio
     AND p.role IN ('SUPER_ADMIN', 'DISTRICT_ADMIN', 'INSPECTION_OFFICER')
   )
 );
+
+DROP POLICY IF EXISTS "Institutions can update own profile" ON public.institutions;
 CREATE POLICY "Institutions can update own profile" ON public.institutions FOR UPDATE USING (
   EXISTS (
     SELECT 1 FROM public.profiles p 
@@ -222,10 +231,15 @@ CREATE POLICY "Institutions can update own profile" ON public.institutions FOR U
 );
 
 -- DOCUMENTS POLICIES
+DROP POLICY IF EXISTS "Public reading for verification" ON public.documents;
 CREATE POLICY "Public reading for verification" ON public.documents FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can insert own documents" ON public.documents;
 CREATE POLICY "Users can insert own documents" ON public.documents FOR INSERT WITH CHECK (
   auth.uid() = uploaded_by
 );
+
+DROP POLICY IF EXISTS "Inspectors & Admins can review documents" ON public.documents;
 CREATE POLICY "Inspectors & Admins can review documents" ON public.documents FOR UPDATE USING (
   EXISTS (
     SELECT 1 FROM public.profiles p 
@@ -240,16 +254,19 @@ VALUES ('safeed-documents', 'safeed-documents', false)
 ON CONFLICT (id) DO NOTHING;
 
 -- STORAGE POLICIES
+DROP POLICY IF EXISTS "Authenticated users upload documents" ON storage.objects;
 CREATE POLICY "Authenticated users upload documents" ON storage.objects 
 FOR INSERT WITH CHECK (
   bucket_id = 'safeed-documents' AND auth.role() = 'authenticated'
 );
 
+DROP POLICY IF EXISTS "Authenticated users read documents" ON storage.objects;
 CREATE POLICY "Authenticated users read documents" ON storage.objects 
 FOR SELECT USING (
   bucket_id = 'safeed-documents' AND auth.role() = 'authenticated'
 );
 
+DROP POLICY IF EXISTS "Authenticated users update documents" ON storage.objects;
 CREATE POLICY "Authenticated users update documents" ON storage.objects 
 FOR UPDATE USING (
   bucket_id = 'safeed-documents' AND auth.role() = 'authenticated'

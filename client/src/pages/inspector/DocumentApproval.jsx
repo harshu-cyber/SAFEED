@@ -1,6 +1,11 @@
+// ============================================================
+// SAFEED-UP — Inspector Document Verification Desk (Supabase)
+// Single Source of Truth: Supabase PostgreSQL & Storage Signed URLs
+// ============================================================
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { documentApi } from '../../api/apiServices';
+import { inspectorService } from '../../services/inspectorService';
+import { documentService } from '../../services/documentService';
 import {
   FiFileText, FiCheck, FiX, FiEye, FiClock, FiAlertCircle,
   FiSearch, FiFilter, FiCheckCircle, FiShield, FiUnlock
@@ -22,6 +27,7 @@ export const DocumentApproval = () => {
   const [search, setSearch] = useState('');
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [readingDoc, setReadingDoc] = useState(null);
+  const [signedUrl, setSignedUrl] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState('');
   const [toast, setToast] = useState('');
@@ -30,12 +36,12 @@ export const DocumentApproval = () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await documentApi.getAssigned();
-      const apiDocs = res.data?.data?.documents || res.data?.documents || [];
-      setDocs(apiDocs);
+      const inspectorId = user?.id || user?._id;
+      const apiDocs = await inspectorService.getAssignedDocuments(inspectorId);
+      setDocs(apiDocs || []);
     } catch (e) {
-      console.error('[DocumentApproval] API fetch error:', e);
-      setErrorMsg(e.response?.data?.message || 'Failed to fetch assigned documents from server.');
+      console.error('[DocumentApproval] Fetch error:', e);
+      setErrorMsg(e.message || 'Failed to fetch assigned documents from Supabase.');
       setDocs([]);
     } finally {
       setLoading(false);
@@ -44,8 +50,6 @@ export const DocumentApproval = () => {
 
   useEffect(() => {
     loadDocs();
-    const interval = setInterval(loadDocs, 10000);
-    return () => clearInterval(interval);
   }, [user]);
 
   const showToast = (msg) => {
@@ -58,12 +62,13 @@ export const DocumentApproval = () => {
     setErrorMsg('');
 
     try {
+      const inspectorId = user?.id || user?._id;
       if (action === 'approve') {
-        await documentApi.approve(docId);
-        showToast('✅ Document Approved! Status saved to MongoDB.');
+        await inspectorService.approveDocument(docId, inspectorId);
+        showToast('✅ Document Approved! QR status automatically evaluated.');
       } else {
-        await documentApi.reject(docId, { reason: rejectionReason || 'Rejected by Inspector' });
-        showToast('❌ Document Rejected. Status saved to MongoDB.');
+        await inspectorService.rejectDocument(docId, inspectorId, rejectionReason || 'Rejected by Inspector');
+        showToast('❌ Document Rejected.');
       }
       await loadDocs();
       setSelectedDoc(null);
@@ -71,22 +76,33 @@ export const DocumentApproval = () => {
       setRejectionReason('');
     } catch (err) {
       console.error('[DocumentApproval] Action error:', err);
-      setErrorMsg(err.response?.data?.message || 'Action failed on server.');
+      setErrorMsg(err.message || 'Action failed on Supabase backend.');
     } finally {
       setActionLoading('');
     }
   };
 
-  const pendingCount = docs.filter(d => d.status === 'PENDING_REVIEW').length;
-  const approvedCount = docs.filter(d => d.status === 'APPROVED').length;
-  const rejectedCount = docs.filter(d => d.status === 'REJECTED').length;
+  const handleReadDoc = async (doc) => {
+    setReadingDoc(doc);
+    setSignedUrl('');
+    const path = doc.storage_path || doc.storagePath;
+    if (path) {
+      const url = await documentService.getSignedFileUrl(path, doc.storage_bucket || 'safeed-documents');
+      setSignedUrl(url || '');
+    }
+  };
+
+  const pendingCount = docs.filter(d => (d.status || d.verificationStatus) === 'PENDING_REVIEW').length;
+  const approvedCount = docs.filter(d => (d.status || d.verificationStatus) === 'APPROVED').length;
+  const rejectedCount = docs.filter(d => (d.status || d.verificationStatus) === 'REJECTED').length;
 
   const filtered = docs.filter(d => {
-    const matchesFilter = filter === 'ALL' || d.status === filter;
+    const status = d.status || d.verificationStatus || 'PENDING_REVIEW';
+    const matchesFilter = filter === 'ALL' || status === filter;
     const matchesSearch = !search ||
-      d.institutionName?.toLowerCase().includes(search.toLowerCase()) ||
-      d.originalFileName?.toLowerCase().includes(search.toLowerCase()) ||
-      d.documentType?.toLowerCase().includes(search.toLowerCase());
+      (d.institutionName || d.institutions?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (d.originalFileName || d.original_file_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (d.documentType || d.document_type || '').toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
@@ -113,15 +129,15 @@ export const DocumentApproval = () => {
           <div className="flex items-center gap-2 mb-1">
             <img src="/up-police-logo.png" alt="UP Police" className="w-7 h-7 object-contain" />
             <h2 className="text-base font-black text-[#0F2038] font-serif">
-              Inspector Document Verification Desk
+              Inspector Document Verification Desk (Supabase)
             </h2>
           </div>
           <p className="text-xs text-slate-500 ml-9">
-            Single Source of Truth: Reading directly from MongoDB Document Collection and GridFS Binary Storage.
+            Single Source of Truth: Querying Supabase documents table and safeed-documents Storage bucket.
           </p>
         </div>
         <div className="flex items-center gap-2 bg-[#0F2038] text-[#D4AF37] px-3.5 py-2 rounded-xl text-xs font-black border border-[#D4AF37]">
-          <MdLocalPolice size={14} /> {user?.name || 'Inspection Officer'} ({user?.role || 'INSPECTION_OFFICER'})
+          <span>👮</span> {user?.name || user?.email || 'Inspection Officer'} ({user?.role || 'INSPECTION_OFFICER'})
         </div>
       </div>
 
@@ -173,7 +189,7 @@ export const DocumentApproval = () => {
       <div className="space-y-3">
         {loading ? (
           <div className="p-8 text-center text-slate-400 font-bold text-xs bg-white border-2 border-slate-200 rounded-2xl">
-            Fetching assigned documents from MongoDB...
+            Fetching assigned documents from Supabase...
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-12 text-slate-400 bg-white border-2 border-slate-200 rounded-2xl space-y-2">
@@ -183,29 +199,37 @@ export const DocumentApproval = () => {
           </div>
         ) : (
           filtered.map(doc => {
-            const statusConfig = STATUS_CONFIG[doc.status] || STATUS_CONFIG.PENDING_REVIEW;
-            const fileSizeMB = doc.fileSize ? (doc.fileSize / (1024 * 1024)).toFixed(2) + ' MB' : '0 MB';
+            const docId = doc.id || doc._id;
+            const docStatus = doc.status || 'PENDING_REVIEW';
+            const statusConfig = STATUS_CONFIG[docStatus] || STATUS_CONFIG.PENDING_REVIEW;
+            const fileName = doc.original_file_name || doc.originalFileName || doc.document_type || doc.documentType;
+            const instName = doc.institutions?.name || doc.institutionName || 'School Admin';
+            const docType = doc.document_type || doc.documentType;
+            const fileSize = doc.file_size || doc.fileSize;
+            const fileSizeMB = fileSize ? (fileSize / (1024 * 1024)).toFixed(2) + ' MB' : 'N/A';
+            const uploadedAt = doc.uploaded_at || doc.uploadedAt || doc.created_at;
+            const rejectionReasonVal = doc.rejection_reason || doc.rejectionReason;
 
             return (
-              <div key={doc._id} className="bg-white border-2 border-slate-200 hover:border-[#D4AF37] rounded-2xl p-4 transition-all shadow-sm">
+              <div key={docId} className="bg-white border-2 border-slate-200 hover:border-[#D4AF37] rounded-2xl p-4 transition-all shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 bg-[#0F2038] rounded-xl flex items-center justify-center flex-shrink-0">
                       <FiFileText size={18} className="text-[#D4AF37]" />
                     </div>
                     <div>
-                      <p className="text-xs font-black text-[#0F2038]">{doc.originalFileName}</p>
-                      <p className="text-[11px] text-slate-600 font-bold">🏫 {doc.institutionName} • Type: {doc.documentType}</p>
+                      <p className="text-xs font-black text-[#0F2038]">{fileName}</p>
+                      <p className="text-[11px] text-slate-600 font-bold">🏫 {instName} • Type: {docType}</p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${statusConfig.color}`}>
                           {statusConfig.label}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-semibold">Uploaded: {new Date(doc.uploadedAt).toLocaleDateString('en-IN')}</span>
+                        <span className="text-[10px] text-slate-400 font-semibold">Uploaded: {uploadedAt ? new Date(uploadedAt).toLocaleDateString('en-IN') : 'N/A'}</span>
                         <span className="text-[10px] text-slate-400 font-semibold">{fileSizeMB}</span>
                       </div>
-                      {doc.rejectionReason && (
+                      {rejectionReasonVal && (
                         <p className="text-[10px] text-rose-700 font-semibold mt-1 italic bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                          Rejection Reason: "{doc.rejectionReason}"
+                          Rejection Reason: "{rejectionReasonVal}"
                         </p>
                       )}
                     </div>
@@ -215,24 +239,24 @@ export const DocumentApproval = () => {
                   <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                     {/* Read PDF Button */}
                     <button
-                      onClick={() => setReadingDoc(doc)}
+                      onClick={() => handleReadDoc(doc)}
                       className="text-xs font-black px-3.5 py-2 bg-[#0F2038] text-[#D4AF37] border-2 border-[#D4AF37] rounded-xl hover:bg-[#1E3A5F] transition-all flex items-center gap-1.5 cursor-pointer shadow"
                     >
                       <FiEye size={13} /> Read PDF / Inspect Stream
                     </button>
 
-                    {doc.status === 'PENDING_REVIEW' && (
+                    {docStatus === 'PENDING_REVIEW' && (
                       <>
                         <button
-                          onClick={() => handleAction(doc._id, 'approve')}
-                          disabled={actionLoading === doc._id + 'approve'}
+                          onClick={() => handleAction(docId, 'approve')}
+                          disabled={actionLoading === docId + 'approve'}
                           className="text-xs font-black px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl cursor-pointer transition-colors flex items-center gap-1 shadow disabled:opacity-50"
                         >
                           <FiCheck size={14} /> Approve ✓
                         </button>
                         <button
                           onClick={() => { setSelectedDoc(doc); setRejectionReason(''); }}
-                          disabled={actionLoading === doc._id + 'reject'}
+                          disabled={actionLoading === docId + 'reject'}
                           className="text-xs font-black px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl cursor-pointer transition-colors flex items-center gap-1 shadow disabled:opacity-50"
                         >
                           <FiX size={14} /> Reject ✗
@@ -240,9 +264,9 @@ export const DocumentApproval = () => {
                       </>
                     )}
 
-                    {doc.status !== 'PENDING_REVIEW' && (
+                    {docStatus !== 'PENDING_REVIEW' && (
                       <button
-                        onClick={() => { setSelectedDoc(doc); setRejectionReason(doc.rejectionReason || ''); }}
+                        onClick={() => { setSelectedDoc(doc); setRejectionReason(rejectionReasonVal || ''); }}
                         className="text-[11px] font-bold text-slate-500 hover:text-[#0F2038] underline cursor-pointer"
                       >
                         Change Status
@@ -265,10 +289,10 @@ export const DocumentApproval = () => {
                 <img src="/up-police-logo.png" alt="UP Police" className="w-8 h-8 object-contain" />
                 <div>
                   <p className="text-xs font-black text-[#D4AF37] uppercase tracking-wider">
-                    Inspector Binary PDF Reader — {readingDoc.originalFileName}
+                    Supabase Inspector Document Reader — {readingDoc.original_file_name || readingDoc.originalFileName}
                   </p>
                   <p className="text-[10px] text-slate-300">
-                    Institution: <strong>{readingDoc.institutionName}</strong> • Type: {readingDoc.documentType} • Mongo ID: {readingDoc._id}
+                    Institution: <strong>{readingDoc.institutions?.name || readingDoc.institutionName}</strong> • Type: {readingDoc.document_type || readingDoc.documentType} • ID: {readingDoc.id || readingDoc._id}
                   </p>
                 </div>
               </div>
@@ -277,59 +301,35 @@ export const DocumentApproval = () => {
 
             {/* Binary Stream Content */}
             <div className="p-6 overflow-y-auto space-y-4 flex-1 bg-[#F4F6F9]">
-              {(() => {
-                const storedToken = localStorage.getItem('accessToken');
-                const rawProxyUrl = documentApi.getFileUrl(readingDoc._id);
-                const tokenProxyUrl = storedToken ? `${rawProxyUrl}?token=${encodeURIComponent(storedToken)}` : rawProxyUrl;
-                const targetUrl = readingDoc.cloudinarySecureUrl || readingDoc.fileUrl || tokenProxyUrl;
-                const mime = (readingDoc.mimeType || readingDoc.fileType || '').toLowerCase();
-                const fileName = (readingDoc.originalFileName || readingDoc.fileName || '').toLowerCase();
-                const isImage = mime.startsWith('image/');
-                const isWord = mime.includes('word') || mime.includes('officedocument') || fileName.endsWith('.doc') || fileName.endsWith('.docx');
-
-                return (
-                  <div className="border-2 border-slate-300 rounded-xl overflow-hidden bg-[#0F2038] shadow">
-                    {isImage ? (
-                      <img
-                        src={targetUrl}
-                        alt={readingDoc.originalFileName}
-                        className="max-w-full h-auto mx-auto"
-                      />
-                    ) : isWord ? (
-                      <div className="p-8 text-center text-white space-y-4">
-                        <div className="text-5xl">📝</div>
-                        <h4 className="text-base font-black text-[#D4AF37]">{readingDoc.originalFileName || 'Microsoft Word Document'}</h4>
-                        <p className="text-xs text-slate-300">Word document stream is ready for review.</p>
-                        <a
-                          href={targetUrl}
-                          download={readingDoc.originalFileName || 'document.docx'}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-[#D4AF37] text-[#0F2038] text-xs font-black px-5 py-2.5 rounded-xl inline-flex items-center gap-2 hover:bg-amber-400 transition-all cursor-pointer"
-                        >
-                          Download / Open Word Document (.docx) ↗
+              {signedUrl ? (
+                <div className="border-2 border-slate-300 rounded-xl overflow-hidden bg-[#0F2038] shadow">
+                  {(readingDoc.mime_type || readingDoc.mimeType || '').startsWith('image/') ? (
+                    <img
+                      src={signedUrl}
+                      alt={readingDoc.original_file_name}
+                      className="max-w-full h-auto mx-auto object-contain"
+                    />
+                  ) : (
+                    <object data={signedUrl} type={readingDoc.mime_type || 'application/pdf'} className="w-full h-[550px]">
+                      <embed src={signedUrl} type={readingDoc.mime_type || 'application/pdf'} className="w-full h-[550px]" />
+                      <div className="p-4 text-center text-white">
+                        <p className="text-xs font-bold mb-2">Binary PDF Stream Ready</p>
+                        <a href={signedUrl} target="_blank" rel="noopener noreferrer" className="bg-[#D4AF37] text-[#0F2038] text-xs font-black px-4 py-2 rounded-lg inline-block">
+                          Open PDF Binary Stream in New Tab ↗
                         </a>
                       </div>
-                    ) : (
-                      <object data={targetUrl} type={readingDoc.mimeType || 'application/pdf'} className="w-full h-[550px]">
-                        <embed src={targetUrl} type={readingDoc.mimeType || 'application/pdf'} className="w-full h-[550px]" />
-                        <div className="p-4 text-center text-white">
-                          <p className="text-xs font-bold mb-2">Binary PDF Stream Ready</p>
-                          <a href={targetUrl} target="_blank" rel="noopener noreferrer" className="bg-[#D4AF37] text-[#0F2038] text-xs font-black px-4 py-2 rounded-lg inline-block">
-                            Open PDF Binary Stream in New Tab ↗
-                          </a>
-                        </div>
-                      </object>
-                    )}
-                  </div>
-                );
-              })()}
+                    </object>
+                  )}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-slate-500 font-bold text-xs">Generating secure Supabase signed URL...</div>
+              )}
             </div>
 
             {/* Modal Inspector Action Bar */}
             <div className="p-4 bg-slate-100 border-t-2 border-slate-300 flex flex-col sm:flex-row items-center justify-between gap-3">
               <p className="text-xs font-black text-[#0F2038]">
-                Inspector Action for {readingDoc.institutionName}
+                Inspector Action for {readingDoc.institutions?.name || readingDoc.institutionName}
               </p>
               <div className="flex gap-2">
                 <button
@@ -339,7 +339,7 @@ export const DocumentApproval = () => {
                   <FiX size={14} /> Reject ✗
                 </button>
                 <button
-                  onClick={() => handleAction(readingDoc._id, 'approve')}
+                  onClick={() => handleAction(readingDoc.id || readingDoc._id, 'approve')}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-6 py-2.5 rounded-xl cursor-pointer shadow flex items-center gap-1"
                 >
                   <FiCheck size={14} /> Approve Document ✓
@@ -358,7 +358,7 @@ export const DocumentApproval = () => {
               <img src="/up-police-logo.png" alt="UP Police" className="w-8 h-8 object-contain" />
               <div>
                 <p className="text-xs font-black text-[#D4AF37] uppercase tracking-wider">Inspector Rejection Action</p>
-                <p className="text-[10px] text-slate-300">{selectedDoc.originalFileName} — {selectedDoc.institutionName}</p>
+                <p className="text-[10px] text-slate-300">{selectedDoc.original_file_name || selectedDoc.originalFileName} — {selectedDoc.institutions?.name || selectedDoc.institutionName}</p>
               </div>
             </div>
             <div className="p-5 space-y-4">
@@ -381,7 +381,7 @@ export const DocumentApproval = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={() => handleAction(selectedDoc._id, 'reject')}
+                  onClick={() => handleAction(selectedDoc.id || selectedDoc._id, 'reject')}
                   disabled={!rejectionReason.trim() || !!actionLoading}
                   className="flex-1 text-xs font-black py-3 bg-rose-600 text-white rounded-xl hover:bg-rose-700 cursor-pointer transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
                 >

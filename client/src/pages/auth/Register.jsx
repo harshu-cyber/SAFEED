@@ -172,6 +172,7 @@ export const Register = () => {
 
     const formattedData = {
       ...data,
+      password: data.password || data.phone,
       name: (data.principalName || data.name || data.institutionName || 'School Admin').trim(),
       phone: String(data.phone || '').replace(/\D/g, '').slice(-10) || data.phone,
       email: (data.email || '').toLowerCase().trim(),

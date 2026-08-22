@@ -1,88 +1,132 @@
+// ============================================================
+// SAFEED-UP — Supabase Auth Context Provider
+// Single Source of Truth for Session State & User Profiles
+// ============================================================
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authApi } from '../api/apiServices';
-import { institutionStore } from '../api/institutionStore';
-import { userStore } from '../api/userStore';
-import { cloudSync } from '../api/cloudSync';
+import { supabase } from '../lib/supabaseClient';
 
 const AuthContext = createContext(null);
-
-
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUser = async () => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
+  const fetchProfileAndSetUser = async (sessionUser) => {
+    if (!sessionUser) {
       setUser(null);
       setLoading(false);
-      return;
+      return null;
     }
+
     try {
-      const res = await authApi.getMe();
-      if (res.data?.data?.user) {
-        setUser(res.data.data.user);
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*, institutions(*)')
+        .eq('id', sessionUser.id)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        console.warn('[AuthContext] Profile fetch warning:', error.message);
       }
+
+      const mergedUser = {
+        ...sessionUser,
+        ...profile,
+        _id: profile?.id || sessionUser.id,
+        id: profile?.id || sessionUser.id,
+        name: profile?.full_name || sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0],
+        email: sessionUser.email,
+        role: profile?.role || sessionUser.user_metadata?.role || 'INSTITUTION_ADMIN',
+        institutionId: profile?.institution_id || profile?.institutions?.id,
+        institution: profile?.institutions,
+        district: profile?.district || profile?.institutions?.district || 'Lucknow',
+        zone: profile?.zone || profile?.institutions?.zone || 'CENTRAL',
+      };
+
+      setUser(mergedUser);
+      return mergedUser;
     } catch (err) {
-      console.warn('[AuthContext] getMe fetch error:', err.message);
-      const savedSchoolStr = localStorage.getItem('registeredSchoolUser');
-      if (savedSchoolStr) {
-        try {
-          const parsed = JSON.parse(savedSchoolStr);
-          const inst = institutionStore.getInstitutionByIdOrEmail(parsed.institutionId || parsed.username);
-          if (inst) {
-            setUser({
-              _id: inst._id,
-              id: inst._id,
-              name: inst.name,
-              email: inst.email,
-              role: 'SCHOOL_ADMIN',
-              institutionId: inst._id,
-              district: inst.district,
-              state: inst.state,
-            });
-          }
-        } catch (_) {}
-      }
+      console.error('[AuthContext] Error fetching profile:', err);
+      // Even if profile query fails, preserve session user without logging out
+      const fallbackUser = {
+        ...sessionUser,
+        _id: sessionUser.id,
+        id: sessionUser.id,
+        name: sessionUser.email?.split('@')[0],
+        role: sessionUser.user_metadata?.role || 'INSTITUTION_ADMIN',
+      };
+      setUser(fallbackUser);
+      return fallbackUser;
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    cloudSync.pull().then(() => fetchUser()).catch(() => fetchUser());
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchProfileAndSetUser(session.user);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // Subscribe to auth state changes
+    const { data: authSubscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        await fetchProfileAndSetUser(session.user);
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      authSubscription?.subscription?.unsubscribe();
+    };
   }, []);
 
-  const login = async (credentials) => {
+  const login = async (email, password) => {
+    setLoading(true);
     try {
-      const res = await authApi.login(credentials);
-      const loggedUser = res.data.data.user;
-      if (res.data.data.accessToken) {
-        localStorage.setItem('accessToken', res.data.data.accessToken);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Supabase authentication failed.');
       }
-      if (res.data.data.refreshToken) {
-        localStorage.setItem('refreshToken', res.data.data.refreshToken);
-      }
-      setUser(loggedUser);
-      return loggedUser;
-    } catch (err) {
-      console.error('[AuthContext] Login API Error:', err.response?.data || err.message);
-      const serverMsg = err.response?.data?.message || err.message || 'Login failed. Please check credentials.';
-      throw new Error(serverMsg);
+
+      const fullUser = await fetchProfileAndSetUser(data.user);
+      return fullUser;
+    } finally {
+      setLoading(false);
     }
   };
 
   const logout = async () => {
-    try { await authApi.logout(); } catch (_) {}
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('registeredSchoolUser');
-    setUser(null);
+    setLoading(true);
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn('[AuthContext] Logout warning:', err);
+    } finally {
+      setUser(null);
+      setLoading(false);
+    }
+  };
+
+  const refetchUser = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      await fetchProfileAndSetUser(session.user);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, setUser, refetchUser: fetchUser }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, setUser, refetchUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -93,3 +137,5 @@ export const useAuth = () => {
   if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
+
+export default AuthContext;

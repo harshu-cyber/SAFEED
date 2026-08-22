@@ -1,80 +1,152 @@
 // ============================================================
-// SafeED-UP — Canonical Frontend Document API Service
-// Single Source of Truth for Document Upload, Retrieval & Verification
+// SAFEED-UP — Supabase Document API Bridge
+// Single Source of Truth for Document Operations
 // ============================================================
-import axiosInstance from './axiosInstance';
+import { documentService } from '../services/documentService';
+import { inspectorService } from '../services/inspectorService';
+import { supabase } from '../lib/supabaseClient';
 
 export const documentApi = {
   /**
-   * Upload document file (multipart/form-data)
-   * POST /api/v1/documents
+   * Upload document file (Supabase Storage + PostgreSQL row)
    */
+  uploadDocument: async (file, documentType, instId) => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData?.session?.user?.id;
+    let targetInstId = instId;
+
+    if (!targetInstId && userId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('institution_id')
+        .eq('id', userId)
+        .single();
+      targetInstId = profile?.institution_id;
+    }
+
+    return documentService.uploadDocument({
+      file,
+      documentType,
+      institutionId: targetInstId,
+      userId,
+    });
+  },
+
   /**
-   * Upload document file (multipart/form-data)
-   * POST /api/v1/documents
+   * Alias for formData upload from UI form
    */
-  uploadDocument: async (file, documentType) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('documentType', documentType);
-    return axiosInstance.post('/documents', formData);
+  upload: async (formData) => {
+    const file = formData.get('file');
+    const documentType = formData.get('documentType');
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData?.session?.user?.id;
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('institution_id')
+      .eq('id', userId)
+      .single();
+
+    const instId = profile?.institution_id;
+
+    const doc = await documentService.uploadDocument({
+      file,
+      documentType,
+      institutionId: instId,
+      userId,
+    });
+
+    return { data: { success: true, data: { document: doc } } };
   },
 
   /**
    * Fetch authenticated institution's documents
-   * GET /api/v1/documents/my
    */
-  getMyDocuments: async () => {
-    return axiosInstance.get('/documents/my');
+  getMyDocuments: async (institutionId) => {
+    let targetInstId = institutionId;
+    if (!targetInstId) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (userId) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('institution_id')
+          .eq('id', userId)
+          .single();
+        targetInstId = profile?.institution_id;
+      }
+    }
+
+    const docs = await documentService.getMyDocuments(targetInstId);
+    return { data: { success: true, documents: docs, data: { documents: docs } } };
   },
 
   /**
-   * Fetch documents assigned to logged in inspector
-   * GET /api/v1/documents/inspector/assigned
+   * Fetch documents assigned to logged-in inspector
    */
+  getAssigned: async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const inspectorId = sessionData?.session?.user?.id;
+
+    const docs = await inspectorService.getAssignedDocuments(inspectorId);
+    return { data: { success: true, documents: docs, data: { documents: docs } } };
+  },
+
   getAssignedDocuments: async () => {
-    return axiosInstance.get('/documents/inspector/assigned');
+    return documentApi.getAssigned();
+  },
+
+  getPending: async () => {
+    return documentApi.getAssigned();
+  },
+
+  getForInstitution: async (instId) => {
+    const docs = await documentService.getMyDocuments(instId);
+    return { data: { success: true, data: { documents: docs } } };
   },
 
   /**
    * Approve a document
-   * PATCH /api/v1/documents/:documentId/approve
    */
+  approve: async (documentId) => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const inspectorId = sessionData?.session?.user?.id;
+    const doc = await inspectorService.approveDocument(documentId, inspectorId);
+    return { data: { success: true, document: doc } };
+  },
+
   approveDocument: async (documentId) => {
-    return axiosInstance.patch(`/documents/${documentId}/approve`);
+    return documentApi.approve(documentId);
   },
 
   /**
    * Reject a document with reason
-   * PATCH /api/v1/documents/:documentId/reject
    */
+  reject: async (documentId, data = {}) => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const inspectorId = sessionData?.session?.user?.id;
+    const reason = typeof data === 'string' ? data : data.reason;
+    const doc = await inspectorService.rejectDocument(documentId, inspectorId, reason);
+    return { data: { success: true, document: doc } };
+  },
+
   rejectDocument: async (documentId, data) => {
-    return axiosInstance.patch(`/documents/${documentId}/reject`, data);
+    return documentApi.reject(documentId, data);
   },
 
   /**
    * Get direct URL or file proxy stream URL
    */
-  getDocumentFileUrl: (documentId) => {
-    const storedToken = localStorage.getItem('accessToken');
-    const rawBase = import.meta.env.VITE_API_URL || '';
-    const cleanBase = rawBase ? rawBase.replace(/\/+$/, '') : '';
-    const baseURL = cleanBase ? (cleanBase.endsWith('/api/v1') ? cleanBase : `${cleanBase}/api/v1`) : '/api/v1';
-    const proxyUrl = `${baseURL}/documents/${documentId}/file`;
-    return storedToken ? `${proxyUrl}?token=${encodeURIComponent(storedToken)}` : proxyUrl;
+  getFileUrl: (storagePathOrId) => {
+    // If input is a storagePath or document ID, return signed URL endpoint or path
+    if (storagePathOrId && storagePathOrId.includes('institutions/')) {
+      return documentService.getSignedFileUrl(storagePathOrId);
+    }
+    return storagePathOrId || '';
   },
 
-  // Aliases for component convenience
-  upload: function(formData) {
-    return axiosInstance.post('/documents', formData);
-  },
-  getAssigned: function() { return axiosInstance.get('/documents/inspector/assigned'); },
-  getPending: function() { return axiosInstance.get('/documents/inspector/assigned'); },
-  getForInstitution: function(instId) { return axiosInstance.get('/documents/my'); },
-  getFileUrl: function(documentId) { return this.getDocumentFileUrl(documentId); },
-  approve: function(id) { return this.approveDocument(id); },
-  reject: function(id, data) { return this.rejectDocument(id, data); },
-  getQrStatus: function(institutionId) { return axiosInstance.get('/documents/qr-status', { params: { institutionId } }); },
+  getDocumentFileUrl: (id) => documentApi.getFileUrl(id),
 };
 
 export default documentApi;

@@ -47,7 +47,7 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
 
   if (!institution && !localInst?._id && !localInst?.id) return null;
 
-  const handleLockSubmit = (e) => {
+  const handleLockSubmit = async (e) => {
     e.preventDefault();
     setActionErr('');
     if (!lockReason.trim()) {
@@ -57,29 +57,31 @@ export const InstitutionFullDetailModal = ({ institution, onClose, onAssignInspe
     const issuerRole = user?.role === 'DISTRICT_ADMIN' ? 'District Authority Admin' :
                        user?.role === 'INSPECTION_OFFICER' ? `Safety Inspector (${user.name || 'DCP Officer'})` :
                        user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Safety Inspection Officer';
-    
-    const updated = institutionStore.lockInstitutionQR(instId, {
-      reason: lockReason.trim(),
-      issuedBy: issuerRole,
-    });
-    if (updated) setLocalInst(updated);
-    setShowLockModal(false);
-    setLockReason('');
+
+    try {
+      const updated = await institutionService.lockQR(instId, lockReason.trim(), issuerRole);
+      if (updated) setLocalInst(updated);
+      setShowLockModal(false);
+      setLockReason('');
+    } catch (err) {
+      setActionErr(err.message || 'Failed to lock QR code.');
+    }
   };
 
-  const handleUnlockSubmit = (e) => {
+  const handleUnlockSubmit = async (e) => {
     e.preventDefault();
     const issuerRole = user?.role === 'DISTRICT_ADMIN' ? 'District Authority Admin' :
                        user?.role === 'INSPECTION_OFFICER' ? `Safety Inspector (${user.name || 'DCP Officer'})` :
                        user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Safety Inspection Officer';
 
-    const updated = institutionStore.unlockInstitutionQR(instId, {
-      notes: unlockNotes.trim() || 'Issues resolved and verified upon physical re-inspection.',
-      issuedBy: issuerRole,
-    });
-    if (updated) setLocalInst(updated);
-    setShowUnlockModal(false);
-    setUnlockNotes('');
+    try {
+      const updated = await institutionService.unlockQR(instId, unlockNotes.trim() || 'Issues resolved and verified upon re-inspection.', issuerRole);
+      if (updated) setLocalInst(updated);
+      setShowUnlockModal(false);
+      setUnlockNotes('');
+    } catch (err) {
+      setActionErr(err.message || 'Failed to unlock QR code.');
+    }
   };
 
   // Safe store calls — each wrapped to prevent any crash from corrupted localStorage

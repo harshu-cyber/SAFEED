@@ -1,11 +1,14 @@
+// ============================================================
+// SAFEED-UP — Institution Document Vault (Supabase Powered)
+// Direct Supabase Storage Binary Upload & Signed URL Reader
+// ============================================================
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { documentApi } from '../../api/apiServices';
+import { documentService } from '../../services/documentService';
 import {
   FiUpload, FiFileText, FiCheckCircle, FiClock, FiX,
   FiShield, FiCheck, FiLock, FiAlertCircle, FiEye
 } from 'react-icons/fi';
-import { MdVerified } from 'react-icons/md';
 
 const CANONICAL_DOC_TYPES = [
   { value: 'FIRE_SAFETY', label: 'Fire Safety Certificate (अग्नि शमन प्रमाणपत्र)' },
@@ -24,18 +27,18 @@ export const DocumentsPage = () => {
   const [toast, setToast] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [viewDoc, setViewDoc] = useState(null);
+  const [signedUrl, setSignedUrl] = useState('');
 
   const loadDocuments = async () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await documentApi.getMyDocuments();
-      const docs = res.data?.data?.documents || res.data?.documents || [];
-      setDocuments(docs);
+      const instId = user?.institutionId || user?.institution_id || user?._id;
+      const docs = await documentService.getMyDocuments(instId);
+      setDocuments(docs || []);
     } catch (err) {
       console.error('[DocumentsPage] Fetch error:', err);
-      const msg = err.response?.data?.message || 'Failed to fetch documents from server. Please verify authentication.';
-      setErrorMsg(msg);
+      setErrorMsg(err.message || 'Failed to fetch documents from Supabase.');
       setDocuments([]);
     } finally {
       setLoading(false);
@@ -58,30 +61,40 @@ export const DocumentsPage = () => {
     setErrorMsg('');
 
     if (!file) {
-      setErrorMsg('Please select a valid PDF, PNG, or JPG file to upload.');
+      setErrorMsg('Please select a valid document file to upload.');
       return;
     }
 
     setUploading(true);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('documentType', documentType);
+      const instId = user?.institutionId || user?.institution_id || user?._id;
+      await documentService.uploadDocument({
+        file,
+        documentType,
+        institutionId: instId,
+        userId: user?.id || user?._id,
+      });
 
-      const response = await documentApi.upload(formData);
-      if (response.data?.success || response.data?.data?.document) {
-        setToast('✅ Document uploaded successfully! Sent to District Inspector for verification.');
-        setFile(null);
-        await loadDocuments();
-      }
+      setToast('✅ Document uploaded successfully to Supabase Storage! Sent to District Inspector.');
+      setFile(null);
+      await loadDocuments();
     } catch (error) {
       console.error('[DocumentsPage] Upload error:', error);
-      const message = error.response?.data?.message || 'Failed to upload document to server.';
-      setErrorMsg(message);
+      setErrorMsg(error.message || 'Failed to upload document to Supabase.');
     } finally {
       setUploading(false);
       setTimeout(() => setToast(''), 5000);
+    }
+  };
+
+  const handleViewDoc = async (doc) => {
+    setViewDoc(doc);
+    setSignedUrl('');
+    const path = doc.storage_path || doc.storagePath;
+    if (path) {
+      const url = await documentService.getSignedFileUrl(path, doc.storage_bucket || 'safeed-documents');
+      setSignedUrl(url || '');
     }
   };
 
@@ -108,12 +121,12 @@ export const DocumentsPage = () => {
         <div className="flex items-center gap-2 mb-1">
           <img src="/up-police-logo.png" alt="UP Police" className="w-6 h-6 object-contain" />
           <span className="text-[10px] font-black text-[#D4AF37] bg-[#0F2038] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-            UP Police Document Vault
+            UP Police Document Vault (Supabase)
           </span>
         </div>
         <h1 className="text-xl font-black text-[#0F2038] font-serif">Official Document Verification — SAFEED-UP</h1>
         <p className="text-xs text-slate-500 mt-0.5">
-          Upload required safety certificates directly to MongoDB GridFS file storage. District Inspector will inspect and verify binary content.
+          Upload required safety certificates directly to Supabase Storage. District Inspector will review and verify binary content.
         </p>
       </div>
 
@@ -156,8 +169,8 @@ export const DocumentsPage = () => {
             </div>
 
             <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-[11px] text-amber-800 font-semibold space-y-1">
-              <p className="font-black flex items-center gap-1"><FiLock size={12} /> Real-Time Inspector Verification:</p>
-              <p>Uploaded binary document goes to MongoDB GridFS. Assigned Inspector streams the binary PDF to review and approve.</p>
+              <p className="font-black flex items-center gap-1"><FiLock size={12} /> Supabase Secure Storage:</p>
+              <p>Uploaded binary document goes to bucket safeed-documents. Assigned Inspector streams the binary PDF to review and approve.</p>
             </div>
 
             <button
@@ -165,7 +178,7 @@ export const DocumentsPage = () => {
               disabled={uploading}
               className="w-full bg-[#0F2038] text-[#D4AF37] border-2 border-[#D4AF37] font-black py-3 rounded-xl hover:bg-[#1E3A5F] transition-all cursor-pointer shadow flex items-center justify-center gap-2 disabled:opacity-60"
             >
-              {uploading ? 'Uploading Binary File...' : <><FiUpload size={14} /> Upload Document</>}
+              {uploading ? 'Uploading to Supabase Storage...' : <><FiUpload size={14} /> Upload Document</>}
             </button>
           </form>
         </div>
@@ -182,7 +195,7 @@ export const DocumentsPage = () => {
             </div>
 
             {loading ? (
-              <div className="p-8 text-center text-slate-400 font-bold text-xs">Loading documents from MongoDB...</div>
+              <div className="p-8 text-center text-slate-400 font-bold text-xs">Loading documents from Supabase...</div>
             ) : documents.length === 0 ? (
               <div className="p-8 text-center text-slate-400 space-y-2">
                 <FiFileText size={36} className="mx-auto opacity-30" />
@@ -192,31 +205,33 @@ export const DocumentsPage = () => {
             ) : (
               <div className="space-y-3">
                 {documents.map((doc) => {
-                  const docTitle = doc.originalFileName || doc.documentType;
-                  const docCategory = doc.documentType;
+                  const docTitle = doc.original_file_name || doc.originalFileName || doc.document_type;
+                  const docCategory = doc.document_type || doc.documentType;
                   const docStatus = doc.status || 'PENDING_REVIEW';
                   const isVerified = docStatus === 'APPROVED';
                   const isRejected = docStatus === 'REJECTED';
-                  const formattedSize = doc.fileSize ? (doc.fileSize / (1024 * 1024)).toFixed(2) + ' MB' : '0 MB';
+                  const fileSize = doc.file_size || doc.fileSize;
+                  const formattedSize = fileSize ? (fileSize / (1024 * 1024)).toFixed(2) + ' MB' : 'N/A';
+                  const uploadedAt = doc.uploaded_at || doc.uploadedAt || doc.created_at;
 
                   return (
-                    <div key={doc._id} className="bg-[#F4F6F9] border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#D4AF37] transition-all">
+                    <div key={doc.id || doc._id} className="bg-[#F4F6F9] border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#D4AF37] transition-all">
                       <div className="flex items-start gap-3">
                         <div className="w-8 h-8 bg-[#0F2038] text-[#D4AF37] rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                           <FiFileText size={16} />
                         </div>
                         <div>
                           <p className="text-xs font-black text-[#0F2038]">{docTitle}</p>
-                          <p className="text-[10px] text-slate-500 font-semibold">{docCategory} • Size: {formattedSize} • Uploaded: {new Date(doc.uploadedAt).toLocaleDateString('en-IN')}</p>
-                          {doc.rejectionReason && (
-                            <p className="text-[10px] text-rose-700 italic mt-0.5">Rejection reason: "{doc.rejectionReason}"</p>
+                          <p className="text-[10px] text-slate-500 font-semibold">{docCategory} • Size: {formattedSize} • Uploaded: {uploadedAt ? new Date(uploadedAt).toLocaleDateString('en-IN') : 'N/A'}</p>
+                          {(doc.rejection_reason || doc.rejectionReason) && (
+                            <p className="text-[10px] text-rose-700 italic mt-0.5">Rejection reason: "{doc.rejection_reason || doc.rejectionReason}"</p>
                           )}
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <button
-                          onClick={() => setViewDoc(doc)}
+                          onClick={() => handleViewDoc(doc)}
                           className="text-[11px] font-black px-3 py-1.5 bg-[#0F2038] text-[#D4AF37] border border-[#D4AF37] rounded-xl hover:bg-[#1E3A5F] transition-all flex items-center gap-1 cursor-pointer"
                         >
                           <FiEye size={12} /> Read PDF
@@ -248,8 +263,8 @@ export const DocumentsPage = () => {
               <div className="flex items-center gap-3">
                 <img src="/up-govt-seal.png" alt="UP Seal" className="w-8 h-8 object-contain" />
                 <div>
-                  <p className="text-xs font-black text-[#D4AF37] uppercase tracking-wider">Canonical Document Reader — {viewDoc.originalFileName}</p>
-                  <p className="text-[10px] text-slate-300">Type: {viewDoc.documentType} • ID: {viewDoc._id}</p>
+                  <p className="text-xs font-black text-[#D4AF37] uppercase tracking-wider">Supabase Document Reader — {viewDoc.original_file_name || viewDoc.originalFileName}</p>
+                  <p className="text-[10px] text-slate-300">Type: {viewDoc.document_type || viewDoc.documentType} • ID: {viewDoc.id || viewDoc._id}</p>
                 </div>
               </div>
               <button onClick={() => setViewDoc(null)} className="text-white hover:text-[#D4AF37] font-black text-lg p-1">✕</button>
@@ -257,31 +272,25 @@ export const DocumentsPage = () => {
 
             {/* Document Binary Stream Viewer */}
             <div className="p-6 overflow-y-auto space-y-4 flex-1 bg-[#F4F6F9]">
-              {(() => {
-                const storedToken = localStorage.getItem('accessToken');
-                const rawProxyUrl = documentApi.getFileUrl(viewDoc._id);
-                const tokenProxyUrl = storedToken ? `${rawProxyUrl}?token=${encodeURIComponent(storedToken)}` : rawProxyUrl;
-                const targetUrl = viewDoc.cloudinarySecureUrl || viewDoc.fileUrl || tokenProxyUrl;
-                const isImage = viewDoc.mimeType?.startsWith('image/');
-
-                return (
-                  <div className="border-2 border-slate-300 rounded-xl overflow-hidden bg-white shadow p-2 flex items-center justify-center min-h-[400px]">
-                    {isImage ? (
-                      <img src={targetUrl} alt={viewDoc.originalFileName} className="max-w-full h-auto max-h-[600px] mx-auto object-contain" />
-                    ) : (
-                      <object data={targetUrl} type={viewDoc.mimeType || 'application/pdf'} className="w-full h-[550px]">
-                        <embed src={targetUrl} type={viewDoc.mimeType || 'application/pdf'} className="w-full h-[550px]" />
-                        <div className="p-4 text-center">
-                          <p className="text-xs font-bold text-slate-700 mb-2">Binary PDF Stream Ready</p>
-                          <a href={targetUrl} target="_blank" rel="noopener noreferrer" className="bg-[#0F2038] text-[#D4AF37] text-xs font-black px-4 py-2 rounded-lg inline-block">
-                            Open PDF Stream 📥
-                          </a>
-                        </div>
-                      </object>
-                    )}
-                  </div>
-                );
-              })()}
+              {signedUrl ? (
+                <div className="border-2 border-slate-300 rounded-xl overflow-hidden bg-white shadow p-2 flex items-center justify-center min-h-[400px]">
+                  {(viewDoc.mime_type || viewDoc.mimeType || '').startsWith('image/') ? (
+                    <img src={signedUrl} alt={viewDoc.original_file_name} className="max-w-full h-auto max-h-[600px] mx-auto object-contain" />
+                  ) : (
+                    <object data={signedUrl} type={viewDoc.mime_type || 'application/pdf'} className="w-full h-[550px]">
+                      <embed src={signedUrl} type={viewDoc.mime_type || 'application/pdf'} className="w-full h-[550px]" />
+                      <div className="p-4 text-center">
+                        <p className="text-xs font-bold text-slate-700 mb-2">Binary PDF Stream Ready</p>
+                        <a href={signedUrl} target="_blank" rel="noopener noreferrer" className="bg-[#0F2038] text-[#D4AF37] text-xs font-black px-4 py-2 rounded-lg inline-block">
+                          Open PDF Stream 📥
+                        </a>
+                      </div>
+                    </object>
+                  )}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-slate-500 font-bold text-xs">Generating secure Supabase signed URL...</div>
+              )}
             </div>
 
             <div className="p-4 bg-white border-t border-slate-200 flex justify-end">

@@ -42,13 +42,7 @@ const GlobalSecurityProtection = () => {
   );
 };
 
-import { cloudSync } from './api/cloudSync';
-
 export default function App() {
-  useEffect(() => {
-    cloudSync.startAutoSync();
-  }, []);
-
   return (
     <>
       <GlobalSecurityProtection />

@@ -1,101 +1,13 @@
-import { cloudSync } from './cloudSync';
-import { institutionStore } from './institutionStore';
-
 // ============================================================
-// SafeED-UP — Inspection Evidence Store
-// 100% FRESH REAL-TIME DATA (Starts Empty)
+// SAFEED-UP — Evidence Store Facade (Supabase Powered)
 // ============================================================
-
-const STORAGE_KEY = 'safeed_evidence_store_v2';
+import { documentService } from '../services/documentService';
 
 export const evidenceStore = {
-  getEvidenceList: () => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
-    return [];
+  getEvidenceForInstitution: async (institutionId) => {
+    return await documentService.getMyDocuments(institutionId);
   },
-
-  getEvidenceForInstitution: (instId) => {
-    if (!instId) return [];
-    const list = evidenceStore.getEvidenceList();
-    const inst = institutionStore.getInstitutionByIdOrEmail(instId);
-    const idLow = String(instId).toLowerCase().trim();
-
-    return list.filter(e =>
-      e.institutionId === instId ||
-      e.institutionId?.toLowerCase().trim() === idLow ||
-      (inst && (
-        e.institutionId === inst._id ||
-        e.institutionId === inst.id ||
-        (inst.email && e.institutionId?.toLowerCase() === inst.email.toLowerCase()) ||
-        (inst.email && e.email?.toLowerCase() === inst.email.toLowerCase()) ||
-        e.institutionId === inst.safeId ||
-        e.safeId === inst.safeId ||
-        (inst.name && e.institutionName?.toLowerCase() === inst.name.toLowerCase())
-      ))
-    );
-  },
-
-  submitInspectionEvidence: (data) => {
-    const list = evidenceStore.getEvidenceList();
-    const inst = institutionStore.getInstitutionByIdOrEmail(data.institutionId || data.institutionName);
-
-    const canonicalInstId = inst ? (inst._id || inst.id) : data.institutionId;
-    const canonicalEmail = inst ? (inst.email || inst.contactPerson?.email) : null;
-    const canonicalSafeId = inst ? inst.safeId : null;
-    const canonicalName = inst ? inst.name : data.institutionName;
-
-    const newRecord = {
-      _id: 'ev_' + Date.now(),
-      inspectionId: data.inspectionId || `INS-UP-${Math.floor(1000 + Math.random() * 9000)}`,
-      institutionId: canonicalInstId,
-      email: canonicalEmail,
-      safeId: canonicalSafeId,
-      institutionName: canonicalName,
-      inspectorName: data.inspectorName || 'DCP Inspection Officer',
-      dcpZone: data.dcpZone || (inst ? inst.zone : 'DCP Central'),
-      date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-      score: data.score || 90,
-      status: 'SUBMITTED_FOR_HIGHER_AUDIT',
-      photos: data.photos || [],
-      remarks: data.remarks || 'Site inspection completed. Evidence photos submitted.',
-    };
-
-    list.unshift(newRecord);
-    try {
-      const sanitized = list.map(item => {
-        const copy = { ...item };
-        if (Array.isArray(copy.photos)) {
-          copy.photos = copy.photos.map(p => (typeof p === 'string' && p.length > 50000) ? '[PHOTO_STORED]' : p);
-        }
-        return copy;
-      });
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
-    } catch (err) {
-      console.warn('[evidenceStore] Quota safe guard active for evidence photos:', err);
-    }
-
-    cloudSync.syncAction('SUBMIT_EVIDENCE', newRecord).catch(err => console.warn('[submitEvidence] cloud sync error:', err));
-    return newRecord;
-  },
-
-  /** Merge cloud evidence feed into local storage cache without dropping local items */
-  syncCloudEvidence: (cloudEvidences) => {
-    if (!Array.isArray(cloudEvidences)) return;
-    let existingLocal = evidenceStore.getEvidenceList();
-
-    const mergedMap = new Map();
-    [...existingLocal, ...cloudEvidences].forEach(e => {
-      if (e && (e._id || e.inspectionId)) {
-        const key = e._id || e.inspectionId;
-        mergedMap.set(key, e);
-      }
-    });
-
-    const merged = Array.from(mergedMap.values());
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+  uploadEvidence: async (data) => {
+    return await documentService.uploadDocument(data);
   }
 };

@@ -97,45 +97,49 @@ export const SuperAdminDashboard = () => {
     };
   }, []);
 
-  const total = institutions.length;
-  const verified = institutions.filter(i => institutionStore.isCertificateUnlocked(i._id)).length;
-  const highRisk = institutions.filter(i => i.riskLevel === 'HIGH' || i.complianceScore < 50).length;
-  const pending = institutions.filter(i => !institutionStore.isCertificateUnlocked(i._id)).length;
+  const safeInsts = Array.isArray(institutions) ? institutions : [];
+  const safeComplaints = Array.isArray(complaints) ? complaints : [];
+
+  const total = safeInsts.length;
+  const verified = safeInsts.filter(i => i && institutionStore.isCertificateUnlocked(i._id || i.id)).length;
+  const highRisk = safeInsts.filter(i => i && (i.riskLevel === 'HIGH' || (i.complianceScore || 0) < 50)).length;
+  const pending = safeInsts.filter(i => i && !institutionStore.isCertificateUnlocked(i._id || i.id)).length;
 
   const byZone = ZONES.map(zone => {
-    const zoneInsts = institutions.filter(i => normalizeZone(i.zone) === zone);
-    const zoneUnlocked = zoneInsts.filter(i => institutionStore.isCertificateUnlocked(i._id)).length;
+    const zoneInsts = safeInsts.filter(i => i && normalizeZone(i.zone) === zone);
+    const zoneUnlocked = zoneInsts.filter(i => i && institutionStore.isCertificateUnlocked(i._id || i.id)).length;
     return { zone, count: zoneInsts.length, unlocked: zoneUnlocked };
   });
 
   const byType = {
-    School: institutions.filter(i => {
-      const t = (i.type || '').toUpperCase();
+    School: safeInsts.filter(i => {
+      const t = (i?.institution_type || i?.type || '').toUpperCase();
       return t === 'SCHOOL' || t === 'SCHOOL_ADMIN' || t === 'SCHOOLS';
     }).length,
-    College: institutions.filter(i => {
-      const t = (i.type || '').toUpperCase();
+    College: safeInsts.filter(i => {
+      const t = (i?.institution_type || i?.type || '').toUpperCase();
       return t === 'COLLEGE' || t === 'COLLEGES';
     }).length,
-    Coaching: institutions.filter(i => {
-      const t = (i.type || '').toUpperCase();
+    Coaching: safeInsts.filter(i => {
+      const t = (i?.institution_type || i?.type || '').toUpperCase();
       return t.includes('COACHING');
     }).length,
   };
 
-  const pendingComplaints = complaints.filter(c => c.status !== 'RESOLVED').length;
+  const pendingComplaints = safeComplaints.filter(c => c && c.status !== 'RESOLVED').length;
 
-  const recent = [...institutions]
+  const recent = [...safeInsts]
     .sort((a, b) => {
-      const timeA = Date.parse(a.createdAt || '') || (typeof a._id === 'string' && a._id.startsWith('inst_') ? parseInt(a._id.split('_')[1]) || 0 : 0);
-      const timeB = Date.parse(b.createdAt || '') || (typeof b._id === 'string' && b._id.startsWith('inst_') ? parseInt(b._id.split('_')[1]) || 0 : 0);
+      const timeA = Date.parse(a?.created_at || a?.createdAt || '') || 0;
+      const timeB = Date.parse(b?.created_at || b?.createdAt || '') || 0;
       return timeB - timeA;
     })
     .slice(0, 5);
 
-  const filtered = institutions.filter(i =>
-    i.name?.toLowerCase().includes(search.toLowerCase()) ||
-    i.safeId?.toLowerCase().includes(search.toLowerCase())
+  const filtered = safeInsts.filter(i =>
+    i?.name?.toLowerCase().includes(search.toLowerCase()) ||
+    i?.safeId?.toLowerCase().includes(search.toLowerCase()) ||
+    i?.safe_id?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (

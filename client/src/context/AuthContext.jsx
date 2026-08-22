@@ -29,14 +29,19 @@ export const AuthProvider = ({ children }) => {
         console.warn('[AuthContext] Profile fetch warning:', error.message);
       }
 
+      const resolvedRole = profile?.role || 
+        sessionUser.user_metadata?.role || 
+        (sessionUser.email?.toLowerCase() === 'admin@safeed.gov.in' ? 'SUPER_ADMIN' : 'INSTITUTION_ADMIN');
+
       const mergedUser = {
         ...sessionUser,
         ...profile,
         _id: profile?.id || sessionUser.id,
         id: profile?.id || sessionUser.id,
-        name: profile?.full_name || sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0],
+        name: profile?.full_name || profile?.name || sessionUser.user_metadata?.name || sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0],
         email: sessionUser.email,
-        role: profile?.role || sessionUser.user_metadata?.role || 'INSTITUTION_ADMIN',
+        role: resolvedRole,
+        assignedPortal: resolvedRole,
         institutionId: profile?.institution_id || profile?.institutions?.id,
         institution: profile?.institutions,
         district: profile?.district || profile?.institutions?.district || 'Lucknow',
@@ -47,13 +52,17 @@ export const AuthProvider = ({ children }) => {
       return mergedUser;
     } catch (err) {
       console.error('[AuthContext] Error fetching profile:', err);
-      // Even if profile query fails, preserve session user without logging out
+      // Even if profile query fails, preserve session user with deterministic role
+      const resolvedRole = sessionUser.user_metadata?.role || 
+        (sessionUser.email?.toLowerCase() === 'admin@safeed.gov.in' ? 'SUPER_ADMIN' : 'INSTITUTION_ADMIN');
+
       const fallbackUser = {
         ...sessionUser,
         _id: sessionUser.id,
         id: sessionUser.id,
         name: sessionUser.email?.split('@')[0],
-        role: sessionUser.user_metadata?.role || 'INSTITUTION_ADMIN',
+        role: resolvedRole,
+        assignedPortal: resolvedRole,
       };
       setUser(fallbackUser);
       return fallbackUser;

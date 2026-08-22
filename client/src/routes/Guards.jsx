@@ -22,7 +22,15 @@ export const ProtectedRoute = () => {
 };
 
 export const RoleGuard = ({ allowedRoles }) => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F4F6F9]">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
   if (!user) return <Navigate to="/auth/login" replace />;
 

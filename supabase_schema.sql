@@ -332,75 +332,17 @@ FOR UPDATE USING (
 );
 
 -- ============================================================
--- 10. IDEMPOTENT SUPER ADMIN PROVISIONING BLOCK
--- Automatically provisions the State Director Super Admin account
--- Running this script repeatedly will NEVER create duplicates
+-- 10. SUPER ADMIN PROFILE ROLE ENFORCEMENT
+-- Ensures any existing or newly registered admin@safeed.gov.in has SUPER_ADMIN role
 -- ============================================================
 DO $$
-DECLARE
-  super_admin_email TEXT := 'admin@safeed.gov.in';
-  super_admin_pass  TEXT := 'SuperAdmin@SafeED2026!';
-  super_admin_id    UUID := 'a0000000-0000-0000-0000-000000000001'::UUID;
-  encrypted_pass    TEXT;
 BEGIN
-  -- 1. Check if auth user already exists by email
-  IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = super_admin_email) THEN
-    encrypted_pass := crypt(super_admin_pass, gen_salt('bf'));
-
-    INSERT INTO auth.users (
-      id,
-      instance_id,
-      email,
-      encrypted_password,
-      email_confirmed_at,
-      raw_app_meta_data,
-      raw_user_meta_data,
-      created_at,
-      updated_at,
-      role,
-      aud
-    )
-    VALUES (
-      super_admin_id,
-      '00000000-0000-0000-0000-000000000000',
-      super_admin_email,
-      encrypted_pass,
-      NOW(),
-      '{"provider": "email", "providers": ["email"]}',
-      '{"name": "State Director Super Admin", "role": "SUPER_ADMIN"}',
-      NOW(),
-      NOW(),
-      'authenticated',
-      'authenticated'
-    );
-  ELSE
-    SELECT id INTO super_admin_id FROM auth.users WHERE email = super_admin_email;
-  END IF;
-
-  -- 2. Upsert profile record with SUPER_ADMIN role
-  INSERT INTO public.profiles (
-    id,
-    email,
-    role,
-    name,
-    district,
-    zone,
-    created_at,
-    updated_at
-  )
-  VALUES (
-    super_admin_id,
-    super_admin_email,
-    'SUPER_ADMIN',
-    'State Director Super Admin',
-    'Lucknow',
-    'HQ',
-    NOW(),
-    NOW()
-  )
-  ON CONFLICT (id) DO UPDATE SET
-    role = 'SUPER_ADMIN',
-    name = 'State Director Super Admin',
-    updated_at = NOW();
-
+  -- Clean up any raw SQL inserted auth.users row that used improper bcrypt hashes
+  DELETE FROM auth.users WHERE email = 'admin@safeed.gov.in' AND (encrypted_password LIKE '$2a$%' OR encrypted_password IS NULL);
+  DELETE FROM public.profiles WHERE email = 'admin@safeed.gov.in' AND NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'admin@safeed.gov.in');
+  
+  -- If super admin exists in auth.users, ensure profiles role is SUPER_ADMIN
+  UPDATE public.profiles
+  SET role = 'SUPER_ADMIN', name = 'State Director Super Admin', updated_at = NOW()
+  WHERE email = 'admin@safeed.gov.in';
 END $$;

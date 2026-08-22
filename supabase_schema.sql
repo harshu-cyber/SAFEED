@@ -207,11 +207,6 @@ BEGIN
   user_zone := NEW.raw_user_meta_data->>'zone';
   user_inst_id := (NEW.raw_user_meta_data->>'institution_id')::UUID;
 
-  -- Auto-confirm email for Super Admin seed to bypass email confirmation gate
-  IF NEW.email = 'admin@safeed.gov.in' THEN
-    UPDATE auth.users SET email_confirmed_at = COALESCE(email_confirmed_at, NOW()) WHERE id = NEW.id;
-  END IF;
-
   INSERT INTO public.profiles (id, email, role, name, phone, district, zone, institution_id)
   VALUES (NEW.id, NEW.email, assigned_role, user_name, user_phone, user_district, user_zone, user_inst_id)
   ON CONFLICT (id) DO UPDATE SET
@@ -337,17 +332,80 @@ FOR UPDATE USING (
 );
 
 -- ============================================================
--- 10. SUPER ADMIN PROFILE ROLE ENFORCEMENT
--- Ensures any existing or newly registered admin@safeed.gov.in has SUPER_ADMIN role
+-- 10. IDEMPOTENT SUPER ADMIN PROVISIONING BLOCK
+-- Automatically provisions the State Director Super Admin account
+-- Running this script repeatedly will NEVER create duplicates
 -- ============================================================
 DO $$
+DECLARE
+  super_admin_email TEXT := 'admin@safeed.gov.in';
+  super_admin_pass  TEXT := 'SuperAdmin@SafeED2026!';
+  super_admin_id    UUID := 'a0000000-0000-0000-0000-000000000001'::UUID;
 BEGIN
-  -- Clean up any raw SQL inserted auth.users row that used improper bcrypt hashes
-  DELETE FROM auth.users WHERE email = 'admin@safeed.gov.in' AND (encrypted_password LIKE '$2a$%' OR encrypted_password IS NULL);
-  DELETE FROM public.profiles WHERE email = 'admin@safeed.gov.in' AND NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'admin@safeed.gov.in');
-  
-  -- If super admin exists in auth.users, ensure profiles role is SUPER_ADMIN
-  UPDATE public.profiles
-  SET role = 'SUPER_ADMIN', name = 'State Director Super Admin', updated_at = NOW()
-  WHERE email = 'admin@safeed.gov.in';
+  -- 1. Remove any legacy or corrupted entries for super_admin_email
+  DELETE FROM public.profiles WHERE email = super_admin_email;
+  DELETE FROM auth.users WHERE email = super_admin_email;
+
+  -- 2. Insert clean, fully confirmed auth user into auth.users
+  INSERT INTO auth.users (
+    id,
+    instance_id,
+    email,
+    encrypted_password,
+    email_confirmed_at,
+    raw_app_meta_data,
+    raw_user_meta_data,
+    created_at,
+    updated_at,
+    role,
+    aud,
+    confirmation_token,
+    recovery_token,
+    email_change_token_new,
+    email_change
+  )
+  VALUES (
+    super_admin_id,
+    '00000000-0000-0000-0000-000000000000'::UUID,
+    super_admin_email,
+    crypt(super_admin_pass, gen_salt('bf')),
+    NOW(),
+    '{"provider": "email", "providers": ["email"]}'::jsonb,
+    '{"name": "State Director Super Admin", "role": "SUPER_ADMIN"}'::jsonb,
+    NOW(),
+    NOW(),
+    'authenticated',
+    'authenticated',
+    '',
+    '',
+    '',
+    ''
+  );
+
+  -- 3. Upsert profile record with SUPER_ADMIN role
+  INSERT INTO public.profiles (
+    id,
+    email,
+    role,
+    name,
+    district,
+    zone,
+    created_at,
+    updated_at
+  )
+  VALUES (
+    super_admin_id,
+    super_admin_email,
+    'SUPER_ADMIN',
+    'State Director Super Admin',
+    'Lucknow',
+    'HQ',
+    NOW(),
+    NOW()
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    role = 'SUPER_ADMIN',
+    name = 'State Director Super Admin',
+    updated_at = NOW();
+
 END $$;

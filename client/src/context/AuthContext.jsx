@@ -101,36 +101,10 @@ export const AuthProvider = ({ children }) => {
 
     setLoading(true);
     try {
-      let { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: cleanPassword,
       });
-
-      // 🛡️ Self-Healing Super Admin Provisioning via GoTrue API
-      // If GoTrue returns a schema/credential error for the default Super Admin, provision via native API
-      if (error && cleanEmail === 'admin@safeed.gov.in') {
-        console.warn('[AuthContext] Provisioning default Super Admin via native GoTrue Auth...');
-        const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-          email: cleanEmail,
-          password: cleanPassword,
-          options: {
-            data: {
-              name: 'State Director Super Admin',
-              role: 'SUPER_ADMIN',
-            },
-          },
-        });
-
-        if (!signUpErr && signUpData?.user) {
-          // Retry login immediately after native GoTrue account creation
-          const retry = await supabase.auth.signInWithPassword({
-            email: cleanEmail,
-            password: cleanPassword,
-          });
-          data = retry.data;
-          error = retry.error;
-        }
-      }
 
       if (error) {
         throw new Error(error.message || 'Supabase authentication failed.');

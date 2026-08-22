@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { institutionService } from '../../services/institutionService';
+import { documentService } from '../../services/documentService';
 import { institutionStore } from '../../api/institutionStore';
 import { cloudSync } from '../../api/cloudSync';
 import { evidenceStore } from '../../api/evidenceStore';
@@ -82,15 +84,16 @@ export const DistrictAdminDashboard = ({ defaultTab }) => {
   }, [defaultTab, location.pathname]);
 
   const loadRealTimeData = async () => {
-    try { await cloudSync.pull(); } catch {}
-    const insts = institutionStore.getInstitutions();
-    setInstitutions(insts);
-    const docs = institutionStore.getDocuments();
-    setDocuments(docs);
-    const evs = evidenceStore.getEvidenceList();
-    setEvidenceList(evs);
-    const cmps = complaintStore.getComplaints();
-    setComplaints(cmps);
+    try {
+      const insts = await institutionService.getInstitutions({ district: districtName });
+      setInstitutions(insts);
+      const cmps = await complaintStore.fetchComplaints({ district: districtName });
+      setComplaints(cmps);
+      const docs = await documentService.getAllDocuments();
+      setDocuments(docs);
+    } catch (err) {
+      console.warn('[DistrictAdmin] Load error:', err);
+    }
   };
 
   useEffect(() => {

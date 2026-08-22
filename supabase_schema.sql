@@ -107,6 +107,38 @@ CREATE TABLE IF NOT EXISTS public.documents (
   UNIQUE (institution_id, document_type)
 );
 
+-- 5B. COMPLAINTS TABLE (Citizen Safety Reporting)
+CREATE TABLE IF NOT EXISTS public.complaints (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  complaint_ticket TEXT NOT NULL UNIQUE,
+  complainant_name TEXT NOT NULL,
+  complainant_phone TEXT NOT NULL,
+  district TEXT NOT NULL,
+  zone TEXT,
+  institution_name TEXT NOT NULL,
+  institution_id UUID REFERENCES public.institutions(id) ON DELETE SET NULL,
+  category TEXT NOT NULL,
+  description TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'PENDING_DISTRICT_ACTION',
+  assigned_inspector TEXT,
+  district_directives TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 5C. EVIDENCE TABLE (Inspector Site Inspection Photos & Evidence)
+CREATE TABLE IF NOT EXISTS public.evidence (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  institution_id UUID NOT NULL REFERENCES public.institutions(id) ON DELETE CASCADE,
+  inspector_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  photo_url TEXT NOT NULL,
+  storage_path TEXT,
+  category TEXT DEFAULT 'SITE_INSPECTION',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 6. AUTOMATED QR COMPLIANCE TRIGGER & FUNCTION
 CREATE OR REPLACE FUNCTION public.evaluate_institution_compliance()
 RETURNS TRIGGER AS $$
@@ -200,6 +232,8 @@ EXECUTE FUNCTION public.handle_new_user();
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.institutions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.complaints ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.evidence ENABLE ROW LEVEL SECURITY;
 
 -- PROFILES POLICIES
 DROP POLICY IF EXISTS "Public profiles reading" ON public.profiles;
@@ -247,6 +281,31 @@ CREATE POLICY "Inspectors & Admins can review documents" ON public.documents FOR
     AND p.role IN ('SUPER_ADMIN', 'DISTRICT_ADMIN', 'INSPECTION_OFFICER')
   )
 );
+
+-- COMPLAINTS POLICIES
+DROP POLICY IF EXISTS "Anyone can submit public complaints" ON public.complaints;
+CREATE POLICY "Anyone can submit public complaints" ON public.complaints FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public reading for complaints" ON public.complaints;
+CREATE POLICY "Public reading for complaints" ON public.complaints FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Admins & Inspectors manage complaints" ON public.complaints;
+CREATE POLICY "Admins & Inspectors manage complaints" ON public.complaints FOR ALL USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p 
+    WHERE p.id = auth.uid() 
+    AND p.role IN ('SUPER_ADMIN', 'DISTRICT_ADMIN', 'INSPECTION_OFFICER')
+  )
+);
+
+-- EVIDENCE POLICIES
+DROP POLICY IF EXISTS "Authenticated users upload evidence" ON public.evidence;
+CREATE POLICY "Authenticated users upload evidence" ON public.evidence FOR INSERT WITH CHECK (
+  auth.role() = 'authenticated'
+);
+
+DROP POLICY IF EXISTS "Public reading for evidence" ON public.evidence;
+CREATE POLICY "Public reading for evidence" ON public.evidence FOR SELECT USING (true);
 
 -- 9. SUPABASE STORAGE BUCKET CREATION (SAFEED-DOCUMENTS)
 INSERT INTO storage.buckets (id, name, public) 

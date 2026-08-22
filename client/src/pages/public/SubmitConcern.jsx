@@ -18,24 +18,32 @@ export const SubmitConcernPage = () => {
 
   const registeredInsts = institutionStore.getInstitutions();
 
-  const handleSubmit = (e) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
+    setErrorMsg('');
 
-    // Submit complaint to real-time complaintStore & sync to MongoDB Atlas
-    const newComplaint = complaintStore.submitComplaint({
-      complainantName,
-      complainantPhone,
-      district,
-      zone,
-      institutionName,
-      category,
-      description,
-    });
+    try {
+      const newComplaint = await complaintStore.submitComplaint({
+        complainantName,
+        complainantPhone,
+        district,
+        zone,
+        institutionName,
+        category,
+        description,
+      });
 
-    cloudSync.syncAction('CREATE_COMPLAINT', newComplaint).catch(err => console.warn('[SubmitConcern] Cloud sync failed:', err));
-
-    setTicketId(newComplaint.complaintTicket);
-    setSubmitted(true);
+      setTicketId(newComplaint.complaintTicket);
+      setSubmitted(true);
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to submit complaint. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const inputClass = "w-full px-3 py-2.5 border border-[#1E3A5F] rounded-xl outline-none focus:ring-2 focus:ring-[#D4AF37] bg-[#071A2F] text-white placeholder:text-slate-500 font-semibold";

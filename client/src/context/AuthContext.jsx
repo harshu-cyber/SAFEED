@@ -87,12 +87,20 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (emailOrCredentials, maybePassword) => {
+    let email = emailOrCredentials;
+    let password = maybePassword;
+
+    if (typeof emailOrCredentials === 'object' && emailOrCredentials !== null) {
+      email = emailOrCredentials.email || emailOrCredentials.username;
+      password = emailOrCredentials.password;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: (email || '').trim(),
+        password: password || '',
       });
 
       if (error) {

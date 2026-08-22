@@ -7,6 +7,12 @@ export const userStore = {
   getCurrentUser: async () => {
     return await authService.getCurrentProfile();
   },
+  getUsers: () => {
+    return [];
+  },
+  getUserById: (id) => {
+    return null;
+  },
   getUsersByRole: async () => {
     return [];
   },

@@ -43,6 +43,9 @@ export const institutionStore = {
   getDocumentsForInstitution: () => {
     return [];
   },
+  getDocumentsForZone: () => {
+    return [];
+  },
   getInstitutionByIdOrEmail: () => {
     return null;
   }

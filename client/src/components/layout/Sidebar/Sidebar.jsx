@@ -54,9 +54,9 @@ export const Sidebar = ({ collapsed }) => {
         ];
 
       case ROLES.DISTRICT_ADMIN:
-        const pendingComplaintsCount = complaintStore
-          .getComplaints()
-          .filter(c => c.status === 'PENDING_DISTRICT_ACTION').length;
+        const rawComplaints = complaintStore.getComplaints?.();
+        const complaintsList = Array.isArray(rawComplaints) ? rawComplaints : [];
+        const pendingComplaintsCount = complaintsList.filter(c => c.status === 'PENDING_DISTRICT_ACTION').length;
         return [
           { label: 'District Dashboard', path: '/dashboard/district-admin', icon: FiGrid },
           { label: 'Institutions Registry', path: '/dashboard/district-admin/institutions', icon: FiShield },
@@ -65,9 +65,9 @@ export const Sidebar = ({ collapsed }) => {
         ];
 
       case ROLES.INSPECTION_OFFICER:
-        const pendingDocCount = institutionStore
-          .getDocumentsForZone(user?.dcpZone || 'DCP Central')
-          .filter(d => d.status === 'PENDING_REVIEW').length;
+        const rawDocs = institutionStore.getDocumentsForZone?.(user?.dcpZone || 'DCP Central');
+        const docsList = Array.isArray(rawDocs) ? rawDocs : [];
+        const pendingDocCount = docsList.filter(d => d.status === 'PENDING_REVIEW').length;
         return [
           { label: 'Inspector Dashboard', path: '/dashboard/inspector', icon: FiGrid },
           { label: 'My Inspections', path: '/dashboard/inspector/inspections', icon: FiCheckSquare },
